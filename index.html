@@ -109,6 +109,11 @@
                 <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                    <label id="teacherName" class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Teacher:</label>
+                    
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
                         class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
@@ -234,7 +239,7 @@
             console.log('Name: ' + profile.getName());
             console.log('Image URL: ' + profile.getImageUrl());
             console.log('Email: ' + profile.getEmail());
-            document.getElementById("passLabel").textContent="Bathroom Pass for" + profile.getName() +"'s Class";
+            document.getElementById("teacherName").textContent=profile.getName();
 
             // Hide sign-in page and show app content
             document.getElementById('signInPage').classList.add('hidden');
