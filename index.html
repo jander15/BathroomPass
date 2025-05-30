@@ -4,44 +4,40 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-signin-client_id" content="683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com">
     <title>School Pass System by Jander</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
     <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet"
     >
-
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <meta name="google-signin-client_id" content="683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com">
     <script type="text/javascript">
-    // This function prompts the user before leaving the page.
     window.onbeforeunload = function() {
-        return "Are you sure you want to leave? Your pass status might be lost!";
+        // This will prompt the user before leaving the page.
+        // It's generally good practice to inform users if they are about to lose unsaved data.
+        return "Dude, are you sure you want to leave? Think of the kittens!";
     }
     </script>
 
     <style>
-        /* Body font and background color */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1c1d1d; /* Dark background for the page */
+            background-color: #1c1d1d; /* A lighter green for the page background */
         }
-        /* Form text size and transition */
         form {
             font-size: 1.125rem; /* text-lg */
             transition: background-color 0.5s ease; /* Smooth transition for form color changes */
         }
-        /* Select element text size */
         select {
             font-size: 1.125rem; /* text-lg for consistency with form text */
         }
-        /* Remove default focus styles from select elements */
+        /* Removed focus:ring styles from select elements */
         select:focus {
             outline: none;
             border-color: #d1d5db; /* Revert to default border color on focus */
             box-shadow: none; /* Remove any box shadow on focus */
         }
-        /* Styling for queue list items */
         #queue-list li {
             cursor: pointer;
             padding: 0.6rem 0.8rem;
@@ -49,21 +45,18 @@
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
             margin-bottom: 0.375rem;
         }
-        /* No bottom margin for the last item in the queue list */
         #queue-list li:last-child {
             margin-bottom: 0;
         }
-        /* Hover effect for queue list items */
         #queue-list li:hover {
             background-color: #e2e8f0;
             color: #1a202c;
         }
-        /* Specific class for selected item in the queue */
+        /* Added the specific class for selected item */
         #queue-list li.bg-yellow-200-selected {
-            background-color: #0692e8; /* A distinct blue for selected item */
+            background-color: #0692e8;
             color: #2d3748;
         }
-        /* Hidden iframe for form submissions (Google Apps Script) */
         iframe[name="iframe"] {
             position: absolute;
             left: -9999px;
@@ -72,22 +65,25 @@
             height: 0;
             visibility: hidden;
         }
-        /* Style for the large header displaying pass status */
+        /* Style for the large header */
         #studentOutHeader {
-             font-size: 5rem; /* Large text size */
+             font-size: 5rem; /* ~text-6xl or larger */
              line-height: 1.1;
-             color: #030000; /* Black text */
+             color: #030000; /* black */
         }
+        
     </style>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
-    <div id="googleSignInContainer" class="flex flex-col items-center justify-center min-h-screen w-full">
-        <h2 class="text-3xl font-bold text-white mb-6 text-center">Please Sign In to Access the Pass System</h2>
-        <div class="g-signin2" data-onsuccess="onSignIn" data-width="240" data-height="50" data-longtitle="true"></div>
+    <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
+        <h1 class="text-4xl font-bold text-white mb-8">Welcome to School Pass System</h1>
+        <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
+        <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
+        <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
     </div>
 
-    <div id="appContent" class="hidden flex flex-col items-center w-full">
+    <div id="appContent" class="hidden flex flex-col items-center p-4 min-h-screen w-full">
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg">
             <span id="studentOutName"></span> PASS IS AVAILABLE
         </h1>
@@ -108,6 +104,7 @@
                 method="POST"
                 target="iframe"
                 style="background-color: #4ade80;" /* Initial background for the form (Green) */
+                
             >
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
@@ -125,7 +122,7 @@
                 </div>
 
                 <div class="flex justify-center space-x-3 mt-4">
-                    <button id="signOutButton" type="button"
+                    <button id="signOutButton" type="button" 
                         class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base"
                         style="display: none">
                         Sign Out
@@ -140,7 +137,7 @@
                 <p class="text-center text-lg font-medium text-gray-800 mt-4">Time: <span id="minutes" class="font-bold">0</span>:<span id="seconds" class="font-bold">00</span></p>
                 <textarea id="timeOut" name="Seconds" class="hidden"></textarea>
                 <textarea id="nameHolder" name="Name" class="hidden"></textarea>
-                </form>
+            </form>
 
             <div id="rightSideFormsContainer" class="w-full lg:w-1/3 flex flex-col rounded-lg shadow-xl">
                 <div class="flex w-full justify-center">
@@ -183,7 +180,7 @@
                             <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
                             <select id="lateNameDropdown"  onchange="lateNameSelected()"
                                 class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-
+                                
                             </select>
                         </div>
                         <div class="flex justify-center mt-6">
@@ -194,36 +191,107 @@
                         <textarea id="timeOut2" name="Seconds" class="hidden"></textarea>
                         <textarea id="nameHolder2" name="Late" class="hidden"></textarea>
                         <textarea id="classHolder" name="Class" class="hidden"></textarea>
-                        </form>
+
+                    </form>
                 </div>
             </div>
-
+            <button id="googleSignOutButton" class="mt-8 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
+                Sign Out of Google
+            </button>
         </div>
 
-        <iframe name="iframe"></iframe>
-
-        <a href="#" onclick="signOut();" class="mt-8 text-blue-400 hover:text-blue-600">Sign out of Google</a>
     </div>
 
+    <iframe name="iframe"></iframe>
+
     <script>
-        // Global variables for the application
+        // --- Google Sign-In Integration ---
+        let auth2; // GoogleAuth object
+
+        // Initialize Google Sign-In
+        function initGoogleSignIn() {
+            gapi.load('auth2', function() {
+                auth2 = gapi.auth2.init({
+                    client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com', // Replace with your actual client ID
+                    scope: 'profile email'
+                });
+
+                // Listen for sign-in state changes
+                auth2.isSignedIn.listen(updateSignInStatus);
+
+                // Initial check of sign-in status
+                updateSignInStatus(auth2.isSignedIn.get());
+            });
+        }
+
+        // Callback function for successful sign-in
+        function onSignIn(googleUser) {
+            console.log('User signed in successfully!');
+            const profile = googleUser.getBasicProfile();
+            console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+            console.log('Name: ' + profile.getName());
+            console.log('Image URL: ' + profile.getImageUrl());
+            console.log('Email: ' + profile.getEmail());
+
+            // Hide sign-in page and show app content
+            document.getElementById('signInPage').classList.add('hidden');
+            document.getElementById('appContent').classList.remove('hidden');
+            document.getElementById('body').classList.remove('justify-center'); // Remove center alignment for app content
+
+            // You might want to display the signed-in user's name somewhere in the app
+            // For now, we'll just proceed to the main app.
+            
+            // Re-initialize the app content after sign-in
+            initializeBathroomPassApp();
+        }
+
+        // Handle sign-out
+        function signOut() {
+            if (auth2) {
+                auth2.signOut().then(function () {
+                    console.log('User signed out.');
+                    // Hide app content and show sign-in page
+                    document.getElementById('appContent').classList.add('hidden');
+                    document.getElementById('signInPage').classList.remove('hidden');
+                    document.getElementById('body').classList.add('justify-center'); // Re-center sign-in page
+                    // Reset app state if necessary (e.g., clear timers, queue)
+                    resetBathroomPassAppState();
+                });
+            }
+        }
+
+        // Update UI based on sign-in status
+        function updateSignInStatus(isSignedIn) {
+            if (isSignedIn) {
+                console.log('User is currently signed in.');
+                document.getElementById('signInPage').classList.add('hidden');
+                document.getElementById('appContent').classList.remove('hidden');
+                document.getElementById('body').classList.remove('justify-center');
+                initializeBathroomPassApp();
+            } else {
+                console.log('User is currently signed out.');
+                document.getElementById('signInPage').classList.remove('hidden');
+                document.getElementById('appContent').classList.add('hidden');
+                document.getElementById('body').classList.add('justify-center');
+                resetBathroomPassAppState();
+            }
+        }
+
+        // --- Bathroom Pass Application Logic (from original code) ---
         const mainForm = document.getElementById('form');
         const nameDropdown = document.getElementById('nameDropdown');
         const courseDropdown = document.getElementById('courseDropdown');
         const nameQueueDropdown = document.getElementById('nameQueue');
         const studentOutHeader = document.getElementById('studentOutHeader');
         const studentOutName = document.getElementById('studentOutName');
-        // Removed teacherEmailInput and teacherEmailInputLate as they are no longer needed for filtering
-        // const teacherEmailInput = document.getElementById('teacherEmailInput');
-        // const teacherEmailInputLate = document.getElementById('teacherEmailInputLate');
 
-        const queueArea = document.getElementById('queueArea');
-        const lateSignInView = document.getElementById('lateSignInView');
-        const queueViewBtn = document.getElementById('queueViewBtn');
-        const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
+        const queueArea = document.getElementById('queueArea'); // Bathroom Pass Queue
+        const lateSignInView = document.getElementById('lateSignInView'); // Late Sign In Form
+        const queueViewBtn = document.getElementById('queueViewBtn'); // New button for Queue
+        const lateSignInViewBtn = document.getElementById('lateSignInViewBtn'); // Existing button, renamed for clarity
 
         const lateNameDropdown = document.getElementById('lateNameDropdown');
-        const lateSignInForm = document.getElementById('lateSignInForm');
+        const lateSignInForm = document.getElementById('lateSignInForm'); // Get the late form
 
         let seconds = 0;
         let minutes = 0;
@@ -231,139 +299,11 @@
         let queue = [];
         let selectedName = null;
         let currentlySignedOutStudent = null;
-        let allNamesData = [];
-        let classes = [];
-        let uniqueCourses = [];
-        let uniqueNames = [];
-        let allNames = [];
-        // Removed signedInUserEmail as it is no longer used for filtering data
-        // let signedInUserEmail = null; // Will store the email of the signed-in user
+        let allNamesData = []; // Store all names data once fetched
 
-        // Google Sign-In callback function
-        function onSignIn(googleUser) {
-            // Get user profile information
-            var profile = googleUser.getBasicProfile();
-            console.log('ID: ' + profile.getId());
-            console.log('Name: ' + profile.getName());
-            console.log('Image URL: ' + profile.getImageUrl());
-            console.log('Email: ' + profile.getEmail());
-
-            // Removed assignment of signedInUserEmail as it's no longer used for filtering
-            // signedInUserEmail = profile.getEmail();
-
-            // Removed setting hidden input values for forms
-            // teacherEmailInput.value = signedInUserEmail;
-            // teacherEmailInputLate.value = signedInUserEmail;
-
-
-            // Hide the Google Sign-In container
-            document.getElementById('googleSignInContainer').classList.add('hidden');
-            // Show the main application content
-            document.getElementById('appContent').classList.remove('hidden');
-
-            // Initialize the application data and UI after successful sign-in
-            initializeAppDataAndUI();
-        }
-
-        // Function to sign out of Google
-        function signOut() {
-            var auth2 = gapi.auth2.getAuthInstance();
-            auth2.signOut().then(function () {
-                console.log('User signed out.');
-                // Hide the main application content
-                document.getElementById('appContent').classList.add('hidden');
-                // Show the Google Sign-In container
-                document.getElementById('googleSignInContainer').classList.remove('hidden');
-                // Optionally, reset any app state here if needed
-                resetAppState();
-            });
-        }
-
-        // Function to reset application state on sign out
-        function resetAppState() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            seconds = 0;
-            minutes = 0;
-            queue = [];
-            selectedName = null;
-            currentlySignedOutStudent = null;
-            allNamesData = [];
-            classes = [];
-            uniqueCourses = [];
-            uniqueNames = [];
-            allNames = [];
-            // Removed clearing signedInUserEmail
-            // signedInUserEmail = null; // Clear email on sign out
-
-            // Removed resetting hidden input values
-            // teacherEmailInput.value = '';
-            // teacherEmailInputLate.value = '';
-
-
-            // Reset UI elements
-            document.getElementById("minutes").textContent = "0";
-            document.getElementById("seconds").textContent = "00";
-            document.getElementById("signOutButton").style.display = "none";
-            document.getElementById("signInButton").style.display = "none";
-            courseDropdown.removeAttribute("disabled"); // Re-enable for next sign-in
-            mainForm.style.backgroundColor = "#4ade80"; // Green
-            studentOutHeader.textContent = "PASS IS AVAILABLE";
-            studentOutHeader.style.backgroundColor = "#4ade80"; // Green
-            studentOutName.textContent = '';
-            nameDropdown.value = 'Select Your Name';
-            nameDropdown.removeAttribute("disabled");
-            nameQueueDropdown.setAttribute("disabled", "disabled");
-            lateNameDropdown.setAttribute("disabled", "disabled");
-            updateQueueDisplay();
-            showLateSignInView();
-            updateToggleButtonVisibility();
-        }
-
-        // This function will be called once the Google user is signed in
-        function initializeAppDataAndUI() {
-            const alertDiv = document.getElementById("alertDiv");
-            if (alertDiv) {
-                alertDiv.classList.add("hidden");
-            }
-
-            // Set initial state for studentOutHeader
-            studentOutHeader.textContent = "PASS IS AVAILABLE";
-            studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
-
-            // Set up initial dropdown states
-            setUpDropdown('courseDropdown', [], "Loading...");
-            courseDropdown.setAttribute("disabled", "disabled");
-
-            setUpDropdown2('nameDropdown', [], "Select Your Name");
-            nameDropdown.setAttribute("disabled", "disabled");
-
-            setUpDropdown2('nameQueue', [], "Select Your Name");
-            nameQueueDropdown.setAttribute("disabled", "disabled");
-
-            setUpDropdown2('lateNameDropdown', [], "Select Your Name");
-            lateNameDropdown.setAttribute("disabled", "disabled");
-
-            document.getElementById("signOutButton").style.display = "none";
-
-            // Fetch data and set up views
-            fetchClassData();
-            fetchAllNames();
-            updateQueueDisplay(); // Initial display of queue (likely empty)
-            showLateSignInView(); // Set initial right-side view to Late Sign In
-            updateToggleButtonVisibility(); // Initial button visibility update
-        }
-
-        // Ensure the app content is hidden initially until sign-in
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('appContent').classList.add('hidden');
-            document.getElementById('googleSignInContainer').classList.remove('hidden');
-        });
-
-        // Timer update function
         function updateTimer() {
             seconds++;
-            const TARDY_TIME = 5; // Time in minutes after which the pass turns red
+            const TARDY_TIME = 5
             document.getElementById("timeOut").value = (minutes * 60) + seconds;
             if (seconds >= 60) {
                 minutes++;
@@ -372,35 +312,34 @@
             if (minutes >= TARDY_TIME) {
                 mainForm.style.backgroundColor = "#ef4444"; // Red
                 studentOutHeader.style.backgroundColor = "#ef4444";
+
             }
             document.getElementById("minutes").textContent = minutes;
             document.getElementById("seconds").textContent = seconds < 10 ? "0" + seconds : seconds;
         }
 
-        // Event listener for Bathroom Sign Out button
         document.getElementById("signOutButton").addEventListener("click", function() {
-            if (!timerInterval) { // Prevent starting timer if already running
-                timerInterval = setInterval(updateTimer, 1000); // Start timer
-                this.style.display = "none"; // Hide Sign Out button
-                document.getElementById("signInButton").style.display = "block"; // Show Sign In button
-                nameDropdown.setAttribute("disabled", "disabled"); // Disable name dropdown
-                courseDropdown.setAttribute("disabled", "disabled"); // Disable course dropdown
-                mainForm.style.backgroundColor = "#f6b26b"; // Orange for "signed out" state
+            if (!timerInterval) {
+                timerInterval = setInterval(updateTimer, 1000);
+                this.style.display = "none";
+                document.getElementById("signInButton").style.display = "block";
+                nameDropdown.setAttribute("disabled", "disabled");
+                courseDropdown.setAttribute("disabled", "disabled");
+                mainForm.style.backgroundColor = "#f6b26b"; // Orange
 
                 const fullString = nameDropdown.value;
-                // Extract name without the number in parentheses
                 const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
-                document.getElementById("nameHolder").value = nameOnly; // Store name for form submission
+                document.getElementById("nameHolder").value = nameOnly; // Use nameHolder for sign out
 
-                studentOutHeader.textContent = `${nameOnly} IS OUT`; // Update header text
+                studentOutHeader.textContent = `${nameOnly} IS OUT`; // Set the full text
                 studentOutHeader.style.backgroundColor = "#f6b26b"; // Orange for "IS OUT"
 
-                currentlySignedOutStudent = fullString; // Keep track of who is signed out
-                updateQueueDisplay(); // Refresh queue display
+                currentlySignedOutStudent = fullString;
+                // Update message and show queue automatically
+                updateQueueDisplay();
                 showQueueView(); // Automatically switch to queue view
                 updateToggleButtonVisibility(); // Update button visibility
 
-                // Set up queue dropdown and enable it
                 setUpDropdown2('nameQueue', uniqueNames);
                 nameQueueDropdown.value = 'Select Your Name';
                 nameQueueDropdown.removeAttribute('disabled');
@@ -408,9 +347,9 @@
             }
         });
 
-        // Event listener for Bathroom Sign In form submission
+        // Event listener for Bathroom Sign In
         mainForm.addEventListener("submit", function() {
-            clearInterval(timerInterval); // Stop the timer
+            clearInterval(timerInterval);
             timerInterval = null;
             seconds = 0;
             minutes = 0;
@@ -418,43 +357,44 @@
             document.getElementById("seconds").textContent = "00";
             document.getElementById("signInButton").style.display = "none";
             document.getElementById("signOutButton").style.display = "none";
-            courseDropdown.removeAttribute("disabled"); // Re-enable course dropdown
-            mainForm.style.backgroundColor = "#4ade80"; // Green for "available" state
+            courseDropdown.removeAttribute("disabled");
+            mainForm.style.backgroundColor = "#4ade80"; // Green
 
             // Show success alert
             document.getElementById("alertDiv").classList.remove("hidden");
             document.getElementById("alertMessage").textContent = `${currentlySignedOutStudent} has been signed in successfully!`;
-            setTimeout(() => document.getElementById("alertDiv").classList.add("hidden"), 5000);
+            setTimeout(() => document.getElementById("alertDiv").classList.add('hidden'), 5000);
 
-            currentlySignedOutStudent = null; // Clear currently signed out student
-
+            currentlySignedOutStudent = null;
+            
             if (queue.length > 0) {
-                const nextPerson = queue.shift(); // Get the next person from the queue
-                nameDropdown.value = nextPerson; // Set their name in the main dropdown
-                nameDropdown.setAttribute("disabled", "disabled"); // Disable main name dropdown
+                const nextPerson = queue.shift();
+                nameDropdown.value = nextPerson;
+                nameDropdown.setAttribute("disabled", "disabled");
                 updateMessage(`${nextPerson} can now sign out.`);
-                updateQueueDisplay(); // Refresh queue display
-                nameSelected(); // Trigger name selection logic
+                updateQueueDisplay();
+                nameSelected();
 
                 studentOutName.textContent = nextPerson;
-                studentOutHeader.textContent = `${nextPerson} IS NEXT`; // Update header
+                studentOutHeader.textContent = `${nextPerson} IS NEXT`; // Set the full text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
 
                 showQueueView(); // Keep queue view active
             } else {
-                nameDropdown.value = 'Select Your Name'; // Reset main name dropdown
-                nameDropdown.removeAttribute("disabled"); // Enable main name dropdown
+                nameDropdown.value = 'Select Your Name';
+                nameDropdown.removeAttribute("disabled");
                 document.getElementById("signOutButton").style.display = "none";
                 updateMessage('The queue is empty. No one is currently signed out.');
-                studentOutHeader.textContent = "PASS IS AVAILABLE"; // Update header
+                // Update header to "PASS IS AVAILABLE"
+                studentOutHeader.textContent = "PASS IS AVAILABLE";
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
                 studentOutName.textContent = '';
-                nameQueueDropdown.setAttribute("disabled", "disabled"); // Disable queue dropdown
+                nameQueueDropdown.setAttribute("disabled", "disabled"); //Disable the queue dropdown
 
-                showLateSignInView(); // Switch back to late sign-in view if queue is empty
+                showLateSignInView(); // Switch back to late sign-in view
             }
-            toggleAddToQueueButton(); // Update add to queue button visibility
-            updateToggleButtonVisibility(); // Update toggle button visibility
+            toggleAddToQueueButton();
+            updateToggleButtonVisibility(); // Update button visibility
         });
 
         // Event listener for Late Sign In form submission
@@ -464,7 +404,7 @@
             // Prevent submission if "Select Your Name" is still chosen
             if (selectedLateName === 'Select Your Name' || selectedLateName.trim() === '') {
                 event.preventDefault(); // Stop the form from submitting
-                // Display an error message to the user
+                // Display a more prominent message to the user
                 document.getElementById("alertDiv").classList.remove("hidden");
                 document.getElementById("alertDiv").classList.add("bg-red-100", "border-red-400", "text-red-700");
                 document.getElementById("alertDiv").classList.remove("bg-green-100", "border-green-400", "text-green-700");
@@ -477,9 +417,11 @@
                 }, 5000);
             } else {
                 const nameOnly2 = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1) : selectedLateName;
-                document.getElementById("nameHolder2").value = nameOnly2; // Store name for form submission
+                document.getElementById("nameHolder2").value = nameOnly2; // Use nameHolder for sign out
 
                 document.getElementById("alertDiv").classList.remove("hidden");
+                document.getElementById("alertDiv").classList.remove("bg-red-100", "border-red-400", "text-red-700"); // Ensure it's green for success
+                document.getElementById("alertDiv").classList.add("bg-green-100", "border-green-400", "text-green-700");
                 document.getElementById("alertMessage").textContent = `${selectedLateName} has been signed in late successfully!`;
                 setTimeout(() => document.getElementById("alertDiv").classList.add("hidden"), 5000);
 
@@ -491,62 +433,55 @@
             }
         });
 
-        // Helper function to extract number from name (e.g., "John Doe (123)")
+
         function getNumberFromName(name) {
             const match = name.match(/\((\d+)\)$/);
             return match ? parseInt(match[1]) : Infinity;
         }
 
-        // Function to update the message area in the queue section
         function updateMessage(message) {
             document.getElementById('message-text').textContent = message;
-            document.getElementById('message-text').classList.remove('hidden'); // Ensure message is visible
         }
 
-        // Function to update the display of the queue list
         function updateQueueDisplay() {
             const queueList = document.getElementById('queue-list');
             const removeFromQueueButton = document.getElementById('remove-from-queue');
 
-            queueList.innerHTML = ''; // Clear existing list items
-            selectedName = null; // Reset selected name
-            removeFromQueueButton.classList.add('hidden'); // Hide remove button
+            queueList.innerHTML = '';
+            selectedName = null;
+            removeFromQueueButton.classList.add('hidden');
 
             if (queue.length === 0) {
-                queueList.style.display = 'none'; // Hide the ordered list
+                queueList.style.display = 'none';
                 if (!currentlySignedOutStudent) {
                    updateMessage('The queue is currently empty. Add your name!');
                 } else {
                    updateMessage('No one else is in queue. Select your name below to add.');
                 }
             } else {
-                queueList.style.display = 'block'; // Show the ordered list
+                queueList.style.display = 'block';
                 updateMessage('Please select a name from the list to remove, or add another.');
 
-                // Sort the queue by the number in parentheses (if present)
                 queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
 
-                // Populate the queue list
                 queue.forEach((person) => {
                     const listItem = document.createElement('li');
                     listItem.textContent = `${person}`;
                     listItem.addEventListener('click', () => {
-                        // Remove selection from other items
                         Array.from(queueList.children).forEach(item => {
                             item.classList.remove('bg-yellow-200-selected');
                         });
-                        selectedName = person; // Set selected name
-                        listItem.classList.add('bg-yellow-200-selected'); // Highlight selected item
-                        removeFromQueueButton.classList.remove('hidden'); // Show remove button
+                        selectedName = person;
+                        listItem.classList.add('bg-yellow-200-selected');
+                        removeFromQueueButton.classList.remove('hidden');
                     });
                     queueList.appendChild(listItem);
                 });
             }
-            toggleAddToQueueButton(); // Update add to queue button visibility
-            updateToggleButtonVisibility(); // Update toggle button visibility
+            toggleAddToQueueButton();
+            updateToggleButtonVisibility(); // Update button visibility
         }
 
-        // Function to control the visibility of the "Add to Queue" button
         function toggleAddToQueueButton() {
             const addToQueueButton = document.getElementById('add-to-queue');
             if (nameQueueDropdown.value === 'Select Your Name' || nameQueueDropdown.value.trim() === '') {
@@ -556,10 +491,8 @@
             }
         }
 
-        // Event listener for queue name dropdown change
         nameQueueDropdown.addEventListener('change', toggleAddToQueueButton);
 
-        // Event listener for "Add to Queue" button
         document.getElementById('add-to-queue').addEventListener('click', () => {
             const name = nameQueueDropdown.value.trim();
 
@@ -570,20 +503,19 @@
             } else if (currentlySignedOutStudent && name === currentlySignedOutStudent) {
                 updateMessage(`${name} is currently signed out and cannot be added to the queue.`);
             } else {
-                queue.push(name); // Add name to queue
+                queue.push(name);
                 updateMessage(`${name} has been added to the queue.`);
-                updateQueueDisplay(); // Refresh queue display
-                nameQueueDropdown.value = 'Select Your Name'; // Reset queue name dropdown
-                toggleAddToQueueButton(); // Update add to queue button visibility
+                updateQueueDisplay();
+                nameQueueDropdown.value = 'Select Your Name';
+                toggleAddToQueueButton();
                 // Ensure queue is visible if something is added and no one is out
                 if (!currentlySignedOutStudent) {
                     showQueueView();
                 }
             }
-            updateToggleButtonVisibility(); // Update toggle button visibility
+            updateToggleButtonVisibility(); // Update button visibility
         });
 
-        // Event listener for "Remove Selected from Queue" button
         document.getElementById('remove-from-queue').addEventListener('click', () => {
             if (queue.length === 0) {
                 updateMessage('The queue is already empty.');
@@ -592,9 +524,9 @@
             } else {
                 const index = queue.indexOf(selectedName);
                 if (index > -1) {
-                    queue.splice(index, 1); // Remove selected name from queue
+                    queue.splice(index, 1);
                     updateMessage(`Removed ${selectedName} from the queue.`);
-                    updateQueueDisplay(); // Refresh queue display
+                    updateQueueDisplay();
                 } else {
                     updateMessage('Error: Name not found in queue.');
                 }
@@ -602,24 +534,94 @@
                     showLateSignInView(); // Go back to late sign-in if queue is empty and no one is out
                 }
             }
-            updateToggleButtonVisibility(); // Update toggle button visibility
+            updateToggleButtonVisibility(); // Update button visibility
         });
 
-        // URL for Google Apps Script deployment
-        const url = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec";
+        // Function to initialize the bathroom pass app content
+        function initializeBathroomPassApp() {
+            const alertDiv = document.getElementById("alertDiv");
+            if (alertDiv) {
+                alertDiv.classList.add("hidden");
+            }
+
+            // Set initial state for studentOutHeader
+            studentOutHeader.textContent = "PASS IS AVAILABLE";
+            studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
+
+            updateQueueDisplay();
+            toggleAddToQueueButton();
+
+            setUpDropdown('courseDropdown', [], "Loading...");
+            courseDropdown.setAttribute("disabled", "disabled");
+
+            setUpDropdown2('nameDropdown', [], "Select Your Name");
+            nameDropdown.setAttribute("disabled", "disabled");
+
+            setUpDropdown2('nameQueue', [], "Select Your Name");
+            nameQueueDropdown.setAttribute("disabled", "disabled");
+
+            setUpDropdown2('lateNameDropdown', [], "Select Your Name"); // Will be populated with uniqueNames later
+            lateNameDropdown.setAttribute("disabled", "disabled"); // Ensure it's disabled initially
+
+            document.getElementById("signOutButton").style.display = "none";
+
+            fetchClassData();
+            fetchAllNames(); // Fetch all names on load
+            showLateSignInView(); // Set initial right-side view to Late Sign In
+            updateToggleButtonVisibility(); // Initial button visibility update
+        }
+
+        // Function to reset the bathroom pass app state on sign-out
+        function resetBathroomPassAppState() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            seconds = 0;
+            minutes = 0;
+            queue = [];
+            selectedName = null;
+            currentlySignedOutStudent = null;
+            allNamesData = [];
+
+            // Reset UI elements
+            document.getElementById("minutes").textContent = "0";
+            document.getElementById("seconds").textContent = "00";
+            document.getElementById("signInButton").style.display = "none";
+            document.getElementById("signOutButton").style.display = "none";
+            courseDropdown.removeAttribute("disabled"); // Re-enable for next sign-in
+            mainForm.style.backgroundColor = "#4ade80"; // Green
+            studentOutHeader.textContent = "PASS IS AVAILABLE";
+            studentOutHeader.style.backgroundColor = "#4ade80";
+            studentOutName.textContent = '';
+            
+            // Clear dropdowns
+            setUpDropdown('courseDropdown', [], "Select Class");
+            setUpDropdown2('nameDropdown', [], "Select Your Name");
+            setUpDropdown2('nameQueue', [], "Select Your Name");
+            setUpDropdown2('lateNameDropdown', [], "Select Your Name");
+
+            // Hide queue and show late sign-in by default
+            showLateSignInView();
+            updateQueueDisplay(); // Clear queue display
+        }
+
+
+        const url = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"
         document.getElementById('form').action = url;
         document.getElementById('lateSignInForm').action = url;
+        let classes = [];
+        let uniqueCourses = [];
+        let uniqueNames = []; // For Bathroom Pass and Late Sign In Name dropdowns
+        let allNames = []; // Store all names data {name: "...", class: "..."}
 
-        // Function to fetch class data from Google Apps Script
+
         function fetchClassData() {
-            // Removed if (!signedInUserEmail) check
-            fetch(`${url}?header=Class`) // Removed userEmail parameter
+            fetch(`${url}?header=Class`)
                 .then((response) => response.json())
                 .then(({ data }) => {
-                    classes = data; // Store the original classes array
-                    populateDatalists("classes", data); // Populate class dropdown
-                    courseDropdown.removeAttribute("disabled"); // Enable class dropdown
-                    courseDropdown.value = ""; // Set default value
+                    classes = data; // Keep the original classes array
+                    populateDatalists("classes", data);
+                    courseDropdown.removeAttribute("disabled");
+                    courseDropdown.value = "";
                 })
                 .catch((error) => {
                     console.error('Error fetching class data:', error);
@@ -627,20 +629,20 @@
                 });
         }
 
-       // Function to fetch ALL names and classes (no longer filtered by user email)
+       // Fetch ALL names and classes to filter locally
         function fetchAllNames() {
-            // Removed if (!signedInUserEmail) check
-            fetch(`${url}?action=getAllData`) // Removed userEmail parameter
+            fetch(`${url}?action=getAllData`) // Assumes your Apps Script can handle this
                 .then(response => response.json())
                 .then(data => {
                     // Ensure data is an array before processing
                     if (Array.isArray(data)) {
-                        allNames = data; // e.g., [{Name: "Alice", Class: "Math"}, {Name: "Bob", Class: "Science"}]
+                        allNames = data; // e.g., [{Class: "Math", Name: "Alice"}, {Class: "Sci", Name: "Bob"}]
                         const allUniqueNames = new Set();
                         allUniqueNames.add("Select Your Name");
                         data.forEach(item => {
-                            // Assuming 'item' is an object with a 'Name' property
-                            if (item && item.Name) {
+                            if (typeof item === 'string') {
+                                allUniqueNames.add(item);
+                            } else if (item && item.Name) {
                                 allUniqueNames.add(item.Name);
                             }
                         });
@@ -656,7 +658,7 @@
                 .catch(error => console.error('Error fetching all names:', error));
         }
 
-        // Populates the class dropdown
+
         const populateDatalists = (id, arr) => {
             const uniqueItems = new Set();
             for (const item of arr) {
@@ -666,32 +668,29 @@
             setUpDropdown('courseDropdown', uniqueCourses);
         };
 
-        // Populates Bathroom Pass and Queue Names dropdowns based on selected course
+        // Populates Bathroom Pass and Queue Names
         const populateDatalists2 = (arr, courseName) => {
             const uniqueItems = new Set();
             uniqueItems.add("Select Your Name");
-            // Now filters based on the `allNames` array which contains all data fetched
-            for (let i = 0; i < allNames.length; i++) {
-                if (allNames[i] && allNames[i].Class === courseName && allNames[i].Name) {
-                    uniqueItems.add(allNames[i].Name);
+            for (let i = 0; i < classes.length; i++) {
+                if (classes[i] === courseName && arr[i]) {
+                    uniqueItems.add(arr[i]);
                 }
             }
             uniqueNames = Array.from(uniqueItems); // Specific to Bathroom Pass
             setUpDropdown2('nameDropdown', uniqueNames);
             setUpDropdown2('nameQueue', uniqueNames);
-            // The lateNameDropdown is populated by fetchAllNames(), so we don't reset it here
-            // setUpDropdown2('lateNameDropdown', uniqueNames); // Also update late sign-in name dropdown
+            setUpDropdown2('lateNameDropdown', uniqueNames); // Also update late sign-in name dropdown
         };
 
 
-        // Helper function to remove all options from a select element
         function removeOptions(selectElement) {
             while (selectElement.options.length > 0) {
                 selectElement.remove(0);
             }
         }
 
-       // Event handler for when the course dropdown changes
+       // For Bathroom Pass Class Change
         function courseChanged(){
             if (courseDropdown.value !== "") {
                 nameDropdown.setAttribute("disabled", "disabled");
@@ -700,7 +699,7 @@
                 setUpDropdown2('nameQueue', [], "Loading...");
                 lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
                 setUpDropdown2('lateNameDropdown', [], "Loading..."); // Still show loading while names update
-                updateNameDropdown(); // Fetch and update names based on the new course
+                updateNameDropdown();
             } else {
                 setUpDropdown2('nameDropdown', [], "Select Your Name");
                 nameDropdown.setAttribute("disabled", "disabled");
@@ -713,18 +712,19 @@
             updateToggleButtonVisibility(); // Update button visibility
         }
 
-       // Fetches and updates Bathroom Pass names based on selected course
+       // Fetches & updates Bathroom Pass names
         function updateNameDropdown() {
             document.getElementById("signOutButton").style.display = "none";
             document.getElementById("signInButton").style.display = "none";
 
-            // Removed if (!signedInUserEmail) check
-            fetch(`${url}?header=Name`) // Removed userEmail parameter
+            fetch(`${url}?header=Name`)
                 .then((response) => response.json())
                 .then(({ data }) => {
-                    populateDatalists2(data, courseDropdown.value);
+                    // Populate all relevant dropdowns with the names filtered by the selected class
+                    populateDatalists2(data, courseDropdown.value); 
                     nameDropdown.removeAttribute("disabled");
-                    lateNameDropdown.removeAttribute("disabled");
+                    //nameQueueDropdown.removeAttribute("disabled"); // This line might be problematic if it's not always enabled
+                    lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
                     nameDropdown.value = 'Select Your Name';
                     nameQueueDropdown.value = 'Select Your Name';
                     lateNameDropdown.value = 'Select Your Name'; // Reset late name dropdown
@@ -738,50 +738,44 @@
                 });
         }
 
-        // Event handler for when a name is selected in the main bathroom pass dropdown
+
         function nameSelected(){
-            // Show sign out button only if a valid name is selected and no one is currently signed out
             if(nameDropdown.value === "Select Your Name" || timerInterval !== null || nameDropdown.value === currentlySignedOutStudent){
                 document.getElementById("signOutButton").style.display = "none";
             } else {
                 document.getElementById("signOutButton").style.display = "block";
             }
-            // Show sign in button only if someone is currently signed out
             document.getElementById("signInButton").style.display = timerInterval !== null ? "block" : "none";
             updateToggleButtonVisibility(); // Update button visibility
         }
 
-        // Event handler for when a name is selected in the late sign-in dropdown
         function lateNameSelected(){
-            // Show the "Sign In Late" button
             document.getElementById("lateSignInSubmitBtn").classList.remove("hidden");
-            // Set the class holder value for the late sign-in form submission
-            document.getElementById("classHolder").value = courseDropdown.value;
+            document.getElementById("classHolder").textContent = courseDropdown.value;
+          
         }
 
-        // Generic function to set up a dropdown with options
         function setUpDropdown(dropdownId, arr, defaultText = "Select Class") {
             let selectElement = document.getElementById(dropdownId);
-            removeOptions(selectElement); // Clear existing options
-            selectElement.add(new Option(defaultText, "")); // Add default option
+            removeOptions(selectElement);
+            selectElement.add(new Option(defaultText, ""));
             arr.forEach(str => {
-                selectElement.add(new Option(str, str)); // Add other options
+                selectElement.add(new Option(str, str));
             });
-            // Disable dropdown if loading or no options are available
             selectElement.disabled = (arr.length === 0 && defaultText.includes("Loading..."));
         }
 
-        // Generic function to set up a dropdown with options, specifically for names
         function setUpDropdown2(dropdownId, arr, defaultText = "Select Your Name") {
             let selectElement = document.getElementById(dropdownId);
-            removeOptions(selectElement); // Clear existing options
-            selectElement.add(new Option(defaultText, "Select Your Name")); // Add default option
+            removeOptions(selectElement);
+            selectElement.add(new Option(defaultText, "Select Your Name"));
             arr.forEach(str => {
-                if (str !== "Select Your Name") { // Avoid adding "Select Your Name" twice
-                    selectElement.add(new Option(str, str)); // Add other options
+                if (str !== "Select Your Name") {
+                    selectElement.add(new Option(str, str));
                 }
             });
-            // The disabling logic is handled by specific functions like courseChanged or initializeAppDataAndUI
+            // Only disable if loading or if it's explicitly set
+            //selectElement.disabled = (arr.length === 0 && defaultText.includes("Loading..."));
         }
 
         // Functions to toggle the right-side views and button styles
@@ -791,11 +785,11 @@
 
             // Set Queue button to active style (purple)
             queueViewBtn.classList.add('bg-purple-400', 'text-white');
-            queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
+            queueViewBtn.classList.remove('bg-gray-300', 'text-gray-800'); 
 
             // Set Late Sign In button to its inactive style (yellow)
             lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-            lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
+            lateSignInViewBtn.classList.remove('bg-gray-300', 'text-white'); 
         }
 
         function showLateSignInView() {
@@ -804,22 +798,29 @@
 
             // Set Late Sign In button to active style (yellow)
             lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-            lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
+            lateSignInViewBtn.classList.remove('bg-gray-300', 'text-white'); 
 
             // Set Queue button to its inactive style (purple)
             queueViewBtn.classList.add('bg-purple-400', 'text-white');
-            queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
+            queueViewBtn.classList.remove('bg-gray-300', 'text-gray-800'); 
         }
 
-        // Function to control the visibility of the toggle buttons (now primarily styling)
+        // Function to control the visibility of the toggle buttons
         function updateToggleButtonVisibility() {
-            // This function primarily handles the active/inactive styling of the toggle buttons.
-            // Their visibility is controlled by the initial HTML structure and the `appContent` div.
+            // This function is now simplified as buttons are always visible in HTML.
+            // Their visibility is controlled by the initial HTML structure.
+            // The active/inactive state is handled by showQueueView/showLateSignInView.
         }
 
         // Event listeners for the new toggle buttons
         queueViewBtn.addEventListener('click', showQueueView);
         lateSignInViewBtn.addEventListener('click', showLateSignInView);
+
+        // Add event listener for the new Google Sign Out button
+        document.getElementById('googleSignOutButton').addEventListener('click', signOut);
+
+        // Initialize Google Sign-In when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initGoogleSignIn);
     </script>
 </body>
 </html>
