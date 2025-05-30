@@ -308,7 +308,7 @@
         let queue = [];
         let selectedName = null;
         let currentlySignedOutStudent = null;
-        let allNamesData = []; // Store all names data once fetched
+        // let allNamesData = []; // Removed, as allNames will hold the structured data
 
         function updateTimer() {
             seconds++;
@@ -349,7 +349,7 @@
                 showQueueView(); // Automatically switch to queue view
                 updateToggleButtonVisibility(); // Update button visibility
 
-                setUpDropdown2('nameQueue', uniqueNames);
+                setUpDropdown2('nameQueue', uniqueNamesForCourse); // Use uniqueNamesForCourse for the queue dropdown
                 nameQueueDropdown.value = 'Select Your Name';
                 nameQueueDropdown.removeAttribute('disabled');
                 toggleAddToQueueButton();
@@ -599,7 +599,8 @@
             queue = [];
             selectedName = null;
             currentlySignedOutStudent = null;
-            allNamesData = [];
+            allNames = []; // Clear allNames on sign out
+            uniqueNamesForCourse = []; // Clear unique names for current course
 
             // Reset UI elements
             document.getElementById("minutes").textContent = "0";
@@ -627,21 +628,32 @@
         const url = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"
         document.getElementById('form').action = url;
         document.getElementById('lateSignInForm').action = url;
-        let classes = [];
+        let classes = []; // This will now hold unique class names
         let uniqueCourses = [];
-        let uniqueNames = []; // For Bathroom Pass and Late Sign In Name dropdowns
-        let allNames = []; // Store all names data {name: "...", class: "..."}
+        let allNames = []; // Store all names data as objects: [{Class: "...", Name: "..."}, ...]
+        let uniqueNamesForCourse = []; // Names specific to the currently selected course
 
 
         function fetchClassData() {
-            // Include userEmail in the fetch request
-            fetch(`${url}?header=Class&userEmail=${encodeURIComponent(userEmail)}`)
+            // Fetch all data to get unique classes from the filtered data
+            fetch(`${url}?action=getAllData&userEmail=${encodeURIComponent(userEmail)}`)
                 .then((response) => response.json())
-                .then(({ data }) => {
-                    classes = data; // Keep the original classes array
-                    populateDatalists("classes", data);
-                    courseDropdown.removeAttribute("disabled");
-                    courseDropdown.value = "";
+                .then((data) => {
+                    if (Array.isArray(data)) {
+                        const uniqueClassNames = new Set();
+                        data.forEach(item => {
+                            if (item && item.Class) {
+                                uniqueClassNames.add(item.Class);
+                            }
+                        });
+                        uniqueCourses = Array.from(uniqueClassNames);
+                        setUpDropdown('courseDropdown', uniqueCourses);
+                        courseDropdown.removeAttribute("disabled");
+                        courseDropdown.value = ""; // Reset to default "Select Class"
+                    } else {
+                        console.error('Error: fetchClassData received non-array data:', data);
+                        setUpDropdown('courseDropdown', [], "Error loading classes");
+                    }
                 })
                 .catch((error) => {
                     console.error('Error fetching class data:', error);
@@ -651,24 +663,22 @@
 
        // Fetch ALL names and classes to filter locally
         function fetchAllNames() {
-            // Include userEmail in the fetch request
+            // Fetch all data (Class and Name) for the user
             fetch(`${url}?action=getAllData&userEmail=${encodeURIComponent(userEmail)}`) 
                 .then(response => response.json())
                 .then(data => {
-                    // Ensure data is an array before processing
                     if (Array.isArray(data)) {
-                        allNames = data; // e.g., [{Class: "Math", Name: "Alice"}, {Class: "Sci", Name: "Bob"}]
-                        const allUniqueNames = new Set();
-                        allUniqueNames.add("Select Your Name");
+                        allNames = data; // Store the structured data
+                        const allUniqueNamesSet = new Set();
+                        allUniqueNamesSet.add("Select Your Name");
                         data.forEach(item => {
-                            if (typeof item === 'string') {
-                                allUniqueNames.add(item);
-                            } else if (item && item.Name) {
-                                allUniqueNames.add(item.Name);
+                            if (item && item.Name) {
+                                allUniqueNamesSet.add(item.Name);
                             }
                         });
-                        uniqueNames = Array.from(allUniqueNames); // Update uniqueNames for all relevant dropdowns
-                        setUpDropdown2('lateNameDropdown', uniqueNames); // Populate late name dropdown
+                        // Populate lateNameDropdown with ALL unique names
+                        setUpDropdown2('lateNameDropdown', Array.from(allUniqueNamesSet));
+                        lateNameDropdown.removeAttribute("disabled"); // Enable it here
                     } else {
                         console.error('Error: fetchAllNames received non-array data:', data);
                         allNames = []; // Reset to empty array to prevent further errors
@@ -681,27 +691,30 @@
 
 
         const populateDatalists = (id, arr) => {
-            const uniqueItems = new Set();
-            for (const item of arr) {
-                uniqueItems.add(item);
-            }
-            uniqueCourses = Array.from(uniqueItems);
-            setUpDropdown('courseDropdown', uniqueCourses);
+            // This function is now primarily for courseDropdown
+            const selectElement = document.getElementById(id);
+            removeOptions(selectElement);
+            selectElement.add(new Option("Select Class", "")); // Default option
+            arr.forEach(str => {
+                selectElement.add(new Option(str, str));
+            });
+            selectElement.disabled = (arr.length === 0 && defaultText.includes("Loading..."));
         };
 
-        // Populates Bathroom Pass and Queue Names
-        const populateDatalists2 = (arr, courseName) => {
-            const uniqueItems = new Set();
-            uniqueItems.add("Select Your Name");
-            for (let i = 0; i < classes.length; i++) {
-                if (classes[i] === courseName && arr[i]) {
-                    uniqueItems.add(arr[i]);
+        // This function now filters from the 'allNames' array
+        const populateNameDropdownsForCourse = (selectedCourseName) => {
+            const namesForCurrentCourse = new Set();
+            namesForCurrentCourse.add("Select Your Name");
+
+            allNames.forEach(item => {
+                if (item.Class === selectedCourseName && item.Name) {
+                    namesForCurrentCourse.add(item.Name);
                 }
-            }
-            uniqueNames = Array.from(uniqueItems); // Specific to Bathroom Pass
-            setUpDropdown2('nameDropdown', uniqueNames);
-            setUpDropdown2('nameQueue', uniqueNames);
-            setUpDropdown2('lateNameDropdown', uniqueNames); // Also update late sign-in name dropdown
+            });
+            uniqueNamesForCourse = Array.from(namesForCurrentCourse);
+
+            setUpDropdown2('nameDropdown', uniqueNamesForCourse);
+            setUpDropdown2('nameQueue', uniqueNamesForCourse);
         };
 
 
@@ -718,46 +731,59 @@
                 setUpDropdown2('nameDropdown', [], "Loading...");
                 nameQueueDropdown.setAttribute("disabled", "disabled");
                 setUpDropdown2('nameQueue', [], "Loading...");
-                lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
-                setUpDropdown2('lateNameDropdown', [], "Loading..."); // Still show loading while names update
-                updateNameDropdown();
+                // lateNameDropdown should always show all names, so re-populate it with all unique names
+                const allUniqueNamesSet = new Set();
+                allUniqueNamesSet.add("Select Your Name");
+                allNames.forEach(item => {
+                    if (item && item.Name) {
+                        allUniqueNamesSet.add(item.Name);
+                    }
+                });
+                setUpDropdown2('lateNameDropdown', Array.from(allUniqueNamesSet));
+                lateNameDropdown.removeAttribute("disabled"); // Ensure it's enabled
+                updateNameDropdown(); // Call to update name dropdowns based on selected course
             } else {
                 setUpDropdown2('nameDropdown', [], "Select Your Name");
                 nameDropdown.setAttribute("disabled", "disabled");
                 setUpDropdown2('nameQueue', [], "Select Your Name");
                 nameQueueDropdown.setAttribute("disabled", "disabled");
-                setUpDropdown2('lateNameDropdown', [], "Select Your Name"); // Reset late name dropdown
-                lateNameDropdown.setAttribute("disabled", "disabled"); // Ensure it's disabled
+                // When no course is selected, lateNameDropdown should still show ALL names
+                const allUniqueNamesSet = new Set();
+                allUniqueNamesSet.add("Select Your Name");
+                allNames.forEach(item => {
+                    if (item && item.Name) {
+                        allUniqueNamesSet.add(item.Name);
+                    }
+                });
+                setUpDropdown2('lateNameDropdown', Array.from(allUniqueNamesSet));
+                lateNameDropdown.removeAttribute("disabled"); // Ensure it's enabled
                 document.getElementById("signOutButton").style.display = "none";
             }
             updateToggleButtonVisibility(); // Update button visibility
         }
 
-       // Fetches & updates Bathroom Pass names
+       // Updates Bathroom Pass names based on selected class
         function updateNameDropdown() {
             document.getElementById("signOutButton").style.display = "none";
             document.getElementById("signInButton").style.display = "none";
 
-            // Include userEmail in the fetch request
-            fetch(`${url}?header=Name&userEmail=${encodeURIComponent(userEmail)}`)
-                .then((response) => response.json())
-                .then(({ data }) => {
-                    // Populate all relevant dropdowns with the names filtered by the selected class
-                    populateDatalists2(data, courseDropdown.value); 
-                    nameDropdown.removeAttribute("disabled");
-                    //nameQueueDropdown.removeAttribute("disabled"); // This line might be problematic if it's not always enabled
-                    lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
-                    nameDropdown.value = 'Select Your Name';
-                    nameQueueDropdown.value = 'Select Your Name';
-                    lateNameDropdown.value = 'Select Your Name'; // Reset late name dropdown
-                    toggleAddToQueueButton();
-                })
-                .catch((error) => {
-                    console.error('Error fetching name data:', error);
-                    setUpDropdown2('nameDropdown', [], "Error loading names");
-                    setUpDropdown2('nameQueue', [], "Error loading names");
-                    setUpDropdown2('lateNameDropdown', [], "Error loading names");
-                });
+            const selectedCourse = courseDropdown.value;
+            if (selectedCourse) {
+                populateNameDropdownsForCourse(selectedCourse); // Use the new function to filter from allNames
+                nameDropdown.removeAttribute("disabled");
+                nameQueueDropdown.removeAttribute("disabled");
+            } else {
+                // If no course is selected, disable and reset name dropdowns
+                setUpDropdown2('nameDropdown', [], "Select Your Name");
+                nameDropdown.setAttribute("disabled", "disabled");
+                setUpDropdown2('nameQueue', [], "Select Your Name");
+                nameQueueDropdown.setAttribute("disabled", "disabled");
+            }
+            
+            nameDropdown.value = 'Select Your Name';
+            nameQueueDropdown.value = 'Select Your Name';
+            lateNameDropdown.value = 'Select Your Name'; // Reset late name dropdown
+            toggleAddToQueueButton();
         }
 
 
@@ -784,7 +810,7 @@
             arr.forEach(str => {
                 selectElement.add(new Option(str, str));
             });
-            selectElement.disabled = (arr.length === 0 && defaultText.includes("Loading..."));
+            // Removed the disabled logic here as it's handled in initializeBathroomPassApp and courseChanged
         }
 
         function setUpDropdown2(dropdownId, arr, defaultText = "Select Your Name") {
@@ -796,8 +822,7 @@
                     selectElement.add(new Option(str, str));
                 }
             });
-            // Only disable if loading or if it's explicitly set
-            //selectElement.disabled = (arr.length === 0 && defaultText.includes("Loading..."));
+            // Removed the disabled logic here as it's handled in initializeBathroomPassApp and courseChanged
         }
 
         // Functions to toggle the right-side views and button styles
