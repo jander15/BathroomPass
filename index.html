@@ -108,15 +108,6 @@
             >
                 <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
-              <div class="flex flex-col sm:flex-row items-start sm:items-center">
-            <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="teacherNameDisplay">Teacher:</label>
-            <div id="teacherNameDisplay"
-                class="block w-full p-2.5 border bg-lime-200 rounded-md shadow-sm focus:outline-none static-dropdown">
-                <span id= "teacherName" class="static-dropdown-text">Your Teacher's Name Here</span>
-                <span class="static-dropdown-arrow"></span>
-            </div>
-            </div>
-
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
@@ -217,12 +208,13 @@
     <script>
         // --- Google Sign-In Integration ---
         let auth2; // GoogleAuth object
+        let userEmail = ''; // Global variable to store the signed-in user's email
 
         // Initialize Google Sign-In
         function initGoogleSignIn() {
             gapi.load('auth2', function() {
                 auth2 = gapi.auth2.init({
-                    client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com', // Replace with your actual client ID
+                    client_id: '683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com', // Replace with your actual client ID
                     scope: 'profile email'
                 });
 
@@ -233,6 +225,7 @@
                 updateSignInStatus(auth2.isSignedIn.get());
             });
         }
+        const teacherName = ""
 
         // Callback function for successful sign-in
         function onSignIn(googleUser) {
@@ -242,18 +235,14 @@
             console.log('Name: ' + profile.getName());
             console.log('Image URL: ' + profile.getImageUrl());
             console.log('Email: ' + profile.getEmail());
-            const teacherNameDropdown = document.getElementById("teacherName");
-            //teacherNameDropdown.setAttribute("disabled","disabled")
-            teacherNameDropdown.textContent=profile.getName();
+            userEmail = profile.getEmail(); // Store the user's email
+            document.getElementById("passLabel").textContent="Bathroom Pass for " + profile.getName() +"'s Class";
 
             // Hide sign-in page and show app content
             document.getElementById('signInPage').classList.add('hidden');
             document.getElementById('appContent').classList.remove('hidden');
             document.getElementById('body').classList.remove('justify-center'); // Remove center alignment for app content
 
-            // You might want to display the signed-in user's name somewhere in the app
-            // For now, we'll just proceed to the main app.
-            
             // Re-initialize the app content after sign-in
             initializeBathroomPassApp();
         }
@@ -263,6 +252,7 @@
             if (auth2) {
                 auth2.signOut().then(function () {
                     console.log('User signed out.');
+                    userEmail = ''; // Clear the user's email on sign out
                     // Hide app content and show sign-in page
                     document.getElementById('appContent').classList.add('hidden');
                     document.getElementById('signInPage').classList.remove('hidden');
@@ -277,12 +267,18 @@
         function updateSignInStatus(isSignedIn) {
             if (isSignedIn) {
                 console.log('User is currently signed in.');
+                // If already signed in, get email and initialize app
+                const googleUser = auth2.currentUser.get();
+                if (googleUser) {
+                    userEmail = googleUser.getBasicProfile().getEmail();
+                }
                 document.getElementById('signInPage').classList.add('hidden');
                 document.getElementById('appContent').classList.remove('hidden');
                 document.getElementById('body').classList.remove('justify-center');
                 initializeBathroomPassApp();
             } else {
                 console.log('User is currently signed out.');
+                userEmail = ''; // Clear email if not signed in
                 document.getElementById('signInPage').classList.remove('hidden');
                 document.getElementById('appContent').classList.add('hidden');
                 document.getElementById('body').classList.add('justify-center');
@@ -578,8 +574,18 @@
 
             document.getElementById("signOutButton").style.display = "none";
 
-            fetchClassData();
-            fetchAllNames(); // Fetch all names on load
+            // Only fetch data if userEmail is available
+            if (userEmail) {
+                fetchClassData();
+                fetchAllNames(); // Fetch all names on load
+            } else {
+                console.warn("User email not available. Cannot fetch class/name data.");
+                setUpDropdown('courseDropdown', [], "Sign in to load classes");
+                setUpDropdown2('nameDropdown', [], "Sign in to load names");
+                setUpDropdown2('nameQueue', [], "Sign in to load names");
+                setUpDropdown2('lateNameDropdown', [], "Sign in to load names");
+            }
+            
             showLateSignInView(); // Set initial right-side view to Late Sign In
             updateToggleButtonVisibility(); // Initial button visibility update
         }
@@ -628,7 +634,8 @@
 
 
         function fetchClassData() {
-            fetch(`${url}?header=Class`)
+            // Include userEmail in the fetch request
+            fetch(`${url}?header=Class&userEmail=${encodeURIComponent(userEmail)}`)
                 .then((response) => response.json())
                 .then(({ data }) => {
                     classes = data; // Keep the original classes array
@@ -644,7 +651,8 @@
 
        // Fetch ALL names and classes to filter locally
         function fetchAllNames() {
-            fetch(`${url}?action=getAllData`) // Assumes your Apps Script can handle this
+            // Include userEmail in the fetch request
+            fetch(`${url}?action=getAllData&userEmail=${encodeURIComponent(userEmail)}`) 
                 .then(response => response.json())
                 .then(data => {
                     // Ensure data is an array before processing
@@ -730,7 +738,8 @@
             document.getElementById("signOutButton").style.display = "none";
             document.getElementById("signInButton").style.display = "none";
 
-            fetch(`${url}?header=Name`)
+            // Include userEmail in the fetch request
+            fetch(`${url}?header=Name&userEmail=${encodeURIComponent(userEmail)}`)
                 .then((response) => response.json())
                 .then(({ data }) => {
                     // Populate all relevant dropdowns with the names filtered by the selected class
