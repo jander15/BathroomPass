@@ -400,6 +400,9 @@
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
                 studentOutName.textContent = '';
                 nameQueueDropdown.setAttribute("disabled", "disabled"); //Disable the queue dropdown
+                // Explicitly hide queue buttons when pass is available
+                document.getElementById('add-to-queue').classList.add('hidden');
+                document.getElementById('remove-from-queue').classList.add('hidden');
 
                 showLateSignInView(); // Switch back to late sign-in view
             }
@@ -494,7 +497,7 @@
 
         function toggleAddToQueueButton() {
             const addToQueueButton = document.getElementById('add-to-queue');
-            if (nameQueueDropdown.value === 'Select Your Name' || nameQueueDropdown.value.trim() === '') {
+            if (nameQueueDropdown.value === 'Select Your Name' || nameQueueDropdown.value.trim() === '' || nameQueueDropdown.disabled) {
                 addToQueueButton.classList.add('hidden');
             } else {
                 addToQueueButton.classList.remove('hidden');
@@ -570,6 +573,9 @@
 
             setUpDropdown2('nameQueue', [], "Select Your Name");
             nameQueueDropdown.setAttribute("disabled", "disabled");
+            document.getElementById('add-to-queue').classList.add('hidden'); // Explicitly hide
+            document.getElementById('remove-from-queue').classList.add('hidden'); // Explicitly hide
+
 
             setUpDropdown2('lateNameDropdown', [], "Select Your Name");
             lateNameDropdown.setAttribute("disabled", "disabled");
@@ -626,6 +632,9 @@
 
             setUpDropdown2('nameQueue', [], "Select Your Name");
             nameQueueDropdown.setAttribute("disabled", "disabled");
+            document.getElementById('add-to-queue').classList.add('hidden'); // Explicitly hide
+            document.getElementById('remove-from-queue').classList.add('hidden'); // Explicitly hide
+
 
             setUpDropdown2('lateNameDropdown', [], "Select Your Name");
             lateNameDropdown.setAttribute("disabled", "disabled");
