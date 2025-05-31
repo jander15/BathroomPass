@@ -77,7 +77,7 @@
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
-        <h1 class="text-4xl font-bold text-white mb-8">Welcome to AHS "Bathroom" Pass 💩</h1>
+        <h1 class="text-4xl font-bold text-white mb-8">💩 Welcome to AHS "Bathroom" Pass 💩</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
         <div id="googleSignInButton"></div>
         <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
@@ -87,7 +87,7 @@
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-red-500 hover:border-blue-500 transition-all duration-200">
             
-            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800">
+            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
                 <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
                 <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
                 <hr class="my-1">
@@ -96,8 +96,8 @@
                 </button>
             </div>
         </div>
-        <h1 id="studentOutHeader" class="font-bold text-center ml-10 mr-10 mb-6 p-2 w-full rounded-lg">
-            <span id="studentOutName"></span> PASS IS AVAILABLE
+        <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg">
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span id="emojiRight" class="ml-2"></span> <span id="headerStatus">PASS IS AVAILABLE</span>
         </h1>
 
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -133,6 +133,11 @@
                     </select>
                 </div>
 
+                <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                    <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="emojiDropdown">Emoji:</label>
+                    <select id="emojiDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                        </select>
+                </div>
                 <div class="flex justify-center space-x-3 mt-4">
                     <button id="signOutButton" type="button" 
                         class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base"
@@ -303,9 +308,13 @@
         const mainForm = document.getElementById('form');
         const nameDropdown = document.getElementById('nameDropdown');
         const courseDropdown = document.getElementById('courseDropdown');
+        const emojiDropdown = document.getElementById('emojiDropdown'); // New emoji dropdown
         const nameQueueDropdown = document.getElementById('nameQueue');
         const studentOutHeader = document.getElementById('studentOutHeader');
         const studentOutName = document.getElementById('studentOutName');
+        const emojiLeft = document.getElementById('emojiLeft'); // New emoji span
+        const emojiRight = document.getElementById('emojiRight'); // New emoji span
+        const headerStatus = document.getElementById('headerStatus'); // New header status span
 
         const queueArea = document.getElementById('queueArea'); // Bathroom Pass Queue
         const lateSignInView = document.getElementById('lateSignInView'); // Late Sign In Form
@@ -321,7 +330,9 @@
         let queue = [];
         let selectedName = null;
         let currentlySignedOutStudent = null;
-        // let allNamesData = []; // Removed, as allNames will hold the structured data
+        
+        // List of emojis for the dropdown
+        const emojiList = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 
         function updateTimer() {
             seconds++;
@@ -347,14 +358,25 @@
                 document.getElementById("signInButton").style.display = "block";
                 nameDropdown.setAttribute("disabled", "disabled");
                 courseDropdown.setAttribute("disabled", "disabled");
+                emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
                 mainForm.style.backgroundColor = "#f6b26b"; // Orange
 
                 const fullString = nameDropdown.value;
                 const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
                 document.getElementById("nameHolder").value = nameOnly; // Use nameHolder for sign out
 
-                studentOutHeader.textContent = `${nameOnly} IS OUT`; // Set the full text
+                studentOutName.textContent = nameOnly; // Set student name
+                headerStatus.textContent = "IS OUT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#f6b26b"; // Orange for "IS OUT"
+
+                const selectedEmoji = emojiDropdown.value;
+                if (selectedEmoji !== "No Emoji") {
+                    emojiLeft.textContent = selectedEmoji;
+                    emojiRight.textContent = selectedEmoji;
+                } else {
+                    emojiLeft.textContent = "";
+                    emojiRight.textContent = "";
+                }
 
                 currentlySignedOutStudent = fullString;
                 // Update message and show queue automatically
@@ -381,6 +403,7 @@
             document.getElementById("signInButton").style.display = "none";
             document.getElementById("signOutButton").style.display = "none";
             courseDropdown.removeAttribute("disabled");
+            emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
             mainForm.style.backgroundColor = "#4ade80"; // Green
 
             // Show success alert
@@ -398,9 +421,13 @@
                 updateQueueDisplay();
                 nameSelected();
 
-                studentOutName.textContent = nextPerson;
-                studentOutHeader.textContent = `${nextPerson} IS NEXT`; // Set the full text
+                studentOutName.textContent = nextPerson; // Set student name
+                headerStatus.textContent = "IS NEXT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
+                
+                emojiLeft.textContent = ""; // Clear emojis
+                emojiRight.textContent = ""; // Clear emojis
+                emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
 
                 showQueueView(); // Keep queue view active
             } else {
@@ -409,9 +436,15 @@
                 document.getElementById("signOutButton").style.display = "none";
                 updateMessage('The queue is empty. No one is currently signed out.');
                 // Update header to "PASS IS AVAILABLE"
-                studentOutHeader.textContent = "PASS IS AVAILABLE";
+                studentOutHeader.textContent = "PASS IS AVAILABLE"; // Direct text for "PASS IS AVAILABLE"
+                studentOutName.textContent = ''; // Clear student name
+                headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
-                studentOutName.textContent = '';
+                
+                emojiLeft.textContent = ""; // Clear emojis
+                emojiRight.textContent = ""; // Clear emojis
+                emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
+
                 nameQueueDropdown.setAttribute("disabled", "disabled"); //Disable the queue dropdown
                 // Explicitly hide queue buttons when pass is available
                 document.getElementById('add-to-queue').classList.add('hidden');
@@ -571,8 +604,12 @@
             }
 
             // Set initial state for studentOutHeader
-            studentOutHeader.textContent = "PASS IS AVAILABLE";
+            studentOutName.textContent = ''; // Clear student name
+            headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
             studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
+            emojiLeft.textContent = ""; // Clear emojis
+            emojiRight.textContent = ""; // Clear emojis
+
 
             updateQueueDisplay();
             toggleAddToQueueButton();
@@ -593,6 +630,11 @@
             setUpDropdown2('lateNameDropdown', [], "Select Your Name");
             lateNameDropdown.setAttribute("disabled", "disabled");
 
+            setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Populate emoji dropdown
+            emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
+            emojiDropdown.value = "No Emoji"; // Ensure default is selected
+
+
             document.getElementById("signOutButton").style.display = "none";
 
             // Only fetch data if userEmail is available
@@ -607,6 +649,8 @@
                 setUpDropdown2('nameDropdown', [], "Sign in to load names");
                 setUpDropdown2('nameQueue', [], "Sign in to load names");
                 setUpDropdown2('lateNameDropdown', [], "Sign in to load names");
+                setUpDropdown('emojiDropdown', [], "Sign in to load emojis");
+                emojiDropdown.setAttribute("disabled", "disabled");
             }
             
             showLateSignInView(); // Set initial right-side view to Late Sign In
@@ -632,9 +676,11 @@
             document.getElementById("signOutButton").style.display = "none";
             // Do not re-enable course dropdown here; initializeBathroomPassApp will handle it on next sign-in
             mainForm.style.backgroundColor = "#4ade80"; // Green
-            studentOutHeader.textContent = "PASS IS AVAILABLE";
-            studentOutHeader.style.backgroundColor = "#4ade80";
-            studentOutName.textContent = '';
+            studentOutName.textContent = ''; // Clear student name
+            headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
+            studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
+            emojiLeft.textContent = ""; // Clear emojis
+            emojiRight.textContent = ""; // Clear emojis
             
             // Clear dropdowns and disable them
             setUpDropdown('courseDropdown', [], "Select Class");
@@ -651,6 +697,9 @@
 
             setUpDropdown2('lateNameDropdown', [], "Select Your Name");
             lateNameDropdown.setAttribute("disabled", "disabled");
+
+            setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
+            emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
             // Hide queue and show late sign-in by default
             showLateSignInView();
@@ -743,6 +792,7 @@
                 nameDropdown.removeAttribute("disabled");
                 nameQueueDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
+                emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
 
                 setUpDropdown2('nameDropdown', [], "Loading..."); // Show loading state
                 setUpDropdown2('nameQueue', [], "Loading..."); // Show loading state
@@ -759,6 +809,9 @@
 
                 setUpDropdown2('lateNameDropdown', [], "Select Your Name");
                 lateNameDropdown.setAttribute("disabled", "disabled"); // Disable if no class selected
+
+                setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
+                emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
                 document.getElementById("signOutButton").style.display = "none";
             }
@@ -778,6 +831,7 @@
                 nameDropdown.removeAttribute("disabled");
                 nameQueueDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled");
+                emojiDropdown.removeAttribute("disabled");
             } else {
                 // If no course is selected, disable and reset name dropdowns
                 setUpDropdown2('nameDropdown', [], "Select Your Name");
@@ -786,11 +840,14 @@
                 nameQueueDropdown.setAttribute("disabled", "disabled");
                 setUpDropdown2('lateNameDropdown', [], "Select Your Name");
                 lateNameDropdown.setAttribute("disabled", "disabled");
+                setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
+                emojiDropdown.setAttribute("disabled", "disabled");
             }
             
             nameDropdown.value = 'Select Your Name';
             nameQueueDropdown.value = 'Select Your Name';
             lateNameDropdown.value = 'Select Your Name'; // Reset late name dropdown
+            emojiDropdown.value = 'No Emoji'; // Reset emoji dropdown
             toggleAddToQueueButton();
         }
 
