@@ -84,6 +84,18 @@
     </div>
 
     <div id="appContent" class="hidden flex flex-col items-center p-4 min-h-screen w-full">
+        <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
+            <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-gray-300 hover:border-blue-500 transition-all duration-200">
+            
+            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800">
+                <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
+                <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
+                <hr class="my-1">
+                <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                    Sign Out of Google
+                </button>
+            </div>
+        </div>
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg">
             <span id="studentOutName"></span> PASS IS AVAILABLE
         </h1>
@@ -199,9 +211,6 @@
         </div>
 
     </div>
-<button id="googleSignOutButton" class="mt-8 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
-                Sign Out of Google
-            </button>
 
     <iframe name="iframe"></iframe>
 
@@ -209,6 +218,7 @@
         // --- Google Sign-In Integration ---
         let userEmail = ''; // Global variable to store the signed-in user's email
         let userName = ''; // Global variable to store the signed-in user's name
+        let userProfilePic = ''; // Global variable to store the signed-in user's profile picture URL
 
         // Helper function to decode JWT token
         function decodeJwtResponse(token) {
@@ -238,7 +248,6 @@
                     logo_alignment: 'left' 
                 } // customization attributes
             );
-            // No need for auto_prompt or updateSignInStatus here, as renderButton handles display
         }
 
         // Callback function for successful sign-in (GSI CredentialResponse)
@@ -253,12 +262,19 @@
             
             userEmail = profile.email; // Store the user's email
             userName = profile.name; // Store the user's name
+            userProfilePic = profile.picture; // Store the user's profile picture URL
             document.getElementById("passLabel").textContent="Bathroom Pass for " + userName +"'s Class";
+
+            // Update profile picture and details in the dropdown
+            document.getElementById('profilePicture').src = userProfilePic;
+            document.getElementById('dropdownUserName').textContent = userName;
+            document.getElementById('dropdownUserEmail').textContent = userEmail;
 
             // Hide sign-in page and show app content
             document.getElementById('signInPage').classList.add('hidden');
             document.getElementById('appContent').classList.remove('hidden');
             document.getElementById('body').classList.remove('justify-center'); // Remove center alignment for app content
+            document.getElementById('profileMenuContainer').classList.remove('hidden'); // Show the profile icon
 
             // Re-initialize the app content after sign-in
             initializeBathroomPassApp();
@@ -270,29 +286,17 @@
             console.log('User signed out.');
             userEmail = ''; // Clear the user's email on sign out
             userName = ''; // Clear the user's name on sign out
+            userProfilePic = ''; // Clear the user's profile picture on sign out
+
             // Hide app content and show sign-in page
             document.getElementById('appContent').classList.add('hidden');
             document.getElementById('signInPage').classList.remove('hidden');
             document.getElementById('body').classList.add('justify-center'); // Re-center sign-in page
+            document.getElementById('profileMenuContainer').classList.add('hidden'); // Hide the profile icon
+            document.getElementById('profileDropdown').classList.add('hidden'); // Ensure dropdown is hidden
+
             // Reset app state if necessary (e.g., clear timers, queue)
             resetBathroomPassAppState();
-        }
-
-        // updateSignInStatus is no longer directly used by GSI,
-        // but keeping it for consistency if other parts of the app rely on it.
-        // The GSI callback `onSignIn` and `signOut` directly manage UI visibility.
-        function updateSignInStatus(isSignedIn) {
-            if (isSignedIn && userEmail) { // Check if userEmail is set from a successful GSI sign-in
-                document.getElementById('signInPage').classList.add('hidden');
-                document.getElementById('appContent').classList.remove('hidden');
-                document.getElementById('body').classList.remove('justify-center');
-                // initializeBathroomPassApp() is called by onSignIn, so no need to call it here again
-            } else {
-                document.getElementById('signInPage').classList.remove('hidden');
-                document.getElementById('appContent').classList.add('hidden');
-                document.getElementById('body').classList.add('justify-center');
-                // resetBathroomPassAppState() is called by signOut, so no need to call it here again
-            }
         }
 
         // --- Bathroom Pass Application Logic (from original code) ---
@@ -869,8 +873,25 @@
         queueViewBtn.addEventListener('click', showQueueView);
         lateSignInViewBtn.addEventListener('click', showLateSignInView);
 
-        // Add event listener for the new Google Sign Out button
-        document.getElementById('googleSignOutButton').addEventListener('click', signOut);
+        // Event listeners for the new Google Profile/Dropdown
+        const profilePicture = document.getElementById('profilePicture');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const dropdownSignOutButton = document.getElementById('dropdownSignOutButton');
+        const profileMenuContainer = document.getElementById('profileMenuContainer');
+
+        profilePicture.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent document click from closing it immediately
+            profileDropdown.classList.toggle('hidden');
+        });
+
+        dropdownSignOutButton.addEventListener('click', signOut);
+
+        // Close dropdown when clicking outside
+        document.body.addEventListener('click', (event) => {
+            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
 
         // Initialize Google Sign-In when the DOM is fully loaded
         document.addEventListener('DOMContentLoaded', initGoogleSignIn);
