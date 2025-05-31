@@ -131,13 +131,10 @@
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
                     <select id="nameDropdown" onchange="nameSelected()" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                </div>
-
-                <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                    <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="emojiDropdown">Emoji:</label>
-                    <select id="emojiDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    <select id="emojiDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
                         </select>
                 </div>
+                
                 <div class="flex justify-center space-x-3 mt-4">
                     <button id="signOutButton" type="button" 
                         class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base"
@@ -436,7 +433,6 @@
                 document.getElementById("signOutButton").style.display = "none";
                 updateMessage('The queue is empty. No one is currently signed out.');
                 // Update header to "PASS IS AVAILABLE"
-                studentOutHeader.textContent = "PASS IS AVAILABLE"; // Direct text for "PASS IS AVAILABLE"
                 studentOutName.textContent = ''; // Clear student name
                 headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
@@ -631,7 +627,7 @@
             lateNameDropdown.setAttribute("disabled", "disabled");
 
             setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Populate emoji dropdown
-            emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
+            emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown initially
             emojiDropdown.value = "No Emoji"; // Ensure default is selected
 
 
@@ -792,7 +788,7 @@
                 nameDropdown.removeAttribute("disabled");
                 nameQueueDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
-                emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
+                // emojiDropdown.removeAttribute("disabled"); // Emoji dropdown enabled/disabled by nameSelected
 
                 setUpDropdown2('nameDropdown', [], "Loading..."); // Show loading state
                 setUpDropdown2('nameQueue', [], "Loading..."); // Show loading state
@@ -831,7 +827,7 @@
                 nameDropdown.removeAttribute("disabled");
                 nameQueueDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled");
-                emojiDropdown.removeAttribute("disabled");
+                // emojiDropdown.removeAttribute("disabled"); // Emoji dropdown enabled/disabled by nameSelected
             } else {
                 // If no course is selected, disable and reset name dropdowns
                 setUpDropdown2('nameDropdown', [], "Select Your Name");
@@ -855,8 +851,15 @@
         function nameSelected(){
             if(nameDropdown.value === "Select Your Name" || timerInterval !== null || nameDropdown.value === currentlySignedOutStudent){
                 document.getElementById("signOutButton").style.display = "none";
+                emojiDropdown.classList.add('hidden'); // Hide emoji dropdown
+                emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
+                emojiDropdown.value = "No Emoji"; // Reset emoji
+                emojiLeft.textContent = ""; // Clear emojis
+                emojiRight.textContent = ""; // Clear emojis
             } else {
                 document.getElementById("signOutButton").style.display = "block";
+                emojiDropdown.classList.remove('hidden'); // Show emoji dropdown
+                emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
             }
             document.getElementById("signInButton").style.display = timerInterval !== null ? "block" : "none";
             updateToggleButtonVisibility(); // Update button visibility
