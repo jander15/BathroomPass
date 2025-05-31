@@ -10,11 +10,11 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet"
     >
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
-    <meta name="google-signin-client_id" content="683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <script type="text/javascript">
     window.onbeforeunload = function() {
-        // Thiss will prompt the user before leaving the page.
+        // This will prompt the user before leaving the page.
         // It's generally good practice to inform users if they are about to lose unsaved data.
         return "Hi, are you sure you want to leave? Think of the kittens!";
     }
@@ -79,7 +79,7 @@
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">Welcome to School Pass System</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
-        <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
+        <div id="googleSignInButton"></div>
         <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
     </div>
 
@@ -207,36 +207,53 @@
 
     <script>
         // --- Google Sign-In Integration ---
-        let auth2; // GoogleAuth object
         let userEmail = ''; // Global variable to store the signed-in user's email
+        let userName = ''; // Global variable to store the signed-in user's name
+
+        // Helper function to decode JWT token
+        function decodeJwtResponse(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
 
         // Initialize Google Sign-In
         function initGoogleSignIn() {
-            gapi.load('auth2', function() {
-                auth2 = gapi.auth2.init({
-                    client_id: '683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com', // Replace with your actual client ID
-                    scope: 'profile email'
-                });
-
-                // Listen for sign-in state changes
-                auth2.isSignedIn.listen(updateSignInStatus);
-
-                // Initial check of sign-in status
-                updateSignInStatus(auth2.isSignedIn.get());
+            google.accounts.id.initialize({
+                client_id: '683459371071-7bm37ul6uatesp6g5nsf8lu1mnl9pnjm.apps.googleusercontent.com', // Your Google Client ID
+                callback: onSignIn // Function to call on successful sign-in
             });
-        }
-        const teacherName = ""
 
-        // Callback function for successful sign-in
-        function onSignIn(googleUser) {
-            console.log('User signed in successfully!');
-            const profile = googleUser.getBasicProfile();
-            console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
-            console.log('Name: ' + profile.getName());
-            console.log('Image URL: ' + profile.getImageUrl());
-            console.log('Email: ' + profile.getEmail());
-            userEmail = profile.getEmail(); // Store the user's email
-            document.getElementById("passLabel").textContent="Bathroom Pass for " + profile.getName() +"'s Class";
+            // Render the Google Sign-In button
+            google.accounts.id.renderButton(
+                document.getElementById('googleSignInButton'),
+                { 
+                    theme: 'dark', 
+                    size: 'large', 
+                    text: 'signin_with', 
+                    shape: 'rectangular', 
+                    logo_alignment: 'left' 
+                } // customization attributes
+            );
+            // No need for auto_prompt or updateSignInStatus here, as renderButton handles display
+        }
+
+        // Callback function for successful sign-in (GSI CredentialResponse)
+        function onSignIn(response) {
+            console.log('User signed in successfully with GSI!');
+            const profile = decodeJwtResponse(response.credential);
+            
+            console.log('ID: ' + profile.sub); // Google User ID
+            console.log('Name: ' + profile.name);
+            console.log('Image URL: ' + profile.picture);
+            console.log('Email: ' + profile.email);
+            
+            userEmail = profile.email; // Store the user's email
+            userName = profile.name; // Store the user's name
+            document.getElementById("passLabel").textContent="Bathroom Pass for " + userName +"'s Class";
 
             // Hide sign-in page and show app content
             document.getElementById('signInPage').classList.add('hidden');
@@ -249,40 +266,32 @@
 
         // Handle sign-out
         function signOut() {
-            if (auth2) {
-                auth2.signOut().then(function () {
-                    console.log('User signed out.');
-                    userEmail = ''; // Clear the user's email on sign out
-                    // Hide app content and show sign-in page
-                    document.getElementById('appContent').classList.add('hidden');
-                    document.getElementById('signInPage').classList.remove('hidden');
-                    document.getElementById('body').classList.add('justify-center'); // Re-center sign-in page
-                    // Reset app state if necessary (e.g., clear timers, queue)
-                    resetBathroomPassAppState();
-                });
-            }
+            google.accounts.id.disableAutoSelect(); // Disables auto-selection for future visits
+            console.log('User signed out.');
+            userEmail = ''; // Clear the user's email on sign out
+            userName = ''; // Clear the user's name on sign out
+            // Hide app content and show sign-in page
+            document.getElementById('appContent').classList.add('hidden');
+            document.getElementById('signInPage').classList.remove('hidden');
+            document.getElementById('body').classList.add('justify-center'); // Re-center sign-in page
+            // Reset app state if necessary (e.g., clear timers, queue)
+            resetBathroomPassAppState();
         }
 
-        // Update UI based on sign-in status
+        // updateSignInStatus is no longer directly used by GSI,
+        // but keeping it for consistency if other parts of the app rely on it.
+        // The GSI callback `onSignIn` and `signOut` directly manage UI visibility.
         function updateSignInStatus(isSignedIn) {
-            if (isSignedIn) {
-                console.log('User is currently signed in.');
-                // If already signed in, get email and initialize app
-                const googleUser = auth2.currentUser.get();
-                if (googleUser) {
-                    userEmail = googleUser.getBasicProfile().getEmail();
-                }
+            if (isSignedIn && userEmail) { // Check if userEmail is set from a successful GSI sign-in
                 document.getElementById('signInPage').classList.add('hidden');
                 document.getElementById('appContent').classList.remove('hidden');
                 document.getElementById('body').classList.remove('justify-center');
-                initializeBathroomPassApp();
+                // initializeBathroomPassApp() is called by onSignIn, so no need to call it here again
             } else {
-                console.log('User is currently signed out.');
-                userEmail = ''; // Clear email if not signed in
                 document.getElementById('signInPage').classList.remove('hidden');
                 document.getElementById('appContent').classList.add('hidden');
                 document.getElementById('body').classList.add('justify-center');
-                resetBathroomPassAppState();
+                // resetBathroomPassAppState() is called by signOut, so no need to call it here again
             }
         }
 
@@ -728,7 +737,7 @@
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
-                //nameQueueDropdown.removeAttribute("disabled");
+                nameQueueDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
 
                 setUpDropdown2('nameDropdown', [], "Loading..."); // Show loading state
