@@ -97,7 +97,7 @@
             </div>
         </div>
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
-            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span> </span><span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -363,7 +363,7 @@
                 document.getElementById("nameHolder").value = nameOnly; // Use nameHolder for sign out
 
                 studentOutName.textContent = nameOnly; // Set student name
-                headerStatus.textContent = " IS OUT"; // Set status text
+                headerStatus.textContent = "IS OUT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#f6b26b"; // Orange for "IS OUT"
 
                 const selectedEmoji = emojiDropdown.value;
@@ -419,7 +419,7 @@
                 nameSelected();
 
                 studentOutName.textContent = nextPerson; // Set student name
-                headerStatus.textContent = " IS NEXT"; // Set status text
+                headerStatus.textContent = "IS NEXT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
                 
                 emojiLeft.textContent = ""; // Clear emojis
