@@ -123,15 +123,15 @@
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
-                        class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                        class="block w-2/3 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
-                    <select id="nameDropdown" onchange="nameSelected()" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    <select id="nameDropdown" onchange="nameSelected()" class="block w-2/3 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
+                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none hidden">
                         </select>
                 </div>
                 
@@ -363,7 +363,7 @@
                 document.getElementById("nameHolder").value = nameOnly; // Use nameHolder for sign out
 
                 studentOutName.textContent = nameOnly; // Set student name
-                headerStatus.textContent = "IS OUT"; // Set status text
+                headerStatus.textContent = " IS OUT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#f6b26b"; // Orange for "IS OUT"
 
                 const selectedEmoji = emojiDropdown.value;
@@ -419,7 +419,7 @@
                 nameSelected();
 
                 studentOutName.textContent = nextPerson; // Set student name
-                headerStatus.textContent = "IS NEXT"; // Set status text
+                headerStatus.textContent = " IS NEXT"; // Set status text
                 studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
                 
                 emojiLeft.textContent = ""; // Clear emojis
