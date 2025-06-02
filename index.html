@@ -16,7 +16,11 @@
     window.onbeforeunload = function() {
         // This will prompt the user before leaving the page.
         // It's generally good practice to inform users if they are about to lose unsaved data.
-        return "Hi, are you sure you want to leave? Think of the kittens!";
+        // You might want to refine this to only trigger if a timer is running.
+        if (timerInterval !== null) {
+            return "You have a student signed out. Are you sure you want to leave?";
+        }
+        return null; // Don't show a prompt if no student is signed out
     }
     </script>
 
@@ -57,6 +61,7 @@
             background-color: #0692e8;
             color: #2d3748;
         }
+        /* The iframe is no longer functionally used for form submission but can remain hidden */
         iframe[name="iframe"] {
             position: absolute;
             left: -9999px;
@@ -121,10 +126,7 @@
             <form
                 id="form"
                 class="rounded-lg shadow-xl p-6 w-full lg:w-2/3 space-y-4 flex-shrink-0"
-                method="POST"
-                target="iframe"
                 style="background-color: #4ade80;" /* Initial background for the form (Green) */
-                
             >
                 <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
@@ -157,8 +159,6 @@
                 </div>
 
                 <p class="text-center text-lg font-medium text-gray-800 mt-4">Time: <span id="minutes" class="font-bold">0</span>:<span id="seconds" class="font-bold">00</span></p>
-                <textarea id="timeOut" name="Seconds" class="hidden"></textarea>
-                <textarea id="nameHolder" name="Name" class="hidden"></textarea>
             </form>
 
             <div id="rightSideFormsContainer" class="w-full lg:w-1/3 flex flex-col rounded-lg shadow-xl">
@@ -197,7 +197,8 @@
 
                 <div id="lateSignInView" class="flex flex-col items-center justify-start w-full p-6 rounded-b-lg bg-yellow-200 flex-grow">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Late Sign In</h2>
-                    <form id="lateSignInForm" class="w-full space-y-4"> <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                    <form id="lateSignInForm" class="w-full space-y-4"> 
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center">
                             <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
                             <select id="lateNameDropdown"  onchange="lateNameSelected()"
                                 class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
@@ -209,7 +210,7 @@
                                 Sign In Late
                             </button>
                         </div>
-                        </form>
+                    </form>
                 </div>
             </div>
             
@@ -340,7 +341,6 @@
         function updateTimer() {
             seconds++;
             const TARDY_TIME = 5
-            document.getElementById("timeOut").value = (minutes * 60) + seconds;
             if (seconds >= 60) {
                 minutes++;
                 seconds = 0;
@@ -366,7 +366,7 @@
 
                 const fullString = nameDropdown.value;
                 const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
-                document.getElementById("nameHolder").value = nameOnly; // Use nameHolder for sign out
+                // document.getElementById("nameHolder").value = nameOnly; // No longer using hidden input
 
                 studentOutName.textContent = nameOnly; // Set student name
                 headerStatus.textContent = "IS OUT"; // Set status text
@@ -395,67 +395,103 @@
             }
         });
 
-        // Event listener for Bathroom Sign In
-        mainForm.addEventListener("submit", function() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            seconds = 0;
-            minutes = 0;
-            document.getElementById("minutes").textContent = minutes;
-            document.getElementById("seconds").textContent = "00";
-            document.getElementById("signInButton").style.display = "none";
-            document.getElementById("signOutButton").style.display = "none";
-            courseDropdown.removeAttribute("disabled");
-            emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
-            mainForm.style.backgroundColor = "#4ade80"; // Green
+        // Event listener for Bathroom Sign In (main form submission using fetch)
+        mainForm.addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission
 
-            // Show success alert
-            document.getElementById("alertDiv").classList.remove("hidden");
-            document.getElementById("alertMessage").textContent = `${currentlySignedOutStudent} has been signed in successfully!`;
-            setTimeout(() => document.getElementById("alertDiv").classList.add('hidden'), 5000);
+            const fullString = nameDropdown.value;
+            const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
+            const classValue = courseDropdown.value;
+            const timeOutSeconds = (minutes * 60) + seconds;
 
-            currentlySignedOutStudent = null;
-            
-            if (queue.length > 0) {
-                const nextPerson = queue.shift();
-                nameDropdown.value = nextPerson;
-                nameDropdown.setAttribute("disabled", "disabled");
-                updateMessage(`${nextPerson} can now sign out.`);
-                updateQueueDisplay();
-                nameSelected();
+            const payload = {
+                action: 'logSignIn', // New action for Apps Script
+                Seconds: timeOutSeconds,
+                Name: nameOnly,
+                Class: classValue,
+                idToken: idToken // Include the ID token for authentication
+            };
 
-                studentOutName.textContent = nextPerson; // Set student name
-                headerStatus.textContent = "IS NEXT"; // Set status text
-                studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
-                
-                emojiLeft.textContent = ""; // Clear emojis
-                emojiRight.textContent = ""; // Clear emojis
-                emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    seconds = 0;
+                    minutes = 0;
+                    document.getElementById("minutes").textContent = minutes;
+                    document.getElementById("seconds").textContent = "00";
+                    document.getElementById("signInButton").style.display = "none";
+                    document.getElementById("signOutButton").style.display = "none";
+                    courseDropdown.removeAttribute("disabled");
+                    emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
+                    mainForm.style.backgroundColor = "#4ade80"; // Green
 
-                showQueueView(); // Keep queue view active
-            } else {
-                nameDropdown.value = 'Select Your Name';
-                nameDropdown.removeAttribute("disabled");
-                document.getElementById("signOutButton").style.display = "none";
-                updateMessage('The queue is empty. No one is currently signed out.');
-                // Update header to "PASS IS AVAILABLE"
-                studentOutName.textContent = ''; // Clear student name
-                headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
-                studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
-                
-                emojiLeft.textContent = ""; // Clear emojis
-                emojiRight.textContent = ""; // Clear emojis
-                emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
+                    // Show success alert
+                    document.getElementById("alertDiv").classList.remove("hidden");
+                    document.getElementById("alertDiv").classList.remove("bg-red-100", "border-red-400", "text-red-700"); // Ensure it's green
+                    document.getElementById("alertDiv").classList.add("bg-green-100", "border-green-400", "text-green-700");
+                    document.getElementById("alertMessage").textContent = `${currentlySignedOutStudent} has been signed in successfully!`;
+                    setTimeout(() => document.getElementById("alertDiv").classList.add('hidden'), 5000);
 
-                nameQueueDropdown.setAttribute("disabled", "disabled"); //Disable the queue dropdown
-                // Explicitly hide queue buttons when pass is available
-                document.getElementById('add-to-queue').classList.add('hidden');
-                document.getElementById('remove-from-queue').classList.add('hidden');
+                    currentlySignedOutStudent = null;
+                    
+                    if (queue.length > 0) {
+                        const nextPerson = queue.shift();
+                        nameDropdown.value = nextPerson;
+                        nameDropdown.setAttribute("disabled", "disabled");
+                        updateMessage(`${nextPerson} can now sign out.`);
+                        updateQueueDisplay();
+                        nameSelected();
 
-                showLateSignInView(); // Switch back to late sign-in view
-            }
-            toggleAddToQueueButton();
-            updateToggleButtonVisibility(); // Update button visibility
+                        studentOutName.textContent = nextPerson; // Set student name
+                        headerStatus.textContent = "IS NEXT"; // Set status text
+                        studentOutHeader.style.backgroundColor = "#4ade80"; // Green for "IS NEXT"
+                        
+                        emojiLeft.textContent = ""; // Clear emojis
+                        emojiRight.textContent = ""; // Clear emojis
+                        emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
+
+                        showQueueView(); // Keep queue view active
+                    } else {
+                        nameDropdown.value = 'Select Your Name';
+                        nameDropdown.removeAttribute("disabled");
+                        document.getElementById("signOutButton").style.display = "none";
+                        updateMessage('The queue is empty. No one is currently signed out.');
+                        // Update header to "PASS IS AVAILABLE"
+                        studentOutName.textContent = ''; // Clear student name
+                        headerStatus.textContent = "PASS IS AVAILABLE"; // Set status text
+                        studentOutHeader.style.backgroundColor = "#4ade80"; // Green for available pass
+                        
+                        emojiLeft.textContent = ""; // Clear emojis
+                        emojiRight.textContent = ""; // Clear emojis
+                        emojiDropdown.value = "No Emoji"; // Reset emoji dropdown
+
+                        nameQueueDropdown.setAttribute("disabled", "disabled"); //Disable the queue dropdown
+                        // Explicitly hide queue buttons when pass is available
+                        document.getElementById('add-to-queue').classList.add('hidden');
+                        document.getElementById('remove-from-queue').classList.add('hidden');
+
+                        showLateSignInView(); // Switch back to late sign-in view
+                    }
+                    toggleAddToQueueButton();
+                    updateToggleButtonVisibility(); // Update button visibility
+
+                } else {
+                    showErrorAlert(`Error signing in: ${data.error || 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting main sign in:', error);
+                showErrorAlert("Failed to submit sign-in. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try again.");
+            });
         });
 
         // Function to display error alerts
@@ -516,7 +552,7 @@
             })
             .catch(error => {
                 console.error('Error submitting late sign in:', error);
-                showErrorAlert("Failed to submit late sign-in. Please ensure you have authorized the 'Data Entry' app and try again.");
+                showErrorAlert("Failed to submit late sign-in. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try again.");
             });
         });
 
@@ -733,7 +769,7 @@
 
             setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
             emojiDropdown.classList.add('hidden'); // Ensure hidden
-            emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
+            emojiDropdown.setAttribute("disabled", "disabled");
 
             // Hide queue and show late sign-in by default
             showLateSignInView();
@@ -741,9 +777,7 @@
         }
 
 
-        const url = "https://script.google.com/a/macros/aspenk12.net/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"
-        document.getElementById('form').action = url;
-        // Removed: document.getElementById('lateSignInForm').action = url; as it's now handled by fetch
+        const url = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"
         let classes = []; // This will now hold unique class names (derived from allNames)
         let uniqueCourses = [];
         let allNames = []; // Store all names data as objects: [{Class: "...", Name: "..."}, ...]
@@ -924,7 +958,6 @@
             } else {
                 document.getElementById("lateSignInSubmitBtn").classList.remove("hidden");
             }
-            // document.getElementById("classHolder").textContent = courseDropdown.value; // No longer needed, sent in fetch payload
         }
 
         function setUpDropdown(dropdownId, arr, defaultText = "Select Class") {
