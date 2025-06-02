@@ -785,6 +785,8 @@
        // For Bathroom Pass Class Change
         function courseChanged(){
             const selectedCourse = courseDropdown.value;
+            document.getElementById("signOutButton").style.display = "none";
+
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
@@ -812,7 +814,6 @@
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
-                document.getElementById("signOutButton").style.display = "none";
             }
             updateToggleButtonVisibility();
         }
