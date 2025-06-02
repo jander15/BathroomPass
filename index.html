@@ -97,7 +97,7 @@
             </div>
         </div>
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
-            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span>&nbsp;</span><span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -105,6 +105,14 @@
             <span class="block sm:inline" id="alertMessage">You have been signed in successfully!</span>
             <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('alertDiv').classList.add('hidden');">
                 <svg class="fill-current h-6 w-6 text-green-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.15a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.15 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+            </span>
+        </div>
+
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="errorAlertDiv" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="errorAlertMessage"></span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('errorAlertDiv').classList.add('hidden');">
+                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.15a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.15 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
             </span>
         </div>
 
@@ -123,15 +131,15 @@
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
-                        class="block w-2/3 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                        class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
-                    <select id="nameDropdown" onchange="nameSelected()" class="block w-2/3 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    <select id="nameDropdown" onchange="nameSelected()" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none hidden">
+                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
                         </select>
                 </div>
                 
@@ -189,8 +197,7 @@
 
                 <div id="lateSignInView" class="flex flex-col items-center justify-start w-full p-6 rounded-b-lg bg-yellow-200 flex-grow">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Late Sign In</h2>
-                    <form id="lateSignInForm" class="w-full space-y-4" method="POST" target="iframe">
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                    <form id="lateSignInForm" class="w-full space-y-4"> <div class="flex flex-col sm:flex-row items-start sm:items-center">
                             <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
                             <select id="lateNameDropdown"  onchange="lateNameSelected()"
                                 class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
@@ -202,11 +209,7 @@
                                 Sign In Late
                             </button>
                         </div>
-                        <textarea id="timeOut2" name="Seconds" class="hidden"></textarea>
-                        <textarea id="nameHolder2" name="Late" class="hidden"></textarea>
-                        <textarea id="classHolder" name="Class" class="hidden"></textarea>
-
-                    </form>
+                        </form>
                 </div>
             </div>
             
@@ -221,6 +224,7 @@
         let userEmail = ''; // Global variable to store the signed-in user's email
         let userName = ''; // Global variable to store the signed-in user's name
         let userProfilePic = ''; // Global variable to store the signed-in user's profile picture URL
+        let idToken = ''; // Global variable to store the ID token
 
         // Helper function to decode JWT token
         function decodeJwtResponse(token) {
@@ -265,6 +269,7 @@
             userEmail = profile.email; // Store the user's email
             userName = profile.name; // Store the user's name
             userProfilePic = profile.picture; // Store the user's profile picture URL
+            idToken = response.credential; // Store the ID token
             document.getElementById("passLabel").textContent="Bathroom Pass for " + userName +"'s Class";
 
             // Update profile picture and details in the dropdown
@@ -289,6 +294,7 @@
             userEmail = ''; // Clear the user's email on sign out
             userName = ''; // Clear the user's name on sign out
             userProfilePic = ''; // Clear the user's profile picture on sign out
+            idToken = ''; // Clear the ID token
 
             // Hide app content and show sign-in page
             document.getElementById('appContent').classList.add('hidden');
@@ -452,40 +458,66 @@
             updateToggleButtonVisibility(); // Update button visibility
         });
 
+        // Function to display error alerts
+        function showErrorAlert(message) {
+            const errorDiv = document.getElementById("errorAlertDiv");
+            const errorMessageSpan = document.getElementById("errorAlertMessage");
+            errorMessageSpan.textContent = message;
+            errorDiv.classList.remove("hidden");
+            // Ensure it's red and visible
+            errorDiv.classList.remove("bg-green-100", "border-green-400", "text-green-700");
+            errorDiv.classList.add("bg-red-100", "border-red-400", "text-red-700");
+            setTimeout(() => errorDiv.classList.add('hidden'), 10000); // Keep error longer
+        }
+
         // Event listener for Late Sign In form submission
         lateSignInForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission via iframe
             const selectedLateName = lateNameDropdown.value;
 
-            // Prevent submission if "Select Your Name" is still chosen
             if (selectedLateName === 'Select Your Name' || selectedLateName.trim() === '') {
-                event.preventDefault(); // Stop the form from submitting
-                // Display a more prominent message to the user
-                document.getElementById("alertDiv").classList.remove("hidden");
-                document.getElementById("alertDiv").classList.add("bg-red-100", "border-red-400", "text-red-700");
-                document.getElementById("alertDiv").classList.remove("bg-green-100", "border-green-400", "text-green-700");
-                document.getElementById("alertMessage").textContent = `Please select a valid name to sign in late.`;
-                setTimeout(() => {
-                    document.getElementById("alertDiv").classList.add("hidden");
-                    // Reset to green after alert
-                    document.getElementById("alertDiv").classList.remove("bg-red-100", "border-red-400", "text-red-700");
-                    document.getElementById("alertDiv").classList.add("bg-green-100", "border-green-400", "text-green-700");
-                }, 5000);
-            } else {
-                const nameOnly2 = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1) : selectedLateName;
-                document.getElementById("nameHolder2").value = nameOnly2; // Use nameHolder for sign out
-
-                document.getElementById("alertDiv").classList.remove("hidden");
-                document.getElementById("alertDiv").classList.remove("bg-red-100", "border-red-400", "text-red-700"); // Ensure it's green for success
-                document.getElementById("alertDiv").classList.add("bg-green-100", "border-green-400", "text-green-700");
-                document.getElementById("alertMessage").textContent = `${selectedLateName} has been signed in late successfully!`;
-                setTimeout(() => document.getElementById("alertDiv").classList.add("hidden"), 5000);
-
-                // Reset the dropdown after a short delay to allow submission
-                setTimeout(() => {
-                    lateNameDropdown.value = 'Select Your Name';
-                    document.getElementById("lateSignInSubmitBtn").classList.add("hidden")
-                }, 100);
+                showErrorAlert(`Please select a valid name to sign in late.`);
+                return; // Stop execution
             }
+
+            const nameOnly2 = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1) : selectedLateName;
+            const classValue = courseDropdown.value; // Get the selected class
+
+            // Prepare data for POST request
+            const payload = {
+                action: 'logLateSignIn', // New action for Apps Script to handle
+                Seconds: 'Late Sign In', // Or actual seconds if you want to track it
+                Name: nameOnly2,
+                Class: classValue,
+                idToken: idToken // Include the ID token for authentication
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    document.getElementById("alertDiv").classList.remove("hidden");
+                    document.getElementById("alertDiv").classList.remove("bg-red-100", "border-red-400", "text-red-700"); // Ensure it's green
+                    document.getElementById("alertDiv").classList.add("bg-green-100", "border-green-400", "text-green-700");
+                    document.getElementById("alertMessage").textContent = `${selectedLateName} has been signed in late successfully!`;
+                    setTimeout(() => document.getElementById("alertDiv").classList.add("hidden"), 5000);
+
+                    lateNameDropdown.value = 'Select Your Name';
+                    document.getElementById("lateSignInSubmitBtn").classList.add("hidden");
+                } else {
+                    showErrorAlert(`Error signing in late: ${data.error || 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting late sign in:', error);
+                showErrorAlert("Failed to submit late sign-in. Please ensure you have authorized the 'Data Entry' app and try again.");
+            });
         });
 
 
@@ -598,6 +630,10 @@
             if (alertDiv) {
                 alertDiv.classList.add("hidden");
             }
+            const errorAlertDiv = document.getElementById("errorAlertDiv");
+            if (errorAlertDiv) {
+                errorAlertDiv.classList.add("hidden");
+            }
 
             // Set initial state for studentOutHeader
             studentOutName.textContent = ''; // Clear student name
@@ -635,13 +671,13 @@
             document.getElementById("signOutButton").style.display = "none";
 
             // Only fetch data if userEmail is available
-            if (userEmail) {
+            if (userEmail && idToken) { // Ensure idToken is also available
                 // Fetch all names first, as other functions depend on it
                 fetchAllNames().then(() => {
                     fetchClassData(); // Then fetch classes, which relies on allNames for unique classes
                 });
             } else {
-                console.warn("User email not available. Cannot fetch class/name data.");
+                console.warn("User email or ID token not available. Cannot fetch class/name data.");
                 setUpDropdown('courseDropdown', [], "Sign in to load classes");
                 setUpDropdown2('nameDropdown', [], "Sign in to load names");
                 setUpDropdown2('nameQueue', [], "Sign in to load names");
@@ -707,7 +743,7 @@
 
         const url = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"
         document.getElementById('form').action = url;
-        document.getElementById('lateSignInForm').action = url;
+        // Removed: document.getElementById('lateSignInForm').action = url; as it's now handled by fetch
         let classes = []; // This will now hold unique class names (derived from allNames)
         let uniqueCourses = [];
         let allNames = []; // Store all names data as objects: [{Class: "...", Name: "..."}, ...]
@@ -716,23 +752,35 @@
 
         // This function now fetches all data for the teacher
         function fetchAllNames() {
-            return fetch(`${url}?action=getAllData&userEmail=${encodeURIComponent(userEmail)}`) 
+            // Change to POST request to send ID token securely
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'getAllData', // Indicate the action for the Apps Script
+                    userEmail: userEmail, // Send user email (for convenience, but backend should verify from token)
+                    idToken: idToken // Send the ID token
+                })
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data)) {
                         allNames = data; // Store the structured data
-                        // No direct population of lateNameDropdown here, as it will be handled by populateNameDropdownsForCourse
                     } else {
                         console.error('Error: fetchAllNames received non-array data:', data);
                         allNames = []; // Reset to empty array to prevent further errors
                         setUpDropdown2('lateNameDropdown', [], "Error loading names");
                         document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
+                        showErrorAlert("Failed to load data. The server returned unexpected data. Please check Apps Script logs.");
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching all names:', error);
                     setUpDropdown2('lateNameDropdown', [], "Error loading names");
                     document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
+                    showErrorAlert("Failed to load data. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try refreshing the page.");
                 });
         }
 
@@ -785,8 +833,6 @@
        // For Bathroom Pass Class Change
         function courseChanged(){
             const selectedCourse = courseDropdown.value;
-            document.getElementById("signOutButton").style.display = "none";
-
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
@@ -814,6 +860,7 @@
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
+                document.getElementById("signOutButton").style.display = "none";
             }
             updateToggleButtonVisibility();
         }
@@ -877,7 +924,7 @@
             } else {
                 document.getElementById("lateSignInSubmitBtn").classList.remove("hidden");
             }
-            document.getElementById("classHolder").textContent = courseDropdown.value; // Ensure class is captured
+            // document.getElementById("classHolder").textContent = courseDropdown.value; // No longer needed, sent in fetch payload
         }
 
         function setUpDropdown(dropdownId, arr, defaultText = "Select Class") {
