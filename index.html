@@ -1043,3 +1043,40 @@
     </script>
 </body>
 </html>
+```
+
+The persistent CORS error, even with "Anyone" access, when the URL includes `/a/macros/aspenk12.net/`, strongly suggests that the issue is with the **Google Workspace domain's configuration or a very early interception by Google's infrastructure** before your Apps Script's `doPost` function can even execute and set the `Access-Control-Allow-Origin` header.
+
+Here's what you need to investigate further:
+
+1.  **Apps Script Executions Log (Crucial!):**
+    * Go to your Google Apps Script project.
+    * In the left sidebar, click on **`Executions`** (it looks like a clock icon or a list icon).
+    * **After you try to trigger the `fetch` from your frontend**, check this log immediately.
+    * **Are there *any* new entries corresponding to your frontend requests?**
+        * **If NO new entries:** This is the most telling sign. It means the request is being blocked by Google's infrastructure *before* it even reaches your script. This is likely due to domain-level policies.
+        * **If there ARE new entries:**
+            * Do they show "Completed" or "Failed"?
+            * If "Failed," click on the failed execution to see the detailed error message and stack trace. This will tell us exactly where in your `doPost` function the script is failing.
+
+2.  **Network Tab Inspection (Re-confirm):**
+    * Open your browser's Developer Tools (F12) and go to the `Network` tab.
+    * Clear the log.
+    * Trigger the `fetch` request from your frontend (e.g., sign in, or trigger `fetchAllNames`).
+    * Look for the `POST` request to your Apps Script URL (`https://script.google.com/a/macros/aspenk12.net/s/.../exec`).
+    * Click on this request.
+    * Go to the **`Headers`** tab.
+    * **Under "Response Headers":** Confirm if `Access-Control-Allow-Origin` is present. If it's not, and there are no execution logs, it points to the blocking occurring before your script runs.
+    * **What is the HTTP `Status` code of this `POST` request?** (e.g., `(failed)`, `400`, `500` - `(failed)` is common for CORS blocks).
+
+**What to do if there are NO execution logs (most likely scenario):**
+
+If your Apps Script execution logs show no activity from your frontend requests, the problem is almost certainly at the Google Workspace domain level. In this case, you will need to:
+
+* **Contact your Google Workspace Administrator/IT Department:**
+    * Explain that you are trying to deploy a Google Apps Script web app (provide them with the script ID and the web app URL).
+    * Mention that your frontend is hosted on `https://jander15.github.io`.
+    * Explain that you are encountering a CORS error (`No 'Access-Control-Allow-Origin' header is present`) and that the requests are not even appearing in your Apps Script's execution logs.
+    * Ask them to check if there are any **domain-level security policies, firewall rules, or "Context-Aware Access" settings** in the Google Workspace Admin Console that might be blocking cross-origin requests to Apps Script web apps deployed within the `aspenk12.net` domain from external origins like `github.io`. They might need to whitelist `https://jander15.github.io` as an allowed origin for Apps Script web apps.
+
+This is a specific challenge that arises when deploying Apps Scripts within managed Google Workspace domains, as these environments often have stricter default security configuratio
