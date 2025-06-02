@@ -97,7 +97,7 @@
             </div>
         </div>
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
-            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span>&nbsp;</span><span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -123,15 +123,15 @@
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
-                        class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                        class="block w-2/3 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
-                    <select id="nameDropdown" onchange="nameSelected()" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    <select id="nameDropdown" onchange="nameSelected()" class="block w-2/3 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
+                    <select id="emojiDropdown" class="block w-fit p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none hidden">
                         </select>
                 </div>
                 
@@ -221,7 +221,6 @@
         let userEmail = ''; // Global variable to store the signed-in user's email
         let userName = ''; // Global variable to store the signed-in user's name
         let userProfilePic = ''; // Global variable to store the signed-in user's profile picture URL
-        let idToken = ''; // Global variable to store the ID token
 
         // Helper function to decode JWT token
         function decodeJwtResponse(token) {
@@ -266,7 +265,6 @@
             userEmail = profile.email; // Store the user's email
             userName = profile.name; // Store the user's name
             userProfilePic = profile.picture; // Store the user's profile picture URL
-            idToken = response.credential; // Store the ID token
             document.getElementById("passLabel").textContent="Bathroom Pass for " + userName +"'s Class";
 
             // Update profile picture and details in the dropdown
@@ -291,7 +289,6 @@
             userEmail = ''; // Clear the user's email on sign out
             userName = ''; // Clear the user's name on sign out
             userProfilePic = ''; // Clear the user's profile picture on sign out
-            idToken = ''; // Clear the ID token
 
             // Hide app content and show sign-in page
             document.getElementById('appContent').classList.add('hidden');
@@ -719,22 +716,12 @@
 
         // This function now fetches all data for the teacher
         function fetchAllNames() {
-            // Change to POST request to send ID token securely
-            return fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'getAllData', // Indicate the action for the Apps Script
-                    userEmail: userEmail, // Send user email (for convenience, but backend should verify from token)
-                    idToken: idToken // Send the ID token
-                })
-            })
+            return fetch(`${url}?action=getAllData&userEmail=${encodeURIComponent(userEmail)}`) 
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data)) {
                         allNames = data; // Store the structured data
+                        // No direct population of lateNameDropdown here, as it will be handled by populateNameDropdownsForCourse
                     } else {
                         console.error('Error: fetchAllNames received non-array data:', data);
                         allNames = []; // Reset to empty array to prevent further errors
@@ -798,6 +785,8 @@
        // For Bathroom Pass Class Change
         function courseChanged(){
             const selectedCourse = courseDropdown.value;
+            document.getElementById("signOutButton").style.display = "none";
+
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
@@ -825,7 +814,6 @@
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
-                document.getElementById("signOutButton").style.display = "none";
             }
             updateToggleButtonVisibility();
         }
