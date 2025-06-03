@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        "Access-Control-Allow-Origin": "https://jander15.github.io", # IMPORTANT: Match your exact GitHub Pages origin
+        "Access-Control-Allow-Origin": "https://jander15.github.io",
         "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization", // Include any custom headers your frontend sends
         "Access-Control-Max-Age": "86400", // Cache preflight response for 24 hours
