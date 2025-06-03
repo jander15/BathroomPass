@@ -79,7 +79,7 @@
         
     </style>
 </head>
-<body>
+<body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">💩 Welcome to AHS "Bathroom" Pass 💩</h1>
@@ -105,7 +105,6 @@
             <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
-        <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
             <strong class="font-bold">Success!</strong>
             <span class="block sm:inline" id="alertMessage">You have been signed in successfully!</span>
@@ -114,7 +113,6 @@
             </span>
         </div>
 
-        <!-- Error Alert -->
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="errorAlertDiv" role="alert">
             <strong class="font-bold">Error!</strong>
             <span class="block sm:inline" id="errorAlertMessage"></span>
@@ -133,7 +131,7 @@
                 <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                    <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
+                    <label class="w=2/3 font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" onchange="courseChanged()" name="Class"
                         class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
@@ -141,9 +139,9 @@
 
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
-                    <select id="nameDropdown" onchange="nameSelected()" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    <select id="nameDropdown" onchange="nameSelected()" class="block w-2/3 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-min flex-shrink-0 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
+                    <select id="emojiDropdown" class="block w-1/3 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
                         </select>
                 </div>
                 
@@ -401,9 +399,7 @@
         mainForm.addEventListener("submit", function(event) {
             event.preventDefault(); // Prevent default form submission
 
-            // Hide sign-in button and stop timer immediately
             document.getElementById("signInButton").style.display = "none";
-            clearInterval(timerInterval); // Stop the timer
 
             const fullString = nameDropdown.value;
             const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
@@ -428,12 +424,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.result === 'success') {
-                    timerInterval = null; // Clear interval reference after successful submission
+                    clearInterval(timerInterval);
+                    timerInterval = null;
                     seconds = 0;
                     minutes = 0;
                     document.getElementById("minutes").textContent = minutes;
                     document.getElementById("seconds").textContent = "00";
-                    document.getElementById("signOutButton").style.display = "none"; // Ensure sign out is hidden
+                    document.getElementById("signInButton").style.display = "none";
+                    document.getElementById("signOutButton").style.display = "none";
                     courseDropdown.removeAttribute("disabled");
                     emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
                     mainForm.style.backgroundColor = "#4ade80"; // Green
@@ -781,7 +779,7 @@
         }
 
 
-        const url = "https://snazzy-stroopwafel-4cf3a5.netlify.app/.netlify/functions/proxy"; // Updated to Netlify Function URL
+        const url = "https://snazzy-stroopwafel-4cf3a5.netlify.app/.netlify/functions/proxy"
         let classes = []; // This will now hold unique class names (derived from allNames)
         let uniqueCourses = [];
         let allNames = []; // Store all names data as objects: [{Class: "...", Name: "..."}, ...]
@@ -809,7 +807,7 @@
                     } else {
                         console.error('Error: fetchAllNames received non-array data:', data);
                         allNames = []; // Reset to empty array to prevent further errors
-                        setUpDropdown2('lateName', [], "Error loading names");
+                        setUpDropdown2('lateNameDropdown', [], "Error loading names");
                         document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
                         showErrorAlert("Failed to load data. The server returned unexpected data. Please check Apps Script logs.");
                     }
@@ -818,7 +816,7 @@
                     console.error('Error fetching all names:', error);
                     setUpDropdown2('lateNameDropdown', [], "Error loading names");
                     document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
-                    showErrorAlert("Failed to load data. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try again.");
+                    showErrorAlert("Failed to load data. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try refreshing the page.");
                 });
         }
 
@@ -854,7 +852,7 @@
 
             if (selectedCourseName && selectedCourseName !== "Select Class" && selectedCourseName !== "") {
                 allNames.forEach(item => {
-                    if (item && item.Class === selectedCourseName && item.Name) {
+                    if (item.Class === selectedCourseName && item.Name) {
                         namesForCurrentCourse.add(item.Name);
                     }
                 });
@@ -871,8 +869,6 @@
        // For Bathroom Pass Class Change
         function courseChanged(){
             const selectedCourse = courseDropdown.value;
-            document.getElementById("signOutButton").style.display = "none";
-
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
@@ -900,6 +896,7 @@
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
+                document.getElementById("signOutButton").style.display = "none";
             }
             updateToggleButtonVisibility();
         }
@@ -1048,3 +1045,40 @@
     </script>
 </body>
 </html>
+```
+
+The persistent CORS error, even with "Anyone" access, when the URL includes `/a/macros/aspenk12.net/`, strongly suggests that the issue is with the **Google Workspace domain's configuration or a very early interception by Google's infrastructure** before your Apps Script's `doPost` function can even execute and set the `Access-Control-Allow-Origin` header.
+
+Here's what you need to investigate further:
+
+1.  **Apps Script Executions Log (Crucial!):**
+    * Go to your Google Apps Script project.
+    * In the left sidebar, click on **`Executions`** (it looks like a clock icon or a list icon).
+    * **After you try to trigger the `fetch` from your frontend**, check this log immediately.
+    * **Are there *any* new entries corresponding to your frontend requests?**
+        * **If NO new entries:** This is the most telling sign. It means the request is being blocked by Google's infrastructure *before* it even reaches your script. This is likely due to domain-level policies.
+        * **If there ARE new entries:**
+            * Do they show "Completed" or "Failed"?
+            * If "Failed," click on the failed execution to see the detailed error message and stack trace. This will tell us exactly where in your `doPost` function the script is failing.
+
+2.  **Network Tab Inspection (Re-confirm):**
+    * Open your browser's Developer Tools (F12) and go to the `Network` tab.
+    * Clear the log.
+    * Trigger the `fetch` request from your frontend (e.g., sign in, or trigger `fetchAllNames`).
+    * Look for the `POST` request to your Apps Script URL (`https://script.google.com/a/macros/aspenk12.net/s/.../exec`).
+    * Click on this request.
+    * Go to the **`Headers`** tab.
+    * **Under "Response Headers":** Confirm if `Access-Control-Allow-Origin` is present. If it's not, and there are no execution logs, it points to the blocking occurring before your script runs.
+    * **What is the HTTP `Status` code of this `POST` request?** (e.g., `(failed)`, `400`, `500` - `(failed)` is common for CORS blocks).
+
+**What to do if there are NO execution logs (most likely scenario):**
+
+If your Apps Script execution logs show no activity from your frontend requests, the problem is almost certainly at the Google Workspace domain level. In this case, you will need to:
+
+* **Contact your Google Workspace Administrator/IT Department:**
+    * Explain that you are trying to deploy a Google Apps Script web app (provide them with the script ID and the web app URL).
+    * Mention that your frontend is hosted on `https://jander15.github.io`.
+    * Explain that you are encountering a CORS error (`No 'Access-Control-Allow-Origin' header is present`) and that the requests are not even appearing in your Apps Script's execution logs.
+    * Ask them to check if there are any **domain-level security policies, firewall rules, or "Context-Aware Access" settings** in the Google Workspace Admin Console that might be blocking cross-origin requests to Apps Script web apps deployed within the `aspenk12.net` domain from external origins like `github.io`. They might need to whitelist `https://jander15.github.io` as an allowed origin for Apps Script web apps.
+
+This is a specific challenge that arises when deploying Apps Scripts within managed Google Workspace domains, as these environments often have stricter default security configuratio
