@@ -22,7 +22,7 @@ exports.handler = async (event, context) => {
   }
 
   // Your Google Apps Script Web App URL
-  const APPS_SCRIPT_URL = "https://script.google.com/a/macros/aspenk12.net/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"; // IMPORTANT: Use YOUR Apps Script URL
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIalB21jM1-vuBfJTpRjtwMc1jJYe0XL5SqCozJCzyNrpd6SBF0Mh_RXITRY5yC-Po/exec"; // IMPORTANT: Use YOUR Apps Script URL
 
   // The origin where your frontend is hosted (for CORS response)
   const FRONTEND_ORIGIN = "https://jander15.github.io"; // IMPORTANT: Match your exact GitHub Pages origin
