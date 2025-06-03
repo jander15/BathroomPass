@@ -1,0 +1,6 @@
+[build]
+  publish = "." # Adjust if your HTML files are in a subdirectory like "docs" or "public"
+  command = "echo 'No build command needed for a static site with functions'"
+
+[functions]
+  directory = "netlify/functions" # This tells Netlify where to find your function files
