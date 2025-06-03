@@ -14,9 +14,7 @@
     
     <script type="text/javascript">
     window.onbeforeunload = function() {
-        // This will prompt the user before leaving the page.
-        // It's generally good practice to inform users if they are about to lose unsaved data.
-        // You might want to refine this to only trigger if a timer is running.
+        // Prompts the user before leaving the page if a timer is running.
         if (timerInterval !== null) {
             return "You have a student signed out. Are you sure you want to leave?";
         }
@@ -105,6 +103,7 @@
             <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
+        <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
             <strong class="font-bold">Success!</strong>
             <span class="block sm:inline" id="alertMessage">You have been signed in successfully!</span>
@@ -113,6 +112,7 @@
             </span>
         </div>
 
+        <!-- Error Alert -->
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="errorAlertDiv" role="alert">
             <strong class="font-bold">Error!</strong>
             <span class="block sm:inline" id="errorAlertMessage"></span>
@@ -141,7 +141,7 @@
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
                     <select id="nameDropdown" onchange="nameSelected()" class="block w-3/4 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-1/8 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4">
+                    <select id="emojiDropdown" class="block w-min flex-shrink-0 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
                         </select>
                 </div>
                 
@@ -426,8 +426,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.result === 'success') {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
+                    timerInterval = null; // Clear interval reference after successful submission
                     seconds = 0;
                     minutes = 0;
                     document.getElementById("minutes").textContent = minutes;
@@ -670,10 +669,6 @@
             if (alertDiv) {
                 alertDiv.classList.add("hidden");
             }
-            const errorAlertDiv = document.getElementById("errorAlertDiv");
-            if (errorAlertDiv) {
-                errorAlertDiv.classList.add("hidden");
-            }
 
             // Set initial state for studentOutHeader
             studentOutName.textContent = ''; // Clear student name
@@ -703,7 +698,7 @@
             lateNameDropdown.setAttribute("disabled", "disabled");
 
             setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Populate emoji dropdown
-            //emojiDropdown.classList.add('hidden'); // Ensure hidden initially
+            emojiDropdown.classList.add('hidden'); // Ensure hidden initially
             emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown initially
             emojiDropdown.value = "No Emoji"; // Ensure default is selected
 
@@ -711,13 +706,13 @@
             document.getElementById("signOutButton").style.display = "none";
 
             // Only fetch data if userEmail is available
-            if (userEmail && idToken) { // Ensure idToken is also available
+            if (userEmail) {
                 // Fetch all names first, as other functions depend on it
                 fetchAllNames().then(() => {
                     fetchClassData(); // Then fetch classes, which relies on allNames for unique classes
                 });
             } else {
-                console.warn("User email or ID token not available. Cannot fetch class/name data.");
+                console.warn("User email not available. Cannot fetch class/name data.");
                 setUpDropdown('courseDropdown', [], "Sign in to load classes");
                 setUpDropdown2('nameDropdown', [], "Sign in to load names");
                 setUpDropdown2('nameQueue', [], "Sign in to load names");
@@ -809,16 +804,16 @@
                     } else {
                         console.error('Error: fetchAllNames received non-array data:', data);
                         allNames = []; // Reset to empty array to prevent further errors
-                        setUpDropdown2('lateNameDropdown', [], "Error loading names");
+                        populateDropdown('lateNameDropdown', [], "Error loading names"); // Use populateDropdown
                         document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
                         showErrorAlert("Failed to load data. The server returned unexpected data. Please check Apps Script logs.");
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching all names:', error);
-                    setUpDropdown2('lateNameDropdown', [], "Error loading names");
+                    populateDropdown('lateNameDropdown', [], "Error loading names"); // Use populateDropdown
                     document.getElementById('lateNameDropdown').setAttribute("disabled", "disabled");
-                    showErrorAlert("Failed to load data. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try refreshing the page.");
+                    showErrorAlert("Failed to load data. This might be due to network issues or because you need to authorize the 'Data Entry' app. Please ensure you have authorized the app and try again.");
                 });
         }
 
@@ -832,11 +827,11 @@
                     }
                 });
                 uniqueCourses = Array.from(uniqueClassNames);
-                setUpDropdown('courseDropdown', uniqueCourses);
+                populateDropdown('courseDropdown', uniqueCourses); // Use populateDropdown
                 courseDropdown.removeAttribute("disabled");
                 courseDropdown.value = ""; // Reset to default "Select Class"
             } else {
-                setUpDropdown('courseDropdown', [], "No classes found or data error");
+                populateDropdown('courseDropdown', [], "No classes found or data error"); // Use populateDropdown
             }
         }
 
@@ -847,30 +842,45 @@
             }
         }
 
+        // Consolidated dropdown population function
+        function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
+            let selectElement = document.getElementById(dropdownId);
+            removeOptions(selectElement);
+            selectElement.add(new Option(defaultText, defaultValue));
+            arr.forEach(str => {
+                // Ensure "Select Your Name" or other default texts aren't added as selectable options from data
+                if (str !== defaultText && str !== defaultValue) { 
+                    selectElement.add(new Option(str, str));
+                }
+            });
+        }
+
         // This function now filters from the 'allNames' array and populates all relevant name dropdowns
         const populateNameDropdownsForCourse = (selectedCourseName) => {
             const namesForCurrentCourse = new Set();
-            namesForCurrentCourse.add("Select Your Name");
+            namesForCurrentCourse.add("Select Your Name"); // Always include default option
 
             if (selectedCourseName && selectedCourseName !== "Select Class" && selectedCourseName !== "") {
                 allNames.forEach(item => {
-                    if (item.Class === selectedCourseName && item.Name) {
+                    if (item && item.Class === selectedCourseName && item.Name) {
                         namesForCurrentCourse.add(item.Name);
                     }
                 });
             }
             
-            uniqueNamesForCourse = Array.from(namesForCurrentCourse);
-
-            setUpDropdown2('nameDropdown', uniqueNamesForCourse);
-            setUpDropdown2('nameQueue', uniqueNamesForCourse);
-            setUpDropdown2('lateNameDropdown', uniqueNamesForCourse); // Apply to late sign-in too
+            const sortedNames = Array.from(namesForCurrentCourse).sort(); // Sort names alphabetically
+            
+            populateDropdown('nameDropdown', sortedNames, "Select Your Name", "Select Your Name");
+            populateDropdown('nameQueue', sortedNames, "Select Your Name", "Select Your Name");
+            populateDropdown('lateNameDropdown', sortedNames, "Select Your Name", "Select Your Name"); // Apply to late sign-in too
         };
 
 
        // For Bathroom Pass Class Change
         function courseChanged(){
             const selectedCourse = courseDropdown.value;
+            document.getElementById("signOutButton").style.display = "none";
+
 
             if (selectedCourse !== "" && selectedCourse !== "Select Class") { // Check for actual class selection
                 nameDropdown.removeAttribute("disabled");
@@ -878,23 +888,23 @@
                 lateNameDropdown.removeAttribute("disabled"); // Enable late name dropdown
                 // emojiDropdown.removeAttribute("disabled"); // Emoji dropdown enabled/disabled by nameSelected
 
-                setUpDropdown2('nameDropdown', [], "Loading..."); // Show loading state
-                setUpDropdown2('nameQueue', [], "Loading..."); // Show loading state
-                setUpDropdown2('lateNameDropdown', [], "Loading..."); // Show loading state
+                populateDropdown('nameDropdown', [], "Loading..."); // Use populateDropdown
+                populateDropdown('nameQueue', [], "Loading..."); // Use populateDropdown
+                populateDropdown('lateNameDropdown', [], "Loading..."); // Use populateDropdown
 
                 populateNameDropdownsForCourse(selectedCourse); // Filter all dropdowns by selected class
             } else {
                 // No class selected or "Select Class" is chosen
-                setUpDropdown2('nameDropdown', [], "Select Your Name");
+                populateDropdown('nameDropdown', [], "Select Your Name"); // Use populateDropdown
                 nameDropdown.setAttribute("disabled", "disabled");
 
-                setUpDropdown2('nameQueue', [], "Select Your Name");
+                populateDropdown('nameQueue', [], "Select Your Name"); // Use populateDropdown
                 nameQueueDropdown.setAttribute("disabled", "disabled");
 
-                setUpDropdown2('lateNameDropdown', [], "Select Your Name");
+                populateDropdown('lateNameDropdown', [], "Select Your Name"); // Use populateDropdown
                 lateNameDropdown.setAttribute("disabled", "disabled"); // Disable if no class selected
 
-                setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
+                populateDropdown('emojiDropdown', emojiList, "No Emoji"); // Use populateDropdown
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
 
@@ -919,13 +929,13 @@
                 // emojiDropdown.removeAttribute("disabled"); // Emoji dropdown enabled/disabled by nameSelected
             } else {
                 // If no course is selected, disable and reset name dropdowns
-                setUpDropdown2('nameDropdown', [], "Select Your Name");
+                populateDropdown('nameDropdown', [], "Select Your Name"); // Use populateDropdown
                 nameDropdown.setAttribute("disabled", "disabled");
-                setUpDropdown2('nameQueue', [], "Select Your Name");
+                populateDropdown('nameQueue', [], "Select Your Name"); // Use populateDropdown
                 nameQueueDropdown.setAttribute("disabled", "disabled");
-                setUpDropdown2('lateNameDropdown', [], "Select Your Name");
+                populateDropdown('lateNameDropdown', [], "Select Your Name"); // Use populateDropdown
                 lateNameDropdown.setAttribute("disabled", "disabled");
-                setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Reset emoji dropdown
+                populateDropdown('emojiDropdown', emojiList, "No Emoji"); // Use populateDropdown
                 emojiDropdown.classList.add('hidden'); // Ensure hidden
                 emojiDropdown.setAttribute("disabled", "disabled");
             }
@@ -941,14 +951,14 @@
         function nameSelected(){
             if(nameDropdown.value === "Select Your Name" || timerInterval !== null || nameDropdown.value === currentlySignedOutStudent){
                 document.getElementById("signOutButton").style.display = "none";
-                //emojiDropdown.classList.add('hidden'); // Hide emoji dropdown
+                emojiDropdown.classList.add('hidden'); // Hide emoji dropdown
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
                 emojiDropdown.value = "No Emoji"; // Reset emoji
                 emojiLeft.textContent = ""; // Clear emojis
                 emojiRight.textContent = ""; // Clear emojis
             } else {
                 document.getElementById("signOutButton").style.display = "block";
-                //emojiDropdown.classList.remove('hidden'); // Show emoji dropdown
+                emojiDropdown.classList.remove('hidden'); // Show emoji dropdown
                 emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
             }
             document.getElementById("signInButton").style.display = timerInterval !== null ? "block" : "none";
@@ -964,21 +974,14 @@
             }
         }
 
-        function setUpDropdown(dropdownId, arr, defaultText = "Select Class") {
+        // Consolidated dropdown population function
+        function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
             let selectElement = document.getElementById(dropdownId);
             removeOptions(selectElement);
-            selectElement.add(new Option(defaultText, ""));
+            selectElement.add(new Option(defaultText, defaultValue));
             arr.forEach(str => {
-                selectElement.add(new Option(str, str));
-            });
-        }
-
-        function setUpDropdown2(dropdownId, arr, defaultText = "Select Your Name") {
-            let selectElement = document.getElementById(dropdownId);
-            removeOptions(selectElement);
-            selectElement.add(new Option(defaultText, "Select Your Name"));
-            arr.forEach(str => {
-                if (str !== "Select Your Name") {
+                // Ensure "Select Your Name" or other default texts aren't added as selectable options from data
+                if (str !== defaultText && str !== defaultValue) { 
                     selectElement.add(new Option(str, str));
                 }
             });
@@ -1047,40 +1050,3 @@
     </script>
 </body>
 </html>
-```
-
-The persistent CORS error, even with "Anyone" access, when the URL includes `/a/macros/aspenk12.net/`, strongly suggests that the issue is with the **Google Workspace domain's configuration or a very early interception by Google's infrastructure** before your Apps Script's `doPost` function can even execute and set the `Access-Control-Allow-Origin` header.
-
-Here's what you need to investigate further:
-
-1.  **Apps Script Executions Log (Crucial!):**
-    * Go to your Google Apps Script project.
-    * In the left sidebar, click on **`Executions`** (it looks like a clock icon or a list icon).
-    * **After you try to trigger the `fetch` from your frontend**, check this log immediately.
-    * **Are there *any* new entries corresponding to your frontend requests?**
-        * **If NO new entries:** This is the most telling sign. It means the request is being blocked by Google's infrastructure *before* it even reaches your script. This is likely due to domain-level policies.
-        * **If there ARE new entries:**
-            * Do they show "Completed" or "Failed"?
-            * If "Failed," click on the failed execution to see the detailed error message and stack trace. This will tell us exactly where in your `doPost` function the script is failing.
-
-2.  **Network Tab Inspection (Re-confirm):**
-    * Open your browser's Developer Tools (F12) and go to the `Network` tab.
-    * Clear the log.
-    * Trigger the `fetch` request from your frontend (e.g., sign in, or trigger `fetchAllNames`).
-    * Look for the `POST` request to your Apps Script URL (`https://script.google.com/a/macros/aspenk12.net/s/.../exec`).
-    * Click on this request.
-    * Go to the **`Headers`** tab.
-    * **Under "Response Headers":** Confirm if `Access-Control-Allow-Origin` is present. If it's not, and there are no execution logs, it points to the blocking occurring before your script runs.
-    * **What is the HTTP `Status` code of this `POST` request?** (e.g., `(failed)`, `400`, `500` - `(failed)` is common for CORS blocks).
-
-**What to do if there are NO execution logs (most likely scenario):**
-
-If your Apps Script execution logs show no activity from your frontend requests, the problem is almost certainly at the Google Workspace domain level. In this case, you will need to:
-
-* **Contact your Google Workspace Administrator/IT Department:**
-    * Explain that you are trying to deploy a Google Apps Script web app (provide them with the script ID and the web app URL).
-    * Mention that your frontend is hosted on `https://jander15.github.io`.
-    * Explain that you are encountering a CORS error (`No 'Access-Control-Allow-Origin' header is present`) and that the requests are not even appearing in your Apps Script's execution logs.
-    * Ask them to check if there are any **domain-level security policies, firewall rules, or "Context-Aware Access" settings** in the Google Workspace Admin Console that might be blocking cross-origin requests to Apps Script web apps deployed within the `aspenk12.net` domain from external origins like `github.io`. They might need to whitelist `https://jander15.github.io` as an allowed origin for Apps Script web apps.
-
-This is a specific challenge that arises when deploying Apps Scripts within managed Google Workspace domains, as these environments often have stricter default security configuratio
