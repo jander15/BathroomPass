@@ -102,7 +102,7 @@
             </div>
         </div>
         <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
-            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span> <span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -400,6 +400,8 @@
             event.preventDefault(); // Prevent default form submission
 
             document.getElementById("signInButton").style.display = "none";
+            clearInterval(timerInterval);
+
 
             const fullString = nameDropdown.value;
             const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1) : fullString;
@@ -701,7 +703,7 @@
             lateNameDropdown.setAttribute("disabled", "disabled");
 
             setUpDropdown('emojiDropdown', emojiList, "No Emoji"); // Populate emoji dropdown
-            emojiDropdown.classList.add('hidden'); // Ensure hidden initially
+            //emojiDropdown.classList.add('hidden'); // Ensure hidden initially
             emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown initially
             emojiDropdown.value = "No Emoji"; // Ensure default is selected
 
@@ -939,14 +941,14 @@
         function nameSelected(){
             if(nameDropdown.value === "Select Your Name" || timerInterval !== null || nameDropdown.value === currentlySignedOutStudent){
                 document.getElementById("signOutButton").style.display = "none";
-                emojiDropdown.classList.add('hidden'); // Hide emoji dropdown
+                //emojiDropdown.classList.add('hidden'); // Hide emoji dropdown
                 emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown
                 emojiDropdown.value = "No Emoji"; // Reset emoji
                 emojiLeft.textContent = ""; // Clear emojis
                 emojiRight.textContent = ""; // Clear emojis
             } else {
                 document.getElementById("signOutButton").style.display = "block";
-                emojiDropdown.classList.remove('hidden'); // Show emoji dropdown
+                //emojiDropdown.classList.remove('hidden'); // Show emoji dropdown
                 emojiDropdown.removeAttribute("disabled"); // Enable emoji dropdown
             }
             document.getElementById("signInButton").style.display = timerInterval !== null ? "block" : "none";
