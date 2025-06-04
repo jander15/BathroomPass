@@ -208,10 +208,12 @@
         const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
         const ACTION_GET_ALL_DATA = 'getAllData';
         const TARDY_THRESHOLD_MINUTES = 5;
-        const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
+        const EMOJI_LIST = ['�', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
         const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
         const FORM_COLOR_OUT = "#f6b26b"; // Orange
         const FORM_COLOR_TARDY = "#ef4444"; // Red
+        const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
+
 
         // --- State Management ---
         const appState = {
@@ -375,8 +377,8 @@
                 updateQueueDisplay(); 
                 showQueueView();      
                 
-                nameQueueDropdown.value = DEFAULT_NAME_OPTION;
-                nameQueueDropdown.removeAttribute('disabled'); // Enable queue dropdown when someone signs out
+                nameQueueDropdown.value = ""; // Select placeholder
+                nameQueueDropdown.removeAttribute('disabled'); 
                 toggleAddToQueueButtonVisibility();
             }
         }
@@ -408,14 +410,14 @@
             emojiDropdown.value = NO_EMOJI_OPTION;
             emojiDropdown.setAttribute("disabled", "disabled"); 
 
-            nameQueueDropdown.removeAttribute('disabled'); // Ensure queue is enabled for others to join
+            nameQueueDropdown.removeAttribute('disabled'); 
 
             showQueueView(); 
             handleNameSelectionChange(); 
         }
 
         function setPassToAvailableState() {
-            nameDropdown.value = DEFAULT_NAME_OPTION;
+            nameDropdown.value = ""; // Select placeholder
             nameDropdown.removeAttribute("disabled");
             signOutButton.style.display = "none"; 
             updateQueueMessage('The queue is empty. No one is currently signed out.');
@@ -429,8 +431,8 @@
             emojiDropdown.value = NO_EMOJI_OPTION;
             emojiDropdown.setAttribute("disabled", "disabled"); 
 
-            nameQueueDropdown.setAttribute("disabled", "disabled"); // Disable queue dropdown
-            nameQueueDropdown.value = DEFAULT_NAME_OPTION; // Reset its value
+            nameQueueDropdown.setAttribute("disabled", "disabled"); 
+            nameQueueDropdown.value = ""; // Select placeholder
             addToQueueButton.classList.add('hidden');
             removeFromQueueButton.classList.add('hidden');
             
@@ -504,10 +506,15 @@
             event.preventDefault();
             const selectedLateName = lateNameDropdown.value;
 
-            if (selectedLateName === DEFAULT_NAME_OPTION || selectedLateName.trim() === '') {
+            if (selectedLateName === "" || selectedLateName === DEFAULT_NAME_OPTION ) { // Check against placeholder value and text
                 showErrorAlert(`Please select a valid name to sign in late.`);
                 return;
             }
+
+            const originalButtonText = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
+            lateSignInSubmitBtn.disabled = true;
+            lateSignInSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            lateSignInSubmitBtn.textContent = "Processing...";
 
             const nameOnly = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1).trim() : selectedLateName.trim();
             const classValue = courseDropdown.value;
@@ -524,14 +531,24 @@
                 const data = await response.json();
                 if (data.result === 'success') {
                     showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
-                    lateNameDropdown.value = DEFAULT_NAME_OPTION;
+                    lateNameDropdown.value = ""; // Select placeholder
                     lateSignInSubmitBtn.classList.add("hidden");
+                    // Reset button state even if hidden, for consistency
+                    lateSignInSubmitBtn.disabled = false;
+                    lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    lateSignInSubmitBtn.textContent = originalButtonText;
                 } else {
                     showErrorAlert(`Error signing in late: ${data.error || 'Unknown error'}`);
+                    lateSignInSubmitBtn.disabled = false;
+                    lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    lateSignInSubmitBtn.textContent = originalButtonText;
                 }
             } catch (error) {
                 console.error('Error submitting late sign in:', error);
                 showErrorAlert("Failed to submit late sign-in. Network or auth issue.");
+                lateSignInSubmitBtn.disabled = false;
+                lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                lateSignInSubmitBtn.textContent = originalButtonText;
             }
         }
 
@@ -579,7 +596,7 @@
         }
 
         function toggleAddToQueueButtonVisibility() {
-            const isNameSelectedInQueueDropdown = nameQueueDropdown.value !== DEFAULT_NAME_OPTION && nameQueueDropdown.value.trim() !== '';
+            const isNameSelectedInQueueDropdown = nameQueueDropdown.value !== "" && nameQueueDropdown.value !== DEFAULT_NAME_OPTION;
             const isQueueDropdownEnabled = !nameQueueDropdown.disabled; 
             
             if (isNameSelectedInQueueDropdown && isQueueDropdownEnabled) {
@@ -592,7 +609,7 @@
         function handleAddToQueueClick() {
             const name = nameQueueDropdown.value.trim();
 
-            if (name === DEFAULT_NAME_OPTION || name === '') {
+            if (name === "" || name === DEFAULT_NAME_OPTION) {
                 updateQueueMessage('Please select your name to add to the queue.');
             } else if (appState.queue.includes(name)) {
                 updateQueueMessage(`${name} is already in the queue.`);
@@ -602,7 +619,7 @@
                 appState.queue.push(name);
                 updateQueueMessage(`${name} has been added to the queue.`);
                 updateQueueDisplay();
-                nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
+                nameQueueDropdown.value = ""; // Select placeholder
                 toggleAddToQueueButtonVisibility(); 
 
                 if (!appState.passHolder && appState.queue.length === 1) { 
@@ -663,7 +680,7 @@
 
             setUpDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION);
             emojiDropdown.setAttribute("disabled", "disabled");
-            emojiDropdown.value = NO_EMOJI_OPTION;
+            emojiDropdown.value = NO_EMOJI_OPTION; // This should be "" to select placeholder
 
             signOutButton.style.display = "none";
             signInButton.style.display = "none"; 
@@ -717,7 +734,7 @@
 
             setUpDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION);
             emojiDropdown.setAttribute("disabled", "disabled");
-            emojiDropdown.value = NO_EMOJI_OPTION;
+            emojiDropdown.value = ""; // Select placeholder
 
             addToQueueButton.classList.add('hidden');
             removeFromQueueButton.classList.add('hidden');
@@ -766,7 +783,6 @@
                 appState.data.courses = Array.from(uniqueClassNames).sort(); 
                 setUpDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
                 courseDropdown.removeAttribute("disabled");
-                // Removed: courseDropdown.value = ""; // setUpDropdown now handles default selection
             } else {
                 setUpDropdown('courseDropdown', [], "No classes found");
             }
@@ -804,23 +820,29 @@
                 nameDropdown.removeAttribute("disabled");
                 lateNameDropdown.removeAttribute("disabled");
                 
-                [nameDropdown, nameQueueDropdown, lateNameDropdown].forEach(dd => setUpDropdown(dd.id, [], LOADING_OPTION));
-                populateNameDropdownsForCourse(selectedCourse);
+                // Set to loading first
+                [nameDropdown, nameQueueDropdown, lateNameDropdown].forEach(dd => {
+                     const element = document.getElementById(dd.id);
+                     if(element) setUpDropdown(dd.id, [], LOADING_OPTION);
+                });
+
+                populateNameDropdownsForCourse(selectedCourse); // This will call setUpDropdown which sets value to ""
+
+                // Ensure placeholder is selected after populating
                 [nameDropdown, nameQueueDropdown, lateNameDropdown].forEach(dd => {
                     const element = document.getElementById(dd.id);
-                    if(element) element.value = DEFAULT_NAME_OPTION
+                    if(element) element.value = ""; 
                 });
                 
-                // Conditionally enable or disable queue dropdown
-                if (!appState.passHolder && appState.queue.length === 0) { // Pass is available
+                if (!appState.passHolder && appState.queue.length === 0) { 
                     nameQueueDropdown.setAttribute("disabled", "disabled");
-                    nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-                } else { // Pass is NOT available (someone out or in queue)
+                    nameQueueDropdown.value = ""; 
+                } else { 
                     nameQueueDropdown.removeAttribute("disabled");
                 }
 
                 emojiDropdown.setAttribute("disabled", "disabled"); 
-                emojiDropdown.value = NO_EMOJI_OPTION;
+                emojiDropdown.value = ""; // Select placeholder
 
             } else { 
                 const nameDropdownsToDisable = [
@@ -832,11 +854,11 @@
                     const ddElement = document.getElementById(ddConfig.id);
                     setUpDropdown(ddConfig.id, [], ddConfig.default); 
                     ddElement.setAttribute("disabled", "disabled");
-                    ddElement.value = ddConfig.default; 
+                    ddElement.value = ""; 
                 });
 
                 emojiDropdown.setAttribute("disabled", "disabled");
-                emojiDropdown.value = NO_EMOJI_OPTION;
+                emojiDropdown.value = ""; // Select placeholder
                 signOutButton.style.display = "none"; 
             }
             toggleAddToQueueButtonVisibility();
@@ -845,14 +867,14 @@
         }
         
         function handleNameSelectionChange(){
-            const isDefaultSelected = nameDropdown.value === DEFAULT_NAME_OPTION;
+            const isDefaultSelected = nameDropdown.value === "" || nameDropdown.value === DEFAULT_NAME_OPTION;
             const isTimerRunning = appState.timer.intervalId !== null;
             const isCurrentStudentSelected = nameDropdown.value === appState.passHolder;
 
             if (isDefaultSelected || isTimerRunning || isCurrentStudentSelected) {
                 signOutButton.style.display = "none";
                 emojiDropdown.setAttribute("disabled", "disabled");
-                emojiDropdown.value = NO_EMOJI_OPTION;
+                emojiDropdown.value = ""; // Select placeholder
                 if (isDefaultSelected || isCurrentStudentSelected) {
                     emojiLeft.textContent = "";
                     emojiRight.textContent = "";
@@ -864,10 +886,13 @@
         }
 
         function handleLateNameSelectionChange(){
-            if (lateNameDropdown.value === DEFAULT_NAME_OPTION || lateNameDropdown.value.trim() === '') {
+            if (lateNameDropdown.value === "" || lateNameDropdown.value === DEFAULT_NAME_OPTION ) {
                 lateSignInSubmitBtn.classList.add("hidden");
             } else {
                 lateSignInSubmitBtn.classList.remove("hidden");
+                lateSignInSubmitBtn.disabled = false;
+                lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                lateSignInSubmitBtn.textContent = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
             }
         }
 
@@ -881,16 +906,13 @@
             let selectElement = document.getElementById(dropdownId);
             removeOptions(selectElement); 
 
-            // The default/placeholder option ALWAYS has value=""
             const defaultOptionElement = new Option(defaultText, "");
             selectElement.add(defaultOptionElement);
 
-            // Add actual items from the array
             arr.forEach(itemValue => {
                 selectElement.add(new Option(itemValue, itemValue));
             });
 
-            // ALWAYS select the placeholder (value="") initially.
             selectElement.value = "";
         }
 
