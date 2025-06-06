@@ -1,5 +1,3 @@
-// js/teacher_dashboard.js
-
 // --- DOM Element References (Declared, but assigned in cacheTeacherDashboardDOMElements) ---
 let dashboardClassDropdown;
 
@@ -15,7 +13,7 @@ let signOutHistoryTabContent;
 let attendanceReportMessageP;
 let attendanceReportTable;
 let attendanceReportTableBody;
-let generateAttendanceReportBtn; // Moved here for clarity
+let generateAttendanceReportBtn; 
 
 // Tab 2: Sign Out History elements
 let signOutHistoryDateFilterType;
@@ -37,20 +35,16 @@ let signOutHistoryReportTableBody;
  */
 function cacheTeacherDashboardDOMElements() {
     dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
-
     attendanceReportTabBtn = document.getElementById('attendanceReportTabBtn');
     signOutHistoryTabBtn = document.getElementById('signOutHistoryTabBtn');
-
     attendanceReportTabContent = document.getElementById('attendanceReportTabContent');
     signOutHistoryTabContent = document.getElementById('signOutHistoryTabContent');
 
-    // Attendance Report elements
     attendanceReportMessageP = document.getElementById('attendanceReportMessage');
     attendanceReportTable = document.getElementById('attendanceReportTable');
     attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
     generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
 
-    // Sign Out History elements
     signOutHistoryDateFilterType = document.getElementById('signOutHistoryDateFilterType');
     signOutHistorySpecificDateInputDiv = document.getElementById('signOutHistorySpecificDateInput');
     signOutHistoryReportDateInput = document.getElementById('signOutHistoryReportDate');
@@ -181,6 +175,7 @@ function renderAttendanceReport(selectedClass) {
  * Generates the Attendance Report. (Currently just shows class roster)
  */
 async function generateAttendanceReport() {
+    console.log('generateAttendanceReport called.');
     attendanceReportMessageP.textContent = "Loading Roster...";
     attendanceReportTable.classList.add('hidden');
     attendanceReportTableBody.innerHTML = '';
@@ -409,7 +404,10 @@ async function initializePageSpecificApp() {
     const todayStr = getTodayDateString();
 
     // Attendance Report tab
-    // Date filter elements removed for now in HTML, so no specific init for them here
+    // Date filter elements are present in HTML, so initialize them
+    attendanceDateFilterType.value = 'today';
+    // This call is now inside the DOMContentLoaded listener.
+    // So toggleAttendanceDateInputs() is called here.
     
     // Sign Out History tab
     signOutHistoryDateFilterType.value = 'today';
@@ -538,6 +536,7 @@ dashboardClassDropdown.addEventListener('change', () => {
 
 
 // Tab 1: Attendance Report Listeners
+// Date filter elements removed for now in HTML, so no specific init for them here
 generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
 
 
@@ -551,4 +550,4 @@ filterLongDurationsCheckbox.addEventListener('change', applySignOutHistoryDurati
 // This is handled by common.js, which has a central DOMContentLoaded listener
 // and calls initGoogleSignIn. initGoogleSignIn then calls initializePageSpecificApp.
 // This file does not need its own DOMContentLoaded listener anymore.
-// document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
