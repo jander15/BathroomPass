@@ -15,7 +15,7 @@ const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
 const ACTION_GET_ALL_DATA = 'getAllData';
 const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;
-const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '�', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
+const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
 const FORM_COLOR_OUT = "#f6b26b"; // Orange
 const FORM_COLOR_TARDY = "#ef4444"; // Red
@@ -324,4 +324,7 @@ function handleGoogleSignOut() {
 
 // --- Main App Initialization Flow (Centralized DOMContentLoaded handling) ---
 // This ensures common DOM elements are cached and GSI is initialized after the DOM is ready.
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+document.addEventListener('DOMContentLoaded', () => {
+    cacheCommonDOMElements(); // Cache elements first
+    initGoogleSignIn();        // Then initialize GSI
+});
