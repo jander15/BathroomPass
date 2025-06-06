@@ -5,66 +5,28 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Pass System by Jander</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-    >
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Identity Services (GSI) library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script type="text/javascript">
+    // This is a global hook, so it remains here but relies on appState from common.js
     /**
      * Prompts the user before leaving the page if a student is currently signed out.
      */
     window.onbeforeunload = function() {
+        // appState will be defined in common.js
         if (typeof appState !== 'undefined' && appState.timer.intervalId !== null) {
             return "You have a student signed out. Are you sure you want to leave?";
         }
         return null;
     }
     </script>
-
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1c1d1d; 
-        }
-        form {
-            font-size: 1.125rem; /* text-lg */
-            transition: background-color 0.5s ease; 
-        }
-        select {
-            font-size: 1.125rem; /* text-lg */
-        }
-        select:focus {
-            outline: none;
-            border-color: #d1d5db; 
-            box-shadow: none; 
-        }
-        #queue-list li {
-            cursor: pointer;
-            padding: 0.6rem 0.8rem;
-            border-radius: 0.5rem;
-            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-            margin-bottom: 0.375rem;
-        }
-        #queue-list li:last-child {
-            margin-bottom: 0;
-        }
-        #queue-list li:hover {
-            background-color: #e2e8f0;
-            color: #1a202c;
-        }
-        #queue-list li.bg-yellow-200-selected { 
-            background-color: #0692e8;
-            color: #2d3748;
-        }
-        #studentOutHeader {
-             font-size: 5rem; 
-             line-height: 1.1;
-             color: #030000; 
-        }
-    </style>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
@@ -91,6 +53,7 @@
             <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
 
+        <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
             <strong class="font-bold">Success!</strong>
             <span class="block sm:inline" id="alertMessage"></span>
@@ -99,6 +62,7 @@
             </span>
         </div>
 
+        <!-- Error Alert -->
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="errorAlertDiv" role="alert">
             <strong class="font-bold">Error!</strong>
             <span class="block sm:inline" id="errorAlertMessage"></span>
@@ -108,25 +72,29 @@
         </div>
 
         <div id="mainContentContainer" class="flex flex-col lg:flex-row items-start lg:items-stretch justify-center w-full max-w-6xl gap-6">
+
             <form
                 id="form"
                 class="rounded-lg shadow-xl p-6 w-full lg:w-2/3 space-y-4 flex-shrink-0"
                 style="background-color: #4ade80;" 
             >
                 <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
+
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="block w=3/4 font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
                     <select id="courseDropdown" name="Class"
                         class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
                 </div>
+
                 <div class="flex flex-col sm:flex-row items-start sm:items-center">
                     <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
                     <select id="nameDropdown" class="block w-3/4 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </select>
-                    <select id="emojiDropdown" class="block w-1/8 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4">
-                    </select>
+                    <select id="emojiDropdown" class="block w-min flex-shrink-0 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4 hidden">
+                        </select>
                 </div>
+                
                 <div class="flex justify-center space-x-3 mt-4">
                     <button id="signOutButton" type="button" 
                         class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base"
@@ -139,6 +107,7 @@
                         Sign In
                     </button>
                 </div>
+
                 <p class="text-center text-lg font-medium text-gray-800 mt-4">Time: <span id="minutes" class="font-bold">0</span>:<span id="seconds" class="font-bold">00</span></p>
             </form>
 
@@ -151,6 +120,7 @@
                         Late Sign In
                     </button>
                 </div>
+
                 <div id="queueArea" class="bg-purple-400 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow hidden">
                     <h2 class="text-2xl font-bold text-black-900 text-center mb-5">Queue for Bathroom</h2>
                     <div class="flex flex-col sm:flex-row items-start sm:items-center">
@@ -163,6 +133,7 @@
                         class="mt-4 px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none transition-colors duration-200 text-base hidden">
                         Add to Queue
                     </button>
+
                     <div id="message-area" class="bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800 mt-4">
                         <p id="message-text" class="hidden text-center text-base font-medium">Please select your name and click 'Add to Queue'.</p>
                         <ol id="queue-list" class="list-decimal list-inside mt-3 text-left text-gray-800 text-base">
@@ -173,6 +144,7 @@
                         </button>
                     </div>
                 </div>
+
                 <div id="lateSignInView" class="flex flex-col items-center justify-start w-full p-6 rounded-b-lg bg-yellow-200 flex-grow">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Late Sign In</h2>
                     <form id="lateSignInForm" class="w-full space-y-4"> 
@@ -180,6 +152,7 @@
                             <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
                             <select id="lateNameDropdown"
                                 class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                                
                             </select>
                         </div>
                         <div class="flex justify-center mt-6">
@@ -190,799 +163,13 @@
                     </form>
                 </div>
             </div>
+            
         </div>
+
     </div>
 
-    <script>
-        // --- Constants ---
-        const GOOGLE_CLIENT_ID = '793583956284-3bnmlmr42c18s79mfj8fkcrci3a197j3.apps.googleusercontent.com';
-        const API_URL = "https://snazzy-stroopwafel-4cf3a5.netlify.app/.netlify/functions/proxy";
-        const DEFAULT_NAME_OPTION = "Select Your Name";
-        const DEFAULT_CLASS_OPTION = "Select Class";
-        const LOADING_OPTION = "Loading...";
-        const NO_EMOJI_OPTION = "No Emoji";
-        const STATUS_PASS_AVAILABLE = "PASS IS AVAILABLE";
-        const STATUS_IS_OUT = "IS OUT";
-        const STATUS_IS_NEXT = "IS NEXT";
-        const ACTION_LOG_SIGN_IN = 'logSignIn';
-        const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
-        const ACTION_GET_ALL_DATA = 'getAllData';
-        const TARDY_THRESHOLD_MINUTES = 5;
-        const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
-        const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
-        const FORM_COLOR_OUT = "#f6b26b"; // Orange
-        const FORM_COLOR_TARDY = "#ef4444"; // Red
-        const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
-        const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
-
-
-        // --- State Management ---
-        const appState = {
-            currentUser: { email: '', name: '', profilePic: '', idToken: '' },
-            timer: { seconds: 0, minutes: 0, intervalId: null, isTardy: false },
-            passHolder: null, 
-            queue: [],
-            selectedQueueName: null, 
-            data: { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] },
-            ui: { currentRightView: 'lateSignIn' }
-        };
-
-        // --- DOM Element Caching ---
-        const signInPage = document.getElementById('signInPage');
-        const googleSignInButton = document.getElementById('googleSignInButton');
-        const signInError = document.getElementById('signInError');
-        const appContent = document.getElementById('appContent');
-        const bodyElement = document.getElementById('body');
-        const profileMenuContainer = document.getElementById('profileMenuContainer');
-        const profilePicture = document.getElementById('profilePicture');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const dropdownUserName = document.getElementById('dropdownUserName');
-        const dropdownUserEmail = document.getElementById('dropdownUserEmail');
-        const dropdownSignOutButton = document.getElementById('dropdownSignOutButton');
-        const studentOutHeader = document.getElementById('studentOutHeader');
-        const emojiLeft = document.getElementById('emojiLeft');
-        const studentOutNameSpan = document.getElementById('studentOutName'); 
-        const headerStatusSpan = document.getElementById('headerStatus'); 
-        const emojiRight = document.getElementById('emojiRight');
-        const alertDiv = document.getElementById('alertDiv');
-        const alertMessageSpan = document.getElementById('alertMessage');
-        const errorAlertDiv = document.getElementById('errorAlertDiv');
-        const errorAlertMessageSpan = document.getElementById('errorAlertMessage');
-        const mainForm = document.getElementById('form');
-        const passLabel = document.getElementById('passLabel');
-        const courseDropdown = document.getElementById('courseDropdown');
-        const nameDropdown = document.getElementById('nameDropdown');
-        const emojiDropdown = document.getElementById('emojiDropdown');
-        const signOutButton = document.getElementById('signOutButton');
-        const signInButton = document.getElementById('signInButton');
-        const minutesSpan = document.getElementById('minutes');
-        const secondsSpan = document.getElementById('seconds');
-        const queueViewBtn = document.getElementById('queueViewBtn');
-        const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
-        const queueArea = document.getElementById('queueArea');
-        const nameQueueDropdown = document.getElementById('nameQueue');
-        const addToQueueButton = document.getElementById('add-to-queue');
-        const messageArea = document.getElementById('message-area');
-        const messageText = document.getElementById('message-text');
-        const queueList = document.getElementById('queue-list');
-        const removeFromQueueButton = document.getElementById('remove-from-queue');
-        const lateSignInView = document.getElementById('lateSignInView');
-        const lateSignInForm = document.getElementById('lateSignInForm');
-        const lateNameDropdown = document.getElementById('lateNameDropdown');
-        const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
-
-        // --- Google Sign-In Integration ---
-        function decodeJwtResponse(token) {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
-
-        function initGoogleSignIn() {
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleSignInResponse 
-            });
-            google.accounts.id.renderButton(
-                googleSignInButton,
-                { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
-            );
-        }
-
-        function handleGoogleSignInResponse(response) {
-            console.log('User signed in successfully with GSI!');
-            const profile = decodeJwtResponse(response.credential);
-            
-            appState.currentUser.email = profile.email;
-            appState.currentUser.name = profile.name;
-            appState.currentUser.profilePic = profile.picture;
-            appState.currentUser.idToken = response.credential;
-
-            passLabel.textContent = `Bathroom Pass for ${appState.currentUser.name}'s Class`;
-            profilePicture.src = appState.currentUser.profilePic;
-            dropdownUserName.textContent = appState.currentUser.name;
-            dropdownUserEmail.textContent = appState.currentUser.email;
-
-            signInPage.classList.add('hidden');
-            appContent.classList.remove('hidden');
-            bodyElement.classList.remove('justify-center');
-            profileMenuContainer.classList.remove('hidden');
-
-            initializeBathroomPassApp();
-        }
-
-        function handleGoogleSignOut() {
-            google.accounts.id.disableAutoSelect();
-            console.log('User signed out.');
-            
-            appState.currentUser = { email: '', name: '', profilePic: '', idToken: '' };
-
-            appContent.classList.add('hidden');
-            signInPage.classList.remove('hidden');
-            bodyElement.classList.add('justify-center');
-            profileMenuContainer.classList.add('hidden');
-            profileDropdown.classList.add('hidden');
-
-            resetBathroomPassAppState();
-        }
-
-        // --- Bathroom Pass Application Logic ---
-        function updateTimerDisplay() {
-            appState.timer.seconds++;
-            if (appState.timer.seconds >= 60) {
-                appState.timer.minutes++;
-                appState.timer.seconds = 0;
-            }
-            if (appState.timer.minutes >= TARDY_THRESHOLD_MINUTES && !appState.timer.isTardy) {
-                mainForm.style.backgroundColor = FORM_COLOR_TARDY;
-                studentOutHeader.style.backgroundColor = FORM_COLOR_TARDY;
-                appState.timer.isTardy = true;
-            }
-            minutesSpan.textContent = appState.timer.minutes;
-            secondsSpan.textContent = appState.timer.seconds < 10 ? "0" + appState.timer.seconds : appState.timer.seconds;
-        }
-
-        function startPassTimerAndTransitionUI() {
-            if (!appState.timer.intervalId) {
-                appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
-                appState.timer.isTardy = false; 
-
-                signOutButton.style.display = "none";
-                signInButton.style.display = "block";
-                signInButton.disabled = false; // Ensure it's enabled when shown
-                signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-
-                nameDropdown.setAttribute("disabled", "disabled");
-                courseDropdown.setAttribute("disabled", "disabled");
-                emojiDropdown.setAttribute("disabled", "disabled");
-                mainForm.style.backgroundColor = FORM_COLOR_OUT;
-
-                const fullString = nameDropdown.value;
-                const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1).trim() : fullString.trim();
-                
-                studentOutNameSpan.textContent = nameOnly;
-                headerStatusSpan.textContent = STATUS_IS_OUT;
-                studentOutHeader.style.backgroundColor = FORM_COLOR_OUT;
-
-                const selectedEmoji = emojiDropdown.value;
-                if (selectedEmoji !== NO_EMOJI_OPTION && selectedEmoji !== "") { // Check against placeholder value
-                    emojiLeft.textContent = selectedEmoji;
-                    emojiRight.textContent = selectedEmoji;
-                } else {
-                    emojiLeft.textContent = "";
-                    emojiRight.textContent = "";
-                }
-
-                appState.passHolder = fullString;
-                
-                updateQueueDisplay(); 
-                showQueueView();      
-                
-                nameQueueDropdown.value = ""; // Select placeholder
-                nameQueueDropdown.removeAttribute('disabled'); 
-                toggleAddToQueueButtonVisibility();
-            }
-        }
-        
-        function resetMainPassUI() {
-            appState.timer.intervalId = null; 
-            appState.timer.seconds = 0;
-            appState.timer.minutes = 0;
-            appState.timer.isTardy = false;
-            minutesSpan.textContent = appState.timer.minutes;
-            secondsSpan.textContent = "00";
-            
-            signInButton.style.display = "none";
-            signInButton.disabled = false;
-            signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-            signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-
-            courseDropdown.removeAttribute("disabled");
-            emojiDropdown.removeAttribute("disabled");
-            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
-        }
-
-        function preparePassForNextInQueue(nextPerson) {
-            nameDropdown.value = nextPerson;
-            nameDropdown.setAttribute("disabled", "disabled"); 
-            updateQueueMessage(`${nextPerson} can now sign out.`); 
-            
-            studentOutNameSpan.textContent = nextPerson;
-            headerStatusSpan.textContent = STATUS_IS_NEXT;
-            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE; 
-            
-            emojiLeft.textContent = ""; 
-            emojiRight.textContent = ""; 
-            emojiDropdown.value = ""; // Select placeholder for No Emoji
-            emojiDropdown.setAttribute("disabled", "disabled"); 
-
-            nameQueueDropdown.removeAttribute('disabled'); 
-
-            showQueueView(); 
-            handleNameSelectionChange(); 
-        }
-
-        function setPassToAvailableState() {
-            nameDropdown.value = ""; // Select placeholder
-            nameDropdown.removeAttribute("disabled");
-            signOutButton.style.display = "none"; 
-            updateQueueMessage('The queue is empty. No one is currently signed out.');
-            
-            studentOutNameSpan.textContent = ''; 
-            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-            
-            emojiLeft.textContent = ""; 
-            emojiRight.textContent = ""; 
-            emojiDropdown.value = ""; // Select placeholder for No Emoji
-            emojiDropdown.setAttribute("disabled", "disabled"); 
-
-            nameQueueDropdown.setAttribute("disabled", "disabled"); 
-            nameQueueDropdown.value = ""; // Select placeholder
-            addToQueueButton.classList.add('hidden');
-            removeFromQueueButton.classList.add('hidden');
-            
-            showLateSignInView(); 
-        }
-
-        async function handleMainFormSubmit(event) {
-            event.preventDefault();
-            
-            signInButton.disabled = true;
-            signInButton.classList.add('opacity-50', 'cursor-not-allowed');
-            signInButton.textContent = "Processing...";
-            
-            clearInterval(appState.timer.intervalId); 
-
-            const nameOnly = appState.passHolder.includes("(") ? appState.passHolder.substring(0, appState.passHolder.indexOf("(")-1).trim() : appState.passHolder.trim();
-            const classValue = courseDropdown.value;
-            const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
-
-            const payload = {
-                action: ACTION_LOG_SIGN_IN,
-                Seconds: timeOutSeconds, 
-                Name: nameOnly, 
-                Class: classValue, 
-                TeacherEmail: appState.currentUser.email, // Added Teacher Email
-                idToken: appState.currentUser.idToken
-            };
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-
-                if (data.result === 'success') {
-                    const signedInStudentName = appState.passHolder; 
-                    resetMainPassUI(); // This also resets signInButton's text and state
-                    showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
-                    appState.passHolder = null; 
-
-                    if (appState.queue.length > 0) {
-                        const nextPerson = appState.queue.shift();
-                        preparePassForNextInQueue(nextPerson);
-                    } else {
-                        setPassToAvailableState();
-                    }
-                    updateQueueDisplay(); 
-                    toggleAddToQueueButtonVisibility();
-                } else {
-                    showErrorAlert(`Error signing in: ${data.error || 'Unknown error'}`);
-                    signInButton.style.display = "block"; // Keep button visible on error
-                    signInButton.disabled = false;
-                    signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                    signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-                    appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
-                }
-            } catch (error) {
-                console.error('Error submitting main sign in:', error);
-                showErrorAlert("Failed to submit sign-in. Network or auth issue. Please check connection and try again.");
-                signInButton.style.display = "block"; // Keep button visible on error
-                signInButton.disabled = false;
-                signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-                if (appState.passHolder) { 
-                    appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
-                }
-            }
-        }
-        
-        function showSuccessAlert(message) {
-            alertDiv.classList.remove("hidden", "bg-red-100", "border-red-400", "text-red-700");
-            alertDiv.classList.add("bg-green-100", "border-green-400", "text-green-700");
-            alertMessageSpan.textContent = message;
-            setTimeout(() => alertDiv.classList.add('hidden'), 5000);
-        }
-
-        function showErrorAlert(message) {
-            errorAlertDiv.classList.remove("hidden", "bg-green-100", "border-green-400", "text-green-700");
-            errorAlertDiv.classList.add("bg-red-100", "border-red-400", "text-red-700");
-            errorAlertMessageSpan.textContent = message;
-            setTimeout(() => errorAlertDiv.classList.add('hidden'), 10000);
-        }
-
-        async function handleLateSignInFormSubmit(event) {
-            event.preventDefault();
-            const selectedLateName = lateNameDropdown.value;
-
-            if (selectedLateName === "" || selectedLateName === DEFAULT_NAME_OPTION ) { 
-                showErrorAlert(`Please select a valid name to sign in late.`);
-                return;
-            }
-
-            const originalButtonText = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
-            lateSignInSubmitBtn.disabled = true;
-            lateSignInSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            lateSignInSubmitBtn.textContent = "Processing...";
-
-            const nameOnly = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1).trim() : selectedLateName.trim();
-            const classValue = courseDropdown.value;
-
-            const payload = {
-                action: ACTION_LOG_LATE_SIGN_IN,
-                Seconds: 'Late Sign In', Name: nameOnly, Class: classValue, idToken: appState.currentUser.idToken
-            };
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                if (data.result === 'success') {
-                    showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
-                    lateNameDropdown.value = ""; 
-                    lateSignInSubmitBtn.classList.add("hidden");
-                    lateSignInSubmitBtn.disabled = false;
-                    lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    lateSignInSubmitBtn.textContent = originalButtonText;
-                } else {
-                    showErrorAlert(`Error signing in late: ${data.error || 'Unknown error'}`);
-                    lateSignInSubmitBtn.disabled = false;
-                    lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    lateSignInSubmitBtn.textContent = originalButtonText;
-                }
-            } catch (error) {
-                console.error('Error submitting late sign in:', error);
-                showErrorAlert("Failed to submit late sign-in. Network or auth issue.");
-                lateSignInSubmitBtn.disabled = false;
-                lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                lateSignInSubmitBtn.textContent = originalButtonText;
-            }
-        }
-
-        function getNumberFromName(name) {
-            const match = name.match(/\((\d+)\)$/);
-            return match ? parseInt(match[1]) : Infinity;
-        }
-
-        function updateQueueMessage(message) {
-            messageText.textContent = message;
-            messageText.classList.remove('hidden'); 
-        }
-
-        function updateQueueDisplay() {
-            queueList.innerHTML = ''; 
-            appState.selectedQueueName = null; 
-            removeFromQueueButton.classList.add('hidden'); 
-
-            if (appState.queue.length === 0) {
-                queueList.style.display = 'none'; 
-                if (!appState.passHolder) { 
-                   updateQueueMessage('The queue is currently empty. Add your name!');
-                } else { 
-                   updateQueueMessage('No one else is in queue. Select your name below to add.');
-                }
-            } else {
-                queueList.style.display = 'block'; 
-                updateQueueMessage('Select a name to remove, or add another.');
-                appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
-                appState.queue.forEach((person) => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = person; 
-                    listItem.addEventListener('click', () => {
-                        Array.from(queueList.children).forEach(item => {
-                            item.classList.remove('bg-yellow-200-selected');
-                        });
-                        appState.selectedQueueName = person;
-                        listItem.classList.add('bg-yellow-200-selected');
-                        removeFromQueueButton.classList.remove('hidden');
-                    });
-                    queueList.appendChild(listItem);
-                });
-            }
-            toggleAddToQueueButtonVisibility(); 
-        }
-
-        function toggleAddToQueueButtonVisibility() {
-            const isNameSelectedInQueueDropdown = nameQueueDropdown.value !== "" && nameQueueDropdown.value !== DEFAULT_NAME_OPTION;
-            const isQueueDropdownEnabled = !nameQueueDropdown.disabled; 
-            
-            if (isNameSelectedInQueueDropdown && isQueueDropdownEnabled) {
-                addToQueueButton.classList.remove('hidden');
-            } else {
-                addToQueueButton.classList.add('hidden');
-            }
-        }
-        
-        function handleAddToQueueClick() {
-            const name = nameQueueDropdown.value.trim();
-
-            if (name === "" || name === DEFAULT_NAME_OPTION) {
-                updateQueueMessage('Please select your name to add to the queue.');
-            } else if (appState.queue.includes(name)) {
-                updateQueueMessage(`${name} is already in the queue.`);
-            } else if (appState.passHolder && name === appState.passHolder) {
-                updateQueueMessage(`${name} is currently signed out and cannot be added to the queue.`);
-            } else {
-                appState.queue.push(name);
-                updateQueueMessage(`${name} has been added to the queue.`);
-                updateQueueDisplay();
-                nameQueueDropdown.value = ""; 
-                toggleAddToQueueButtonVisibility(); 
-
-                if (!appState.passHolder && appState.queue.length === 1) { 
-                    showQueueView();
-                }
-            }
-        }
-
-        function handleRemoveFromQueueClick() {
-            if (appState.queue.length === 0) {
-                updateQueueMessage('The queue is already empty.');
-            } else if (!appState.selectedQueueName) {
-                updateQueueMessage('Please select a name from the list to remove.');
-            } else {
-                const index = appState.queue.indexOf(appState.selectedQueueName);
-                if (index > -1) {
-                    const removedName = appState.selectedQueueName;
-                    appState.queue.splice(index, 1);
-                    updateQueueMessage(`Removed ${removedName} from the queue.`);
-                    updateQueueDisplay(); 
-                } else {
-                    updateQueueMessage('Error: Name not found in queue.'); 
-                }
-                if (appState.queue.length === 0 && !appState.passHolder) {
-                    showLateSignInView(); 
-                }
-            }
-        }
-
-        function initializeBathroomPassApp() {
-            alertDiv.classList.add("hidden");
-            errorAlertDiv.classList.add("hidden");
-
-            studentOutNameSpan.textContent = '';
-            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-            emojiLeft.textContent = "";
-            emojiRight.textContent = "";
-
-            updateQueueDisplay(); 
-            toggleAddToQueueButtonVisibility(); 
-
-            setUpDropdown('courseDropdown', [], LOADING_OPTION);
-            courseDropdown.setAttribute("disabled", "disabled");
-
-            const nameDropdownsToInit = [
-                { id: 'nameDropdown', default: DEFAULT_NAME_OPTION },
-                { id: 'nameQueue', default: DEFAULT_NAME_OPTION },
-                { id: 'lateNameDropdown', default: DEFAULT_NAME_OPTION }
-            ];
-            nameDropdownsToInit.forEach(dd => {
-                setUpDropdown(dd.id, [], dd.default); 
-                document.getElementById(dd.id).setAttribute("disabled", "disabled");
-            });
-            
-            addToQueueButton.classList.add('hidden');
-            removeFromQueueButton.classList.add('hidden');
-
-            setUpDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION);
-            emojiDropdown.setAttribute("disabled", "disabled");
-            emojiDropdown.value = ""; // Select placeholder
-
-            signOutButton.style.display = "none";
-            signInButton.style.display = "none"; 
-            signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; // Set default text
-
-            if (appState.currentUser.email && appState.currentUser.idToken) {
-                fetchAllStudentData().then(() => {
-                    populateCourseDropdownFromData(); 
-                });
-            } else {
-                console.warn("User email or ID token not available. Cannot fetch data.");
-                const noAuthMessage = "Sign in to load data";
-                setUpDropdown('courseDropdown', [], noAuthMessage);
-                nameDropdownsToInit.forEach(dd => setUpDropdown(dd.id, [], noAuthMessage));
-                setUpDropdown('emojiDropdown', [], noAuthMessage);
-            }
-            
-            showLateSignInView(); 
-        }
-
-        function resetBathroomPassAppState() {
-            if (appState.timer.intervalId) {
-                clearInterval(appState.timer.intervalId);
-            }
-            appState.timer = { seconds: 0, minutes: 0, intervalId: null, isTardy: false };
-            appState.passHolder = null;
-            appState.queue = [];
-            appState.selectedQueueName = null;
-            appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] };
-
-            minutesSpan.textContent = "0";
-            secondsSpan.textContent = "00";
-            
-            signInButton.style.display = "none";
-            signInButton.disabled = false;
-            signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-            signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-
-            signOutButton.style.display = "none";
-            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
-            studentOutNameSpan.textContent = '';
-            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-            emojiLeft.textContent = "";
-            emojiRight.textContent = "";
-            
-            const dropdownsToReset = [
-                { id: 'courseDropdown', default: DEFAULT_CLASS_OPTION },
-                { id: 'nameDropdown', default: DEFAULT_NAME_OPTION },
-                { id: 'nameQueue', default: DEFAULT_NAME_OPTION },
-                { id: 'lateNameDropdown', default: DEFAULT_NAME_OPTION }
-            ];
-            dropdownsToReset.forEach(dd => {
-                setUpDropdown(dd.id, [], dd.default);
-                document.getElementById(dd.id).setAttribute("disabled", "disabled");
-            });
-
-            setUpDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION);
-            emojiDropdown.setAttribute("disabled", "disabled");
-            emojiDropdown.value = ""; 
-
-            addToQueueButton.classList.add('hidden');
-            removeFromQueueButton.classList.add('hidden');
-
-            showLateSignInView(); 
-            updateQueueDisplay(); 
-        }
-
-        function fetchAllStudentData() {
-            return fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: ACTION_GET_ALL_DATA,
-                    userEmail: appState.currentUser.email, 
-                    idToken: appState.currentUser.idToken
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    appState.data.allNamesFromSheet = data;
-                } else {
-                    console.error('Error: fetchAllStudentData received non-array data:', data);
-                    appState.data.allNamesFromSheet = [];
-                    showErrorAlert("Failed to load student data. Server returned unexpected format.");
-                    setUpDropdown('courseDropdown', [], "Data Error");
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching all student data:', error);
-                appState.data.allNamesFromSheet = [];
-                showErrorAlert("Failed to load student data. Network or authorization issue. Please check connection, ensure app is authorized, and refresh.");
-                setUpDropdown('courseDropdown', [], "Network Error");
-            });
-        }
-
-        function populateCourseDropdownFromData() {
-            if (appState.data.allNamesFromSheet.length > 0) {
-                const uniqueClassNames = new Set();
-                appState.data.allNamesFromSheet.forEach(item => {
-                    if (item && item.Class) {
-                        uniqueClassNames.add(item.Class);
-                    }
-                });
-                appState.data.courses = Array.from(uniqueClassNames).sort(); 
-                setUpDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
-                courseDropdown.removeAttribute("disabled");
-            } else {
-                setUpDropdown('courseDropdown', [], "No classes found");
-            }
-        }
-
-        function removeOptions(selectElement) {
-            while (selectElement.options.length > 0) {
-                selectElement.remove(0);
-            }
-        }
-
-        function populateNameDropdownsForCourse(selectedCourseName) {
-            const namesForCourseSet = new Set();
-            if (selectedCourseName && selectedCourseName !== DEFAULT_CLASS_OPTION && selectedCourseName !== "") {
-                appState.data.allNamesFromSheet.forEach(item => {
-                    if (item.Class === selectedCourseName && item.Name) {
-                        namesForCourseSet.add(item.Name);
-                    }
-                });
-            }
-            appState.data.namesForSelectedCourse = Array.from(namesForCourseSet).sort((a, b) => {
-                if (a === DEFAULT_NAME_OPTION) return -1; 
-                if (b === DEFAULT_NAME_OPTION) return 1;
-                return a.localeCompare(b);
-            });
-            setUpDropdown('nameDropdown', appState.data.namesForSelectedCourse, DEFAULT_NAME_OPTION);
-            setUpDropdown('nameQueue', appState.data.namesForSelectedCourse, DEFAULT_NAME_OPTION);
-            setUpDropdown('lateNameDropdown', appState.data.namesForSelectedCourse, DEFAULT_NAME_OPTION);
-        }
-
-        function handleCourseSelectionChange(){
-            const selectedCourse = courseDropdown.value;
-
-            if (selectedCourse && selectedCourse !== DEFAULT_CLASS_OPTION && selectedCourse !== "") {
-                nameDropdown.removeAttribute("disabled");
-                lateNameDropdown.removeAttribute("disabled");
-                
-                [nameDropdown, nameQueueDropdown, lateNameDropdown].forEach(dd => {
-                     const element = document.getElementById(dd.id);
-                     if(element) setUpDropdown(dd.id, [], LOADING_OPTION);
-                });
-
-                populateNameDropdownsForCourse(selectedCourse); 
-
-                [nameDropdown, nameQueueDropdown, lateNameDropdown].forEach(dd => {
-                    const element = document.getElementById(dd.id);
-                    if(element) element.value = ""; 
-                });
-                
-                if (!appState.passHolder && appState.queue.length === 0) { 
-                    nameQueueDropdown.setAttribute("disabled", "disabled");
-                    nameQueueDropdown.value = ""; 
-                } else { 
-                    nameQueueDropdown.removeAttribute("disabled");
-                }
-
-                emojiDropdown.setAttribute("disabled", "disabled"); 
-                emojiDropdown.value = ""; 
-
-            } else { 
-                const nameDropdownsToDisable = [
-                    { id: 'nameDropdown', default: DEFAULT_NAME_OPTION },
-                    { id: 'nameQueue', default: DEFAULT_NAME_OPTION },
-                    { id: 'lateNameDropdown', default: DEFAULT_NAME_OPTION }
-                ];
-                nameDropdownsToDisable.forEach(ddConfig => {
-                    const ddElement = document.getElementById(ddConfig.id);
-                    setUpDropdown(ddConfig.id, [], ddConfig.default); 
-                    ddElement.setAttribute("disabled", "disabled");
-                    ddElement.value = ""; 
-                });
-
-                emojiDropdown.setAttribute("disabled", "disabled");
-                emojiDropdown.value = ""; 
-                signOutButton.style.display = "none"; 
-            }
-            toggleAddToQueueButtonVisibility();
-            handleLateNameSelectionChange(); 
-            handleNameSelectionChange();
-        }
-        
-        function handleNameSelectionChange(){
-            const isDefaultSelected = nameDropdown.value === "" || nameDropdown.value === DEFAULT_NAME_OPTION;
-            const isTimerRunning = appState.timer.intervalId !== null;
-            const isCurrentStudentSelected = nameDropdown.value === appState.passHolder;
-
-            if (isDefaultSelected || isTimerRunning || isCurrentStudentSelected) {
-                signOutButton.style.display = "none";
-                emojiDropdown.setAttribute("disabled", "disabled");
-                emojiDropdown.value = ""; 
-                if (isDefaultSelected || isCurrentStudentSelected) {
-                    emojiLeft.textContent = "";
-                    emojiRight.textContent = "";
-                }
-            } else { 
-                signOutButton.style.display = "block";
-                emojiDropdown.removeAttribute("disabled");
-            }
-        }
-
-        function handleLateNameSelectionChange(){
-            if (lateNameDropdown.value === "" || lateNameDropdown.value === DEFAULT_NAME_OPTION ) {
-                lateSignInSubmitBtn.classList.add("hidden");
-            } else {
-                lateSignInSubmitBtn.classList.remove("hidden");
-                lateSignInSubmitBtn.disabled = false;
-                lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                lateSignInSubmitBtn.textContent = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
-            }
-        }
-
-        function setUpDropdown(dropdownId, arr, defaultText = "Select Option") {
-            let selectElement = document.getElementById(dropdownId);
-            removeOptions(selectElement); 
-
-            const defaultOptionElement = new Option(defaultText, "");
-            selectElement.add(defaultOptionElement);
-
-            arr.forEach(itemValue => {
-                selectElement.add(new Option(itemValue, itemValue));
-            });
-
-            selectElement.value = "";
-        }
-
-        function showQueueView() {
-            queueArea.classList.remove('hidden');
-            lateSignInView.classList.add('hidden');
-            appState.ui.currentRightView = 'queue';
-
-            queueViewBtn.classList.add('bg-purple-400', 'text-white');
-            queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
-            lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-            lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
-        }
-
-        function showLateSignInView() {
-            queueArea.classList.add('hidden');
-            lateSignInView.classList.remove('hidden');
-            appState.ui.currentRightView = 'lateSignIn';
-
-            lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-            lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
-            queueViewBtn.classList.add('bg-purple-400', 'text-white');
-            queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
-        }
-        
-        // --- Event Listeners ---
-        document.addEventListener('DOMContentLoaded', initGoogleSignIn);
-        signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
-        mainForm.addEventListener("submit", handleMainFormSubmit);
-        courseDropdown.addEventListener("change", handleCourseSelectionChange);
-        nameDropdown.addEventListener("change", handleNameSelectionChange);
-        lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit);
-        lateNameDropdown.addEventListener('change', handleLateNameSelectionChange);
-        nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility);
-        addToQueueButton.addEventListener('click', handleAddToQueueClick);
-        removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
-        queueViewBtn.addEventListener('click', showQueueView);
-        lateSignInViewBtn.addEventListener('click', showLateSignInView);
-        profilePicture.addEventListener('click', (event) => {
-            event.stopPropagation();
-            profileDropdown.classList.toggle('hidden');
-        });
-        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-        bodyElement.addEventListener('click', (event) => { 
-            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
-
-    </script>
+    <!-- External JavaScript Files -->
+    <script src="js/common.js"></script>
+    <script src="js/bathroom_pass.js"></script>
 </body>
 </html>
