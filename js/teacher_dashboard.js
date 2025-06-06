@@ -116,11 +116,10 @@ async function generateReport() {
 
     try {
         const payload = {
-            action: 'getReportData', // New action for Apps Script
+            action: ACTION_GET_REPORT_DATA, // New action for Apps Script
             class: selectedClass,
             startDate: startDate,
             endDate: endDate,
-            idToken: appState.currentUser.idToken,
             userEmail: appState.currentUser.email
         };
 
@@ -199,11 +198,25 @@ async function initializePageSpecificApp() {
     reportTable.classList.add('hidden');
     reportTableBody.innerHTML = '';
 
+    console.log("initializePageSpecificApp (Dashboard): Current user state:", appState.currentUser);
+
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
+            console.log("initializePageSpecificApp (Dashboard): Fetching all student data...");
             await fetchAllStudentData(); // common.js function to get all student data (which includes classes)
-            populateCourseDropdownFromData(); // Populate dashboard class dropdown
+            console.log("initializePageSpecificApp (Dashboard): allNamesFromSheet:", appState.data.allNamesFromSheet);
+            
+            populateCourseDropdownFromData(); // This function is in common.js
+            console.log("initializePageSpecificApp (Dashboard): appState.data.courses (after populateCourseDropdownFromData):", appState.data.courses);
+
+            populateDropdown('dashboardClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             dashboardClassDropdown.removeAttribute("disabled");
+
+            // Optionally, trigger initial report if a class is pre-selected or default
+            if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
+                 generateReport();
+            }
+
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
             populateDropdown('dashboardClassDropdown', [], "Error loading classes", "");
@@ -221,30 +234,32 @@ async function initializePageSpecificApp() {
  * This is the page-specific reset called by common.js on sign-out.
  */
 function resetPageSpecificAppState() {
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }; // Reset data state
+    // Reset appState.data for a clean slate
+    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }; 
 
     // Reset dropdowns
     populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
     dashboardClassDropdown.setAttribute("disabled", "disabled");
 
+    // Reset date filters
     dateFilterType.value = 'today';
-    toggleDateInputs();
+    toggleDateInputs(); // Ensure only 'today' input is visible
     reportDateInput.value = '';
     startDateInput.value = '';
     endDateInput.value = '';
 
+    // Clear report output
     reportTableBody.innerHTML = '';
     reportTable.classList.add('hidden');
     reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
 
+    // Reset button state
     generateReportBtn.disabled = false;
     generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     generateReportBtn.textContent = "Generate Report";
 }
 
 // --- Event Listeners specific to Teacher Dashboard page ---
+document.addEventListener('DOMContentLoaded', initGoogleSignIn); // Initialize GSI on DOM load for this page
 dateFilterType.addEventListener('change', toggleDateInputs);
 generateReportBtn.addEventListener('click', generateReport);
-
-// Note: dashboardClassDropdown's change listener will be added in common.js's DOMContentLoaded for common elements
-// but it's populated and affected by dashboard-specific logic.
