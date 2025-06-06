@@ -15,7 +15,7 @@ const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
 const ACTION_GET_ALL_DATA = 'getAllData';
 const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;
-const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
+const EMOJI_LIST = ['�', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
 const FORM_COLOR_OUT = "#f6b26b"; // Orange
 const FORM_COLOR_TARDY = "#ef4444"; // Red
@@ -37,8 +37,8 @@ const appState = {
 };
 
 
-// --- DOM Element References (Declared, but assigned after DOMContentLoaded) ---
-// These are declared as 'let' so they can be assigned later.
+// --- Common DOM Element References (Declared, then assigned in cacheCommonDOMElements) ---
+// These are declared as 'let' so they can be assigned after DOMContentLoaded.
 let signInPage;
 let googleSignInButton;
 let signInError;
@@ -233,7 +233,7 @@ function initGoogleSignIn() {
     });
 
     // Only render button if the element exists on the page
-    if (googleSignInButton) {
+    if (googleSignInButton) { // googleSignInButton is now correctly cached by cacheCommonDOMElements()
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
