@@ -14,6 +14,19 @@ const reportOutputDiv = document.getElementById('reportOutput');
 const reportMessageP = document.getElementById('reportMessage');
 const reportTable = document.getElementById('reportTable');
 const reportTableBody = document.getElementById('reportTableBody');
+const signOutReportTab = document.getElementById('signOutReportTab');
+const attendanceReportTab = document.getElementById('attendanceReportTab');
+const signOutReportContent = document.getElementById('signOutReportContent');
+const attendanceReportContent = document.getElementById('attendanceReportContent');
+const attendanceDateInput = document.getElementById('attendanceDate');
+const attendanceReportOutputDiv = document.getElementById('attendanceReportOutput');
+const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
+const attendanceReportTable = document.getElementById('attendanceReportTable');
+const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+const detailsModal = document.getElementById('detailsModal');
+const modalStudentName = document.getElementById('modalStudentName');
+const modalDetailsContent = document.getElementById('modalDetailsContent');
+const closeModalBtn = document.getElementById('closeModalBtn');
 
 
 // --- Dashboard Page Specific Functions (All function declarations first) ---
@@ -34,12 +47,12 @@ function toggleDateInputs() {
 }
 
 /**
- * Generates today's date investre-MM-DD format.
+ * Generates today's date in YYYY-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to वर्षे-MM-DD
+    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
 }
 
 /**
@@ -237,6 +250,176 @@ async function generateReport() {
 }
 
 /**
+ * Switches between the Sign Out and Attendance report tabs.
+ * @param {string} tab - The tab to switch to ('signOut' or 'attendance').
+ */
+function switchTab(tab) {
+    if (tab === 'attendance') {
+        signOutReportContent.classList.add('hidden');
+        attendanceReportContent.classList.remove('hidden');
+        signOutReportTab.classList.remove('border-indigo-500', 'text-indigo-600');
+        signOutReportTab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+        attendanceReportTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        // Automatically generate the report if a class is selected
+        if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
+             generateAttendanceReport();
+        }
+    } else { // 'signOut'
+        signOutReportContent.classList.remove('hidden');
+        attendanceReportContent.classList.add('hidden');
+        attendanceReportTab.classList.remove('border-indigo-500', 'text-indigo-600');
+        attendanceReportTab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+        signOutReportTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+    }
+}
+
+/**
+ * Generates and displays the attendance report.
+ */
+async function generateAttendanceReport() {
+    attendanceReportMessageP.textContent = "Generating attendance report...";
+    attendanceReportTable.classList.add('hidden');
+    attendanceReportTableBody.innerHTML = '';
+    showErrorAlert('');
+    showSuccessAlert('');
+
+    const selectedClass = dashboardClassDropdown.value;
+    const selectedDate = attendanceDateInput.value;
+
+    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
+        showErrorAlert("Please select a class to generate the report.");
+        attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
+        return;
+    }
+    if (!selectedDate) {
+        showErrorAlert("Please select a date.");
+        attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
+        return;
+    }
+
+    try {
+        // 1. Fetch sign-out data for the selected day
+        const payload = {
+            action: ACTION_GET_REPORT_DATA,
+            class: selectedClass,
+            startDate: selectedDate,
+            endDate: selectedDate,
+            userEmail: appState.currentUser.email
+        };
+        const reportData = await sendAuthenticatedRequest(payload);
+
+        if (reportData.result !== 'success' || !Array.isArray(reportData.report)) {
+            throw new Error(reportData.error || 'Failed to fetch report data.');
+        }
+
+        // 2. Get all students for the class
+        const allStudentsInClass = appState.data.allNamesFromSheet
+            .filter(student => student.Class === selectedClass)
+            .map(student => student.Name)
+            .sort();
+
+        if (allStudentsInClass.length === 0) {
+            attendanceReportMessageP.textContent = `No students found for class ${selectedClass}.`;
+            return;
+        }
+
+        attendanceReportMessageP.classList.add('hidden');
+        attendanceReportTable.classList.remove('hidden');
+
+        // 3. Process and display
+        allStudentsInClass.forEach(studentName => {
+            const studentSignOuts = reportData.report.filter(record => record.Name === studentName);
+            const tr = document.createElement('tr');
+            tr.dataset.studentName = studentName;
+
+            let status = "Present";
+            let isClickable = false;
+            let hasLateSignIn = false;
+            let hasLongSignOut = false;
+
+            if (studentSignOuts.length > 0) {
+                isClickable = true;
+                tr.dataset.signOuts = JSON.stringify(studentSignOuts); // Store data for modal
+
+                hasLateSignIn = studentSignOuts.some(record => record.Seconds === "Late Sign In");
+                hasLongSignOut = studentSignOuts.some(record => typeof record.Seconds === 'number' && record.Seconds > (TARDY_THRESHOLD_MINUTES * 60));
+
+                if (hasLateSignIn && hasLongSignOut) {
+                    status = "Late Sign In & Long Sign Out";
+                } else if (hasLateSignIn) {
+                    status = "Late Sign In";
+                } else if (hasLongSignOut) {
+                    status = "Long Sign Out (> 5 min)";
+                } else {
+                    status = `Signed Out (${studentSignOuts.length} time(s))`;
+                }
+            }
+
+            tr.innerHTML = `
+                <td class="py-2 px-4 border-b">${studentName}</td>
+                <td class="py-2 px-4 border-b">${status}</td>
+            `;
+
+            if (hasLateSignIn || hasLongSignOut) {
+                tr.classList.add('bg-red-200');
+            }
+
+            if (isClickable) {
+                tr.classList.add('cursor-pointer', 'hover:bg-gray-200');
+                tr.addEventListener('click', () => showStudentDetails(tr.dataset.studentName, tr.dataset.signOuts));
+            }
+
+            attendanceReportTableBody.appendChild(tr);
+        });
+
+    } catch (error) {
+        console.error('Error generating attendance report:', error);
+        showErrorAlert(`Failed to generate attendance report: ${error.message}`);
+        attendanceReportMessageP.textContent = "Failed to generate report. Please try again.";
+        attendanceReportMessageP.classList.remove('hidden');
+    }
+}
+
+
+/**
+ * Shows the modal with a student's sign-out details.
+ * @param {string} studentName - The name of the student.
+ * @param {string} signOutsJSON - The sign-out data as a JSON string.
+ */
+function showStudentDetails(studentName, signOutsJSON) {
+    const signOuts = JSON.parse(signOutsJSON);
+    modalStudentName.textContent = `For: ${studentName}`;
+
+    let detailsHtml = '<ul class="list-disc list-inside">';
+    signOuts.forEach(record => {
+        if (record.Seconds === "Late Sign In") {
+            detailsHtml += `<li>Late Sign In at ${formatTime(record.Date)}</li>`;
+        } else {
+            const totalSeconds = record.Seconds;
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            detailsHtml += `<li>Signed out at ${formatTime(record.Date)} for a duration of ${durationDisplay}</li>`;
+        }
+    });
+    detailsHtml += '</ul>';
+
+    modalDetailsContent.innerHTML = detailsHtml;
+    detailsModal.classList.remove('hidden');
+}
+
+
+/**
+ * Hides the student details modal.
+ */
+function hideStudentDetails() {
+    detailsModal.classList.add('hidden');
+}
+
+
+/**
  * Initializes the Teacher Dashboard application elements and fetches initial data.
  * This is the page-specific initialization called by common.js.
  */
@@ -247,14 +430,17 @@ async function initializePageSpecificApp() {
     populateDropdown('dashboardClassDropdown', [], LOADING_OPTION, "");
     dashboardClassDropdown.setAttribute("disabled", "disabled");
 
-    // Pre-select 'Today' and hide other date inputs
+    // Pre-select 'Today' and hide other date inputs for Sign Out report
     dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
     endDateInput.value = getTodayDateString();
 
-    filterLongDurationsCheckbox.checked = false; // Ensure checkbox is reset on init
+    // Set default date for Attendance Report
+    attendanceDateInput.value = getTodayDateString();
+
+    filterLongDurationsCheckbox.checked = false; 
 
     generateReportBtn.disabled = false;
     generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -263,27 +449,24 @@ async function initializePageSpecificApp() {
     reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
     reportTable.classList.add('hidden');
     reportTableBody.innerHTML = '';
+    
+    attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
+    attendanceReportTable.classList.add('hidden');
+    attendanceReportTableBody.innerHTML = '';
 
     console.log("initializePageSpecificApp (Dashboard): Current user state:", appState.currentUser);
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
             console.log("initializePageSpecificApp (Dashboard): Fetching all student data...");
-            await fetchAllStudentData(); // common.js function to get all student data (which includes classes)
+            await fetchAllStudentData(); 
             console.log("initializePageSpecificApp (Dashboard): appState.data.allNamesFromSheet:", appState.data.allNamesFromSheet);
             
-            populateCourseDropdownFromData(); // This function is in common.js
+            populateCourseDropdownFromData();
             console.log("initializePageSpecificApp (Dashboard): appState.data.courses (after populateCourseDropdownFromData):", appState.data.courses);
 
             populateDropdown('dashboardClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             dashboardClassDropdown.removeAttribute("disabled");
-
-            // Optionally, trigger initial report if a class is pre-selected or default
-            // This is generally not done automatically on dashboard load,
-            // but left here for quick testing if needed.
-            // if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
-            //      generateReport();
-            // }
 
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
@@ -295,6 +478,9 @@ async function initializePageSpecificApp() {
         populateDropdown('dashboardClassDropdown', [], "Sign in to load classes", "");
         dashboardClassDropdown.setAttribute("disabled", "disabled");
     }
+    
+    // Set the initial tab view
+    switchTab('signOut');
 }
 
 /**
@@ -303,7 +489,7 @@ async function initializePageSpecificApp() {
  */
 function resetPageSpecificAppState() {
     // Reset appState.data for a clean slate
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; // Reset currentReportData too
+    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; 
 
     // Reset dropdowns
     populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
@@ -311,25 +497,57 @@ function resetPageSpecificAppState() {
 
     // Reset date filters
     dateFilterType.value = 'today';
-    toggleDateInputs(); // Ensure only 'today' input is visible
+    toggleDateInputs();
     reportDateInput.value = '';
     startDateInput.value = '';
     endDateInput.value = '';
-    filterLongDurationsCheckbox.checked = false; // Reset checkbox
+    attendanceDateInput.value = '';
+    filterLongDurationsCheckbox.checked = false; 
 
-    // Clear report output
+    // Clear sign out report output
     reportTableBody.innerHTML = '';
     reportTable.classList.add('hidden');
     reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+
+    // Clear attendance report output
+    attendanceReportTableBody.innerHTML = '';
+    attendanceReportTable.classList.add('hidden');
+    attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
 
     // Reset button state
     generateReportBtn.disabled = false;
     generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     generateReportBtn.textContent = "Generate Report";
+    
+    // Reset to default tab
+    switchTab('signOut');
 }
 
 // --- Event Listeners specific to Teacher Dashboard page (All function calls go here, after functions are defined) ---
 document.addEventListener('DOMContentLoaded', initGoogleSignIn); // Initialize GSI on DOM load for this page
 dateFilterType.addEventListener('change', toggleDateInputs);
 generateReportBtn.addEventListener('click', generateReport);
-filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter); // New event listener for the checkbox
+filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter);
+// New listeners for attendance report
+signOutReportTab.addEventListener('click', () => switchTab('signOut'));
+attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
+attendanceDateInput.addEventListener('change', generateAttendanceReport);
+dashboardClassDropdown.addEventListener('change', () => {
+    // Determine which report is active and regenerate it
+    if (!signOutReportContent.classList.contains('hidden')) {
+        reportTable.classList.add('hidden');
+        reportMessageP.textContent = "Class changed. Click 'Generate Report' to see new data.";
+        reportMessageP.classList.remove('hidden');
+    }
+    if (!attendanceReportContent.classList.contains('hidden')) {
+        generateAttendanceReport();
+    }
+});
+
+closeModalBtn.addEventListener('click', hideStudentDetails);
+// Also close modal if clicking outside of it
+detailsModal.addEventListener('click', (event) => {
+    if (event.target === detailsModal) {
+        hideStudentDetails();
+    }
+});
