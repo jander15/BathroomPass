@@ -26,7 +26,22 @@ const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
 
 
-// --- Dashboard Page Specific Functions (All function declarations first) ---
+// --- Helper & Formatting Functions ---
+
+/**
+ * Normalizes a student name by removing any parenthetical parts (e.g., student IDs).
+ * This allows for matching names between the roster and the activity log.
+ * @param {string} name - The original student name string.
+ * @returns {string} The normalized name.
+ */
+function normalizeName(name) {
+    if (typeof name !== 'string') return '';
+    const parenthesisIndex = name.indexOf('(');
+    if (parenthesisIndex > -1) {
+        return name.substring(0, parenthesisIndex).trim();
+    }
+    return name.trim();
+}
 
 /**
  * Toggles the visibility of date input fields based on the selected filter type.
@@ -35,7 +50,6 @@ function toggleDateInputs() {
     const selectedFilter = dateFilterType.value;
     specificDateInputDiv.classList.add('hidden');
     dateRangeInputsDiv.classList.add('hidden');
-
     if (selectedFilter === 'specificDate') {
         specificDateInputDiv.classList.remove('hidden');
     } else if (selectedFilter === 'dateRange') {
@@ -74,19 +88,19 @@ function formatTime(dateInput) {
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
 }
 
+// --- Report Generation & UI Functions ---
+
 /**
- * Applies the duration filter (show only > 5 minutes) to the report table rows.
+ * Applies the duration filter to the main sign-out report.
  */
 function applyDurationFilter() {
     const showLongDurationsOnly = filterLongDurationsCheckbox.checked;
-    const thresholdSeconds = TARDY_THRESHOLD_MINUTES * 60; 
-
+    const thresholdSeconds = TARDY_THRESHOLD_MINUTES * 60;
     Array.from(reportTableBody.rows).forEach(row => {
         const typeCell = row.cells[3];
-        const durationCell = row.cells[4]; 
+        const durationCell = row.cells[4];
         let isLongDuration = false;
         let isSignOut = typeCell.textContent === "Sign Out";
-
         if (isSignOut && durationCell.textContent !== "N/A") {
             let totalSeconds = 0;
             if (durationCell.textContent.includes(':')) {
@@ -97,21 +111,12 @@ function applyDurationFilter() {
             }
             isLongDuration = totalSeconds > thresholdSeconds;
         }
-
-        if (isSignOut && isLongDuration) {
-            row.classList.add('bg-red-200');
-        } else {
-            row.classList.remove('bg-red-200');
-        }
-
-        if (showLongDurationsOnly) {
-            row.classList.toggle('hidden', !(isSignOut && isLongDuration));
-        } else {
-            row.classList.remove('hidden');
-        }
+        if (isSignOut && isLongDuration) row.classList.add('bg-red-200');
+        else row.classList.remove('bg-red-200');
+        if (showLongDurationsOnly) row.classList.toggle('hidden', !(isSignOut && isLongDuration));
+        else row.classList.remove('hidden');
     });
 }
-
 
 /**
  * Generates and displays the main sign-out report.
@@ -120,88 +125,50 @@ async function generateReport() {
     reportMessageP.textContent = "Generating report...";
     reportTable.classList.add('hidden');
     reportTableBody.innerHTML = '';
-    showErrorAlert(''); 
-    showSuccessAlert(''); 
-
+    showErrorAlert('');
+    showSuccessAlert('');
     const selectedClass = dashboardClassDropdown.value;
     const filterType = dateFilterType.value;
-    let startDate = null;
-    let endDate = null;
-
+    let startDate = null, endDate = null;
     if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
         showErrorAlert("Please select a class to generate the report.");
-        reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
         return;
     }
-
     if (filterType === 'today') {
-        const today = getTodayDateString();
-        startDate = today;
-        endDate = today;
+        startDate = endDate = getTodayDateString();
     } else if (filterType === 'specificDate') {
-        startDate = reportDateInput.value;
-        endDate = reportDateInput.value;
-        if (!startDate) {
-            showErrorAlert("Please select a specific date.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
+        startDate = endDate = reportDateInput.value;
+        if (!startDate) { showErrorAlert("Please select a specific date."); return; }
     } else if (filterType === 'dateRange') {
         startDate = startDateInput.value;
         endDate = endDateInput.value;
-        if (!startDate || !endDate) {
-            showErrorAlert("Please select both start and end dates for the range.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
-        if (new Date(startDate) > new Date(endDate)) {
-            showErrorAlert("Start date cannot be after end date.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
+        if (!startDate || !endDate) { showErrorAlert("Please select both start and end dates."); return; }
+        if (new Date(startDate) > new Date(endDate)) { showErrorAlert("Start date cannot be after end date."); return; }
     }
-
     generateReportBtn.disabled = true;
     generateReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
     generateReportBtn.textContent = "Loading Report...";
-
     try {
-        const payload = {
-            action: ACTION_GET_REPORT_DATA,
-            class: selectedClass,
-            startDate: startDate,
-            endDate: endDate,
-            userEmail: appState.currentUser.email
-        };
+        const payload = { action: ACTION_GET_REPORT_DATA, class: selectedClass, startDate, endDate, userEmail: appState.currentUser.email };
         const data = await sendAuthenticatedRequest(payload);
-
         if (data.result === 'success' && Array.isArray(data.report)) {
-            appState.data.currentReportData = data.report;
             if (data.report.length === 0) {
                 reportMessageP.textContent = `No sign-out data found for ${selectedClass} within the selected date range.`;
                 reportTable.classList.add('hidden');
             } else {
                 reportMessageP.classList.add('hidden');
                 reportTable.classList.remove('hidden');
-                reportTableBody.innerHTML = ''; 
+                reportTableBody.innerHTML = '';
                 data.report.forEach(row => {
                     const tr = document.createElement('tr');
-                    let type = "Sign Out";
-                    let durationDisplay = "N/A";
-                    if (row.Seconds === "Late Sign In") {
-                        type = "Late Sign In";
-                    } else if (typeof row.Seconds === 'number') {
+                    let type = "Sign Out", durationDisplay = "N/A";
+                    if (row.Seconds === "Late Sign In") type = "Late Sign In";
+                    else if (typeof row.Seconds === 'number') {
                         const minutes = Math.floor(row.Seconds / 60);
                         const seconds = row.Seconds % 60;
                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     }
-                    tr.innerHTML = `
-                        <td class="py-2 px-4 border-b">${formatDate(row.Date)}</td>
-                        <td class="py-2 px-4 border-b">${formatTime(row.Date)}</td>
-                        <td class="py-2 px-4 border-b">${row.Name || 'N/A'}</td>
-                        <td class="py-2 px-4 border-b">${type}</td>
-                        <td class="py-2 px-4 border-b">${durationDisplay}</td>
-                    `;
+                    tr.innerHTML = `<td class="py-2 px-4 border-b">${formatDate(row.Date)}</td><td class="py-2 px-4 border-b">${formatTime(row.Date)}</td><td class="py-2 px-4 border-b">${row.Name || 'N/A'}</td><td class="py-2 px-4 border-b">${type}</td><td class="py-2 px-4 border-b">${durationDisplay}</td>`;
                     reportTableBody.appendChild(tr);
                 });
                 applyDurationFilter();
@@ -243,17 +210,13 @@ async function generateAttendanceReport() {
     attendanceReportMessageP.textContent = "Generating attendance report...";
     attendanceReportTable.classList.add('hidden');
     attendanceReportTableBody.innerHTML = '';
-    // Clear previous diagnostic info
     const oldDiagnosticDiv = attendanceReportOutputDiv.querySelector('.troubleshooting-info');
-    if (oldDiagnosticDiv) {
-        oldDiagnosticDiv.remove();
-    }
+    if (oldDiagnosticDiv) oldDiagnosticDiv.remove();
     showErrorAlert('');
     showSuccessAlert('');
 
     const selectedClass = dashboardClassDropdown.value;
     const selectedDate = attendanceDateInput.value;
-
     if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION || !selectedDate) {
         showErrorAlert("Please select a class and a date.");
         attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
@@ -264,29 +227,15 @@ async function generateAttendanceReport() {
     generateAttendanceReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
     generateAttendanceReportBtn.textContent = "Loading...";
 
-    let reportData = { report: [] }; // Default empty data
-
     try {
-        const payload = {
-            action: ACTION_GET_REPORT_DATA,
-            class: selectedClass,
-            startDate: selectedDate,
-            endDate: selectedDate,
-            userEmail: appState.currentUser.email
-        };
-        const data = await sendAuthenticatedRequest(payload);
+        const payload = { action: ACTION_GET_REPORT_DATA, class: selectedClass, startDate: selectedDate, endDate: selectedDate, userEmail: appState.currentUser.email };
+        const reportData = await sendAuthenticatedRequest(payload);
 
-        if (data.result === 'success' && Array.isArray(data.report)) {
-            reportData = data; // Store fetched data
-        } else {
-            throw new Error(data.error || 'Unknown error fetching report data.');
+        if (reportData.result !== 'success' || !Array.isArray(reportData.report)) {
+            throw new Error(reportData.error || 'Failed to fetch report data.');
         }
 
-        const allStudentsInClass = appState.data.allNamesFromSheet
-            .filter(student => student.Class === selectedClass)
-            .map(student => student.Name)
-            .sort();
-
+        const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
         if (allStudentsInClass.length === 0) {
             attendanceReportMessageP.textContent = `No students found for class ${selectedClass}.`;
             return;
@@ -297,12 +246,15 @@ async function generateAttendanceReport() {
         attendanceReportTableBody.innerHTML = '';
 
         allStudentsInClass.forEach(studentName => {
-            const studentRecords = reportData.report.filter(record => record.Name === studentName);
-            let attendanceStatus = "Present", reason = "N/A", hasLongSignOut = false, hasLateSignIn = false, signOutCount = 0;
+            // **THE FIX**: Normalize names from both lists before comparing them.
+            const normalizedStudentName = normalizeName(studentName);
+            const studentRecords = reportData.report.filter(record => normalizeName(record.Name) === normalizedStudentName);
 
+            let attendanceStatus = "Present", reason = "N/A", hasLongSignOut = false, hasLateSignIn = false;
+            
             if (studentRecords.length > 0) {
-                attendanceStatus = "Activity Recorded";
                 let longSignOutCount = 0;
+                let signOutCount = 0;
                 studentRecords.forEach(record => {
                     if (record.Seconds === "Late Sign In") hasLateSignIn = true;
                     else if (typeof record.Seconds === 'number') {
@@ -318,16 +270,16 @@ async function generateAttendanceReport() {
                 if (signOutCount > 0) reasons.push(`${signOutCount} Sign Out(s)`);
                 if (longSignOutCount > 0) reasons.push(`(${longSignOutCount} > 5 min)`);
                 reason = reasons.join(' ');
-                if(hasLateSignIn || hasLongSignOut) attendanceStatus = "Needs Review";
+                attendanceStatus = (hasLateSignIn || hasLongSignOut) ? "Needs Review" : "Activity Recorded";
             }
 
             const tr = document.createElement('tr');
             tr.className = 'border-t';
             if (studentRecords.length > 0) {
-                tr.classList.add('cursor-pointer');
+                tr.classList.add('cursor-pointer', 'bg-blue-100'); // Blue background for any activity
                 tr.dataset.accordionToggle = "true";
+                if (hasLateSignIn || hasLongSignOut) tr.classList.add('font-bold');
             }
-            if (hasLateSignIn || hasLongSignOut) tr.classList.add('bg-yellow-100', 'font-bold');
 
             const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
             tr.innerHTML = `<td class="py-3 px-4">${studentName} ${arrowSvg}</td><td class="py-3 px-4">${attendanceStatus}</td><td class="py-3 px-4">${reason}</td>`;
@@ -335,11 +287,11 @@ async function generateAttendanceReport() {
 
             if (studentRecords.length > 0) {
                 const detailsTr = document.createElement('tr');
-                detailsTr.className = 'hidden';
+                detailsTr.className = 'hidden bg-blue-50'; // Slightly lighter blue for details
                 const detailsTd = document.createElement('td');
                 detailsTd.colSpan = 3;
                 detailsTd.className = 'p-0';
-                let detailsTableHtml = `<div class="p-4 bg-gray-50"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="py-2 px-4 border-b text-left">Date</th><th class="py-2 px-4 border-b text-left">Time</th><th class="py-2 px-4 border-b text-left">Type</th><th class="py-2 px-4 border-b text-left">Duration (min:sec)</th></tr></thead><tbody>`;
+                let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="py-2 px-4 border-b text-left">Date</th><th class="py-2 px-4 border-b text-left">Time</th><th class="py-2 px-4 border-b text-left">Type</th><th class="py-2 px-4 border-b text-left">Duration (min:sec)</th></tr></thead><tbody>`;
                 studentRecords.forEach(record => {
                     let type = "Sign Out", durationDisplay = "N/A";
                     if (record.Seconds === "Late Sign In") type = "Late Sign In";
@@ -356,7 +308,6 @@ async function generateAttendanceReport() {
                 attendanceReportTableBody.appendChild(detailsTr);
             }
         });
-
     } catch (error) {
         console.error('Error generating attendance report:', error);
         showErrorAlert(`Failed to generate attendance report: ${error.message}`);
@@ -365,20 +316,6 @@ async function generateAttendanceReport() {
         generateAttendanceReportBtn.disabled = false;
         generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         generateAttendanceReportBtn.textContent = "Generate Attendance Report";
-
-        // --- TROUBLESHOOTING BLOCK ---
-        const diagnosticDiv = document.createElement('div');
-        diagnosticDiv.className = 'troubleshooting-info mt-6 p-4 bg-gray-100 border rounded';
-        const rosterNames = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
-        const activityNames = [...new Set(reportData.report.map(r => r.Name))].sort();
-        diagnosticDiv.innerHTML = `
-            <h4 class="font-bold text-lg">Troubleshooting Info</h4>
-            <p class="text-sm text-gray-600 mb-2">This box shows the names from the class roster and the names found in the activity log for the selected date. If they don't match exactly (e.g., "Doe, John (123)" vs "Doe, John"), the rows won't be expandable.</p>
-            <div class="flex space-x-4">
-                <div class="w-1/2"><h5 class="font-semibold">Names from Roster: (${rosterNames.length})</h5><ul class="list-disc list-inside text-xs h-40 overflow-y-auto">${rosterNames.map(name => `<li>${name}</li>`).join('')}</ul></div>
-                <div class="w-1/2"><h5 class="font-semibold">Names from Activity Log: (${activityNames.length})</h5><ul class="list-disc list-inside text-xs h-40 overflow-y-auto">${activityNames.map(name => `<li>${name}</li>`).join('')}</ul></div>
-            </div>`;
-        attendanceReportOutputDiv.appendChild(diagnosticDiv);
     }
 }
 
@@ -386,7 +323,6 @@ async function generateAttendanceReport() {
  * Initializes the Teacher Dashboard application elements.
  */
 async function initializePageSpecificApp() {
-    // ... (rest of the function is the same as before)
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
     populateDropdown('dashboardClassDropdown', [], LOADING_OPTION, "");
@@ -420,12 +356,10 @@ async function initializePageSpecificApp() {
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
             populateDropdown('dashboardClassDropdown', [], "Error loading classes", "");
-            dashboardClassDropdown.setAttribute("disabled", "disabled");
         }
     } else {
         console.warn("User not authenticated for dashboard. Cannot fetch data.");
         populateDropdown('dashboardClassDropdown', [], "Sign in to load classes", "");
-        dashboardClassDropdown.setAttribute("disabled", "disabled");
     }
     switchTab('signOut');
 }
@@ -434,7 +368,6 @@ async function initializePageSpecificApp() {
  * Resets all Teacher Dashboard page specific UI and state.
  */
 function resetPageSpecificAppState() {
-    // ... (rest of the function is the same as before)
     appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; 
     populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
     dashboardClassDropdown.setAttribute("disabled", "disabled");
@@ -491,6 +424,4 @@ dashboardClassDropdown.addEventListener('change', () => {
     attendanceReportTable.classList.add('hidden');
     attendanceReportMessageP.textContent = "Class changed. Click 'Generate Attendance Report' to see new data.";
     attendanceReportMessageP.classList.remove('hidden');
-    const oldDiagnosticDiv = attendanceReportOutputDiv.querySelector('.troubleshooting-info');
-    if (oldDiagnosticDiv) oldDiagnosticDiv.remove();
 });
