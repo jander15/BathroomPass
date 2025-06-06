@@ -68,12 +68,6 @@
         <div id="dashboardContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl space-y-4">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Student Reports</h2>
         
-            <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="dashboardClassDropdown">Class:</label>
-                <select id="dashboardClassDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                    </select>
-            </div>
-        
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     <button id="signOutReportTab" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">
@@ -86,23 +80,33 @@
             </div>
         
             <div id="signOutReportContent">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-4">
-                    <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="dateFilterType">Date Filter:</label>
-                    <select id="dateFilterType" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                        <option value="today">Today</option>
-                        <option value="specificDate">Specific Date</option>
-                        <option value="dateRange">Date Range</option>
-                    </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="font-medium text-gray-700" for="signOutClassDropdown">Class:</label>
+                        <select id="signOutClassDropdown" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="font-medium text-gray-700" for="dateFilterType">Date Filter:</label>
+                        <select id="dateFilterType" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                            <option value="today">Today</option>
+                            <option value="specificDate">Specific Date</option>
+                            <option value="dateRange">Date Range</option>
+                        </select>
+                    </div>
                 </div>
-                <div id="specificDateInput" class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 hidden">
-                    <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="reportDate">Date:</label>
-                    <input type="date" id="reportDate" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                <div id="specificDateInput" class="hidden mt-4">
+                    <label class="font-medium text-gray-700" for="reportDate">Date:</label>
+                    <input type="date" id="reportDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                 </div>
-                <div id="dateRangeInputs" class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 hidden">
-                    <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="startDate">From:</label>
-                    <input type="date" id="startDate" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                    <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="endDate">To:</label>
-                    <input type="date" id="endDate" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                <div id="dateRangeInputs" class="hidden mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-medium text-gray-700" for="startDate">From:</label>
+                        <input type="date" id="startDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="font-medium text-gray-700" for="endDate">To:</label>
+                        <input type="date" id="endDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    </div>
                 </div>
                 <div class="flex items-center mt-4">
                     <input type="checkbox" id="filterLongDurations" class="form-checkbox h-5 w-5 text-blue-600 rounded-md">
@@ -114,27 +118,33 @@
                     </button>
                 </div>
                 <div id="reportOutput" class="mt-8 overflow-x-auto">
-                    <p id="reportMessage" class="text-center text-gray-600">Select a class and date filter, then click "Generate Report".</p>
-                    <table id="reportTable" class="min-w-full bg-white border border-gray-300 hidden">
+                    <p id="reportMessage" class="text-center text-gray-600">Select filters and click "Generate Report".</p>
+                    <table id="reportTable" class="min-w-full bg-white hidden">
                         <thead>
-                            <tr>
-                                <th class="py-2 px-4 border-b">Date</th>
-                                <th class="py-2 px-4 border-b">Time</th>
-                                <th class="py-2 px-4 border-b">Name</th>
-                                <th class="py-2 px-4 border-b">Type</th>
-                                <th class="py-2 px-4 border-b">Duration (s)</th>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-4 border-b text-left">Date</th>
+                                <th class="py-2 px-4 border-b text-left">Time</th>
+                                <th class="py-2 px-4 border-b text-left">Class</th>
+                                <th class="py-2 px-4 border-b text-left">Name</th>
+                                <th class="py-2 px-4 border-b text-left">Type</th>
+                                <th class="py-2 px-4 border-b text-left">Duration</th>
                             </tr>
                         </thead>
-                        <tbody id="reportTableBody">
-                            </tbody>
+                        <tbody id="reportTableBody"></tbody>
                     </table>
                 </div>
             </div>
         
             <div id="attendanceReportContent" class="hidden mt-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                    <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="attendanceDate">Date:</label>
-                    <input type="date" id="attendanceDate" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div>
+                        <label class="font-medium text-gray-700" for="attendanceClassDropdown">Class:</label>
+                        <select id="attendanceClassDropdown" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
+                    </div>
+                     <div>
+                        <label class="font-medium text-gray-700" for="attendanceDate">Date:</label>
+                        <input type="date" id="attendanceDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                    </div>
                 </div>
                 <div class="flex justify-center mt-6">
                     <button id="generateAttendanceReportBtn" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none transition-colors duration-200">
@@ -151,8 +161,7 @@
                                 <th class="py-2 px-4 border-b text-left w-2/5">Reason</th>
                             </tr>
                         </thead>
-                        <tbody id="attendanceReportTableBody">
-                            </tbody>
+                        <tbody id="attendanceReportTableBody"></tbody>
                     </table>
                 </div>
             </div>
