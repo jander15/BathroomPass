@@ -8,13 +8,15 @@ const reportDateInput = document.getElementById('reportDate');
 const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
 const startDateInput = document.getElementById('startDate');
 const endDateInput = document.getElementById('endDate');
+const filterLongDurationsCheckbox = document.getElementById('filterLongDurations'); // New checkbox
 const generateReportBtn = document.getElementById('generateReportBtn');
 const reportOutputDiv = document.getElementById('reportOutput');
 const reportMessageP = document.getElementById('reportMessage');
 const reportTable = document.getElementById('reportTable');
 const reportTableBody = document.getElementById('reportTableBody');
 
-// --- Dashboard Page Specific Logic ---
+
+// --- Dashboard Page Specific Functions (All function declarations first) ---
 
 /**
  * Toggles the visibility of date input fields based on the selected filter type.
@@ -32,35 +34,85 @@ function toggleDateInputs() {
 }
 
 /**
- * Generates today's date in YYYY-MM-DD format.
+ * Generates today's date investre-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
+    return today.toISOString().split('T')[0]; // Formats to वर्षे-MM-DD
 }
 
 /**
  * Formats a Date object to MM/DD/YYYY.
- * @param {Date} date - The Date object.
+ * @param {Date|string} dateInput - The Date object or date string.
  * @returns {string} Formatted date string.
  */
-function formatDate(date) {
-    if (!date) return '';
-    const d = new Date(date);
+function formatDate(dateInput) {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    // Ensure padding for month and day
     return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 /**
  * Formats a Date object to HH:MM:SS.
- * @param {Date} date - The Date object.
+ * @param {Date|string} dateInput - The Date object or date string.
  * @returns {string} Formatted time string.
  */
-function formatTime(date) {
-    if (!date) return '';
-    const d = new Date(date);
+function formatTime(dateInput) {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    // Ensure padding for hours, minutes, and seconds
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
 }
+
+/**
+ * Applies the duration filter (show only > 5 minutes) to the report table rows.
+ * This is done client-side after the report is fetched.
+ */
+function applyDurationFilter() {
+    const showLongDurationsOnly = filterLongDurationsCheckbox.checked;
+    const thresholdSeconds = TARDY_THRESHOLD_MINUTES * 60; // 5 minutes in seconds
+
+    Array.from(reportTableBody.rows).forEach(row => {
+        const typeCell = row.cells[3]; // 'Type' column
+        const durationCell = row.cells[4]; // 'Duration (s)' column
+
+        let isLongDuration = false;
+        let isSignOut = typeCell.textContent === "Sign Out";
+
+        if (isSignOut && durationCell.textContent !== "N/A") {
+            // Convert MM:SS to seconds or read raw seconds
+            let totalSeconds = 0;
+            if (durationCell.textContent.includes(':')) {
+                const parts = durationCell.textContent.split(':');
+                totalSeconds = parseInt(parts[0] || '0') * 60 + parseInt(parts[1] || '0');
+            } else {
+                totalSeconds = parseFloat(durationCell.textContent || '0'); // Assuming it's already a number
+            }
+            isLongDuration = totalSeconds > thresholdSeconds;
+        }
+
+        // Apply red background highlighting
+        if (isSignOut && isLongDuration) {
+            row.classList.add('bg-red-200'); // Apply highlight for long durations
+        } else {
+            row.classList.remove('bg-red-200'); // Remove highlight otherwise
+        }
+
+        // Hide/show based on filter checkbox
+        if (showLongDurationsOnly) {
+            if (isSignOut && isLongDuration) {
+                row.classList.remove('hidden'); // Show if it's a long sign-out
+            } else {
+                row.classList.add('hidden'); // Hide if it's not
+            }
+        } else {
+            row.classList.remove('hidden'); // Show all rows if filter is off
+        }
+    });
+}
+
 
 /**
  * Generates and displays the report based on selected class and date filter.
@@ -74,6 +126,7 @@ async function generateReport() {
 
     const selectedClass = dashboardClassDropdown.value;
     const filterType = dateFilterType.value;
+    // filterLongDurationsCheckbox.checked is now handled client-side after fetch
     let startDate = null;
     let endDate = null;
 
@@ -103,6 +156,7 @@ async function generateReport() {
             reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
             return;
         }
+        // Basic date validation
         if (new Date(startDate) > new Date(endDate)) {
             showErrorAlert("Start date cannot be after end date.");
             reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
@@ -116,35 +170,42 @@ async function generateReport() {
 
     try {
         const payload = {
-            action: ACTION_GET_REPORT_DATA, // New action for Apps Script
+            action: ACTION_GET_REPORT_DATA,
             class: selectedClass,
             startDate: startDate,
             endDate: endDate,
+            // filterLongDurations is NOT sent to backend anymore
             userEmail: appState.currentUser.email
         };
 
         const data = await sendAuthenticatedRequest(payload);
 
         if (data.result === 'success' && Array.isArray(data.report)) {
-            if (data.report.length === 0) {
+            appState.data.currentReportData = data.report; // Store the raw, unfiltered report data
+
+            if (appState.data.currentReportData.length === 0) {
                 reportMessageP.textContent = `No sign-out data found for ${selectedClass} within the selected date range.`;
                 reportTable.classList.add('hidden');
             } else {
                 reportMessageP.classList.add('hidden'); // Hide message if data is found
                 reportTable.classList.remove('hidden');
-                data.report.forEach(row => {
-                    const tr = document.createElement('tr');
-                    let type = "Sign Out"; // Default for sign out
-                    let duration = row.Seconds; // Already in seconds for sign out
+                
+                // Clear existing rows before appending new ones
+                reportTableBody.innerHTML = ''; 
 
-                    // Determine type and duration for late sign-ins
+                appState.data.currentReportData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    let type = "Sign Out";
+                    let durationDisplay = row.Seconds;
+
                     if (row.Seconds === "Late Sign In") {
                         type = "Late Sign In";
-                        duration = "N/A"; 
-                    } else if (typeof row.Seconds === 'string' && row.Seconds.includes(':')) {
-                        // Handle potential time format from older logs if any
-                        type = "Sign Out";
-                        duration = row.Seconds; // Keep as string if it's already a time format
+                        durationDisplay = "N/A";
+                    } else if (typeof row.Seconds === 'number') {
+                         const totalSeconds = row.Seconds;
+                         const minutes = Math.floor(totalSeconds / 60);
+                         const seconds = totalSeconds % 60;
+                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     }
 
                     tr.innerHTML = `
@@ -152,10 +213,13 @@ async function generateReport() {
                         <td class="py-2 px-4 border-b">${formatTime(row.Date)}</td>
                         <td class="py-2 px-4 border-b">${row.Name || 'N/A'}</td>
                         <td class="py-2 px-4 border-b">${type}</td>
-                        <td class="py-2 px-4 border-b">${duration}</td>
+                        <td class="py-2 px-4 border-b">${durationDisplay}</td>
                     `;
                     reportTableBody.appendChild(tr);
                 });
+                
+                // Apply the filter after all rows are rendered
+                applyDurationFilter();
             }
         } else {
             showErrorAlert(`Error generating report: ${data.error || 'Unknown error'}`);
@@ -186,9 +250,11 @@ async function initializePageSpecificApp() {
     // Pre-select 'Today' and hide other date inputs
     dateFilterType.value = 'today';
     toggleDateInputs();
-    reportDateInput.value = getTodayDateString(); // Set default for specificDate and startDate/endDate for dateRange
+    reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
     endDateInput.value = getTodayDateString();
+
+    filterLongDurationsCheckbox.checked = false; // Ensure checkbox is reset on init
 
     generateReportBtn.disabled = false;
     generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -204,7 +270,7 @@ async function initializePageSpecificApp() {
         try {
             console.log("initializePageSpecificApp (Dashboard): Fetching all student data...");
             await fetchAllStudentData(); // common.js function to get all student data (which includes classes)
-            console.log("initializePageSpecificApp (Dashboard): allNamesFromSheet:", appState.data.allNamesFromSheet);
+            console.log("initializePageSpecificApp (Dashboard): appState.data.allNamesFromSheet:", appState.data.allNamesFromSheet);
             
             populateCourseDropdownFromData(); // This function is in common.js
             console.log("initializePageSpecificApp (Dashboard): appState.data.courses (after populateCourseDropdownFromData):", appState.data.courses);
@@ -213,9 +279,11 @@ async function initializePageSpecificApp() {
             dashboardClassDropdown.removeAttribute("disabled");
 
             // Optionally, trigger initial report if a class is pre-selected or default
-            if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
-                 generateReport();
-            }
+            // This is generally not done automatically on dashboard load,
+            // but left here for quick testing if needed.
+            // if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
+            //      generateReport();
+            // }
 
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
@@ -235,7 +303,7 @@ async function initializePageSpecificApp() {
  */
 function resetPageSpecificAppState() {
     // Reset appState.data for a clean slate
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }; 
+    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; // Reset currentReportData too
 
     // Reset dropdowns
     populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
@@ -247,6 +315,7 @@ function resetPageSpecificAppState() {
     reportDateInput.value = '';
     startDateInput.value = '';
     endDateInput.value = '';
+    filterLongDurationsCheckbox.checked = false; // Reset checkbox
 
     // Clear report output
     reportTableBody.innerHTML = '';
@@ -259,7 +328,8 @@ function resetPageSpecificAppState() {
     generateReportBtn.textContent = "Generate Report";
 }
 
-// --- Event Listeners specific to Teacher Dashboard page ---
+// --- Event Listeners specific to Teacher Dashboard page (All function calls go here, after functions are defined) ---
 document.addEventListener('DOMContentLoaded', initGoogleSignIn); // Initialize GSI on DOM load for this page
 dateFilterType.addEventListener('change', toggleDateInputs);
 generateReportBtn.addEventListener('click', generateReport);
+filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter); // New event listener for the checkbox
