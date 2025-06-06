@@ -15,7 +15,7 @@ const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
 const ACTION_GET_ALL_DATA = 'getAllData';
 const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;
-const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
+const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '�', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
 const FORM_COLOR_OUT = "#f6b26b"; // Orange
 const FORM_COLOR_TARDY = "#ef4444"; // Red
@@ -57,7 +57,7 @@ let errorAlertMessageSpan;
 
 /**
  * Caches common DOM elements by their IDs.
- * This should be called after DOMContentLoaded to ensure elements are available.
+ * This should be called only after DOMContentLoaded to ensure elements are available.
  */
 function cacheCommonDOMElements() {
     signInPage = document.getElementById('signInPage');
@@ -218,12 +218,9 @@ async function fetchAllStudentData() {
 
 /**
  * Initializes the Google Identity Services client and renders the sign-in button.
+ * This is the primary entry point for GSI setup after common DOM elements are cached.
  */
 function initGoogleSignIn() {
-    // Cache common DOM elements right at the start of GSI init
-    // This function is expected to be called by each page's DOMContentLoaded.
-    cacheCommonDOMElements(); 
-
     if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
         console.error("Google Identity Services library not loaded.");
         if (signInError) showErrorAlert("Google Sign-In library failed to load. Please check your internet connection.");
@@ -291,7 +288,7 @@ function handleGoogleSignInResponse(response) {
 
     // Call the page-specific initialization function.
     // This function MUST be defined in the page-specific JS file (e.g., bathroom_pass.js, teacher_dashboard.js)
-    // and should handle its own DOMContentLoaded or ensure it's available globally before this is called.
+    // and is expected to be globally available when common.js calls it.
     if (typeof initializePageSpecificApp === 'function') {
         initializePageSpecificApp();
     } else {
@@ -325,5 +322,6 @@ function handleGoogleSignOut() {
     }
 }
 
-// Common DOMContentLoaded is handled by each page's JS now.
-// Global constants are defined outside any function for immediate availability.
+// --- Main App Initialization Flow (Centralized DOMContentLoaded handling) ---
+// This ensures common DOM elements are cached and GSI is initialized after the DOM is ready.
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
