@@ -48,7 +48,7 @@ function toggleDateInputs() {
 }
 
 /**
- * Generates today's date in YYYY-MM-DD format.
+ * Generates today's date in 'YYYY-MM-DD' format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
@@ -322,6 +322,7 @@ async function generateAttendanceReport() {
 
         attendanceReportMessageP.classList.add('hidden');
         attendanceReportTable.classList.remove('hidden');
+        attendanceReportTableBody.innerHTML = '';
 
         // 3. Process and display
         allStudentsInClass.forEach(studentName => {
