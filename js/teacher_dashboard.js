@@ -187,12 +187,12 @@ function toggleStudentHistoryDateInputs() {
 }
 
 /**
- * Generates today's date investre-MM-DD format.
+ * Generates today's date in YYYY-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to वर्षे-MM-DD
+    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
 }
 
 /**
@@ -336,9 +336,20 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
     attendanceReportTable.classList.remove('hidden');
     attendanceReportMessageP.classList.add('hidden');
 
-    const uniqueStudents = Array.from(new Set(appState.data.allNamesFromSheet.map(s => s.Name))).sort(); // Get all students in teacher's classes
+    // Filter appState.data.allNamesFromSheet for students in the currently selected class
+    // This ensures all students in the class are listed, even if they have no activity for the period.
+    const studentsInSelectedClass = appState.data.allNamesFromSheet.filter(student => 
+        student.Class === dashboardClassDropdown.value // Assuming 'Class' is a property on student objects
+    ).map(student => student.Name).sort();
 
-    uniqueStudents.forEach(studentName => {
+    if (studentsInSelectedClass.length === 0) {
+        attendanceReportMessageP.textContent = `No students found in the selected class: ${dashboardClassDropdown.value}.`;
+        attendanceReportTable.classList.add('hidden');
+        attendanceReportMessageP.classList.remove('hidden');
+        return;
+    }
+
+    studentsInSelectedClass.forEach(studentName => {
         const studentActivities = reportData.filter(entry => entry.Name === studentName);
 
         let rowData = {};
@@ -349,8 +360,7 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
             const dailyAgg = aggregateDailyStudentActivity(studentActivities);
             rowData = dailyAgg;
             isHighlightRow = dailyAgg.isLateSignIn || dailyAgg.hasLongSignOut;
-            mainRowStatus = dailyAgg.status;
-            // For single day, status/total sign outs column shows status, total sign out time, late sign ins
+            
             mainRowStatus = `${dailyAgg.status || "Present"}`;
             if (dailyAgg.totalSignOutSeconds > 0) {
                 mainRowStatus += ` (${formatDuration(dailyAgg.totalSignOutSeconds)})`;
@@ -362,7 +372,7 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
         } else if (filterType === 'dateRange') {
             const rangeAgg = aggregateRangeStudentActivity(studentActivities);
             rowData = rangeAgg;
-            isHighlightRow = rangeAgg.totalLateSignIns > 0 || (rangeAgg.totalSignOutSeconds / rangeAgg.totalSignOuts > (TARDY_THRESHOLD_MINUTES * 60) && rangeAgg.totalSignOuts > 0); // Avg duration > 5 min
+            isHighlightRow = rangeAgg.totalLateSignIns > 0 || (rangeAgg.totalSignOuts > 0 && (rangeAgg.totalSignOutSeconds / rangeAgg.totalSignOuts > (TARDY_THRESHOLD_MINUTES * 60))); 
             mainRowStatus = `${rangeAgg.totalSignOuts} Sign Outs`;
             if (rangeAgg.totalLateSignIns > 0) {
                 mainRowStatus += ` (${rangeAgg.totalLateSignIns} Late)`;
@@ -390,9 +400,11 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
         `;
         attendanceReportTableBody.appendChild(tr);
 
-        // Add click listener for expansion
-        if (rowData.details && rowData.details.length > 0 || (rowData.dailyDetails && rowData.dailyDetails.length > 0)) {
-            let detailRow = null;
+        // Add click listener for expansion if there are details
+        if ((filterType === 'today' || filterType === 'specificDate') && rowData.details && rowData.details.length > 0 || 
+            (filterType === 'dateRange' && rowData.dailyDetails && rowData.dailyDetails.length > 0)) {
+            
+            let detailRow = null; // Declare detailRow outside the listener
             tr.addEventListener('click', () => {
                 if (detailRow && detailRow.parentNode) {
                     detailRow.parentNode.removeChild(detailRow);
@@ -401,7 +413,8 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
                 } else {
                     detailRow = document.createElement('tr');
                     detailRow.classList.add('detail-row');
-                    detailRow.innerHTML = `<td colspan="4"></td>`; // Placeholder for correct colspan
+                    // Colspan must match the number of columns in the main table
+                    detailRow.innerHTML = `<td colspan="4"></td>`; 
                     const detailCell = detailRow.querySelector('td');
                     tr.classList.add('expanded-row');
 
@@ -423,7 +436,7 @@ function renderAttendanceReport(reportData, filterType, selectedDate) {
         }
     });
 
-    if (uniqueStudents.length === 0) {
+    if (studentsInSelectedClass.length === 0) {
         attendanceReportMessageP.textContent = `No students found for ${dashboardClassDropdown.value} or no data for selected criteria.`;
         attendanceReportTable.classList.add('hidden');
         attendanceReportMessageP.classList.remove('hidden');
@@ -474,7 +487,7 @@ async function generateAttendanceReport() {
         }
         if (new Date(startDate) > new Date(endDate)) {
             showErrorAlert("Start date cannot be after end date.");
-            attendanceReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+            attendanceReportMessageP.textContent = "Start date cannot be after end date.";
             return;
         }
     }
@@ -485,7 +498,7 @@ async function generateAttendanceReport() {
 
     try {
         const payload = {
-            action: ACTION_GET_REPORT_DATA, // Use the same backend action, filter in frontend
+            action: ACTION_GET_REPORT_DATA, // Backend returns all log entries for the class/date range
             class: selectedClass,
             startDate: startDate,
             endDate: endDate,
@@ -602,7 +615,7 @@ async function generateSignOutHistoryReport() {
         }
         if (new Date(startDate) > new Date(endDate)) {
             showErrorAlert("Start date cannot be after end date.");
-            signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+            signOutHistoryReportMessageP.textContent = "Start date cannot be after end date.";
             return;
         }
     }
@@ -741,7 +754,7 @@ async function generateStudentHistoryReport() {
         }
         if (new Date(startDate) > new Date(endDate)) {
             showErrorAlert("Start date cannot be after end date.");
-            studentHistoryReportMessageP.textContent = "Select a student and date filter, then click 'Generate Report'.";
+            studentHistoryReportMessageP.textContent = "Start date cannot be after end date.";
             return;
         }
     } else if (filterType === 'allTime') {
@@ -897,22 +910,21 @@ async function initializePageSpecificApp() {
             await fetchAllStudentData(); // common.js function to get all student data (which includes classes)
             console.log("initializePageSpecificApp (Dashboard): appState.data.allNamesFromSheet:", appState.data.allNamesFromSheet);
             
+            // Populate main class dropdown for dashboard
             populateCourseDropdownFromData(); // This function is in common.js and populates appState.data.courses
-            console.log("initializePageSpecificApp (Dashboard): appState.data.courses (after populateCourseDropdownFromData):", appState.data.courses);
-
             populateDropdown('dashboardClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             dashboardClassDropdown.removeAttribute("disabled");
-
-            // Populate student dropdown from all available students (unfiltered by class initially)
-            const allUniqueStudentNames = Array.from(new Set(appState.data.allNamesFromSheet.map(s => s.Name))).sort();
-            populateDropdown('studentHistoryDropdown', allUniqueStudentNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
-            // Re-disable student history dropdown if no class is selected yet
-            if (dashboardClassDropdown.value === "" || dashboardClassDropdown.value === DEFAULT_CLASS_OPTION) {
-                studentHistoryDropdown.setAttribute("disabled", "disabled");
+            
+            // Trigger change event to populate student dropdown and potentially initial report if class is already selected
+            // This handles cases where dashboardClassDropdown might have a pre-selected value from browser history
+            if (dashboardClassDropdown.value !== "" && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
+                const event = new Event('change');
+                dashboardClassDropdown.dispatchEvent(event);
             } else {
-                studentHistoryDropdown.removeAttribute("disabled");
+                // If no class is selected by default, ensure student dropdown is disabled
+                populateDropdown('studentHistoryDropdown', [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION); // Re-populate with defaults
+                studentHistoryDropdown.setAttribute("disabled", "disabled");
             }
-
 
             // Set default tab to Attendance Report
             showDashboardTab('attendanceReportTabContent');
@@ -1009,14 +1021,34 @@ studentHistoryTabBtn.addEventListener('click', () => showDashboardTab('studentHi
 
 // Class Dropdown - Main filter for the dashboard
 dashboardClassDropdown.addEventListener('change', () => {
-    // When class changes, disable student history dropdown if default class is selected
-    if (dashboardClassDropdown.value === "" || dashboardClassDropdown.value === DEFAULT_CLASS_OPTION) {
-        studentHistoryDropdown.setAttribute("disabled", "disabled");
-    } else {
+    // When class changes, filter students for student history dropdown
+    const selectedClass = dashboardClassDropdown.value;
+    if (selectedClass && selectedClass !== DEFAULT_CLASS_OPTION) {
+        // Filter students for the specific class from allNamesFromSheet
+        const studentsInSelectedClass = appState.data.allNamesFromSheet.filter(student => 
+            student.Class === selectedClass
+        ).map(student => student.Name).sort();
+        
+        populateDropdown('studentHistoryDropdown', studentsInSelectedClass, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
         studentHistoryDropdown.removeAttribute("disabled");
+    } else {
+        // If no class is selected, disable and reset student dropdown
+        populateDropdown('studentHistoryDropdown', [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
+        studentHistoryDropdown.setAttribute("disabled", "disabled");
     }
-    // Optionally trigger a report generation automatically on class change,
-    // or rely on user clicking "Generate Report"
+    // Clear reports when class changes (optional, but good UX)
+    attendanceReportTableBody.innerHTML = '';
+    attendanceReportTable.classList.add('hidden');
+    attendanceReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+
+    signOutHistoryReportTableBody.innerHTML = '';
+    signOutHistoryReportTable.classList.add('hidden');
+    signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+
+    studentHistoryReportTableBody.innerHTML = '';
+    studentHistoryReportTable.classList.add('hidden');
+    studentHistoryReportMessageP.textContent = "Select a student and date filter, then click 'Generate Report'.";
+
 });
 
 
