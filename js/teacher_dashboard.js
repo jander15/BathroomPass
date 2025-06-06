@@ -84,18 +84,17 @@ function renderSignOutReport() {
         filteredData = filteredData.filter(r => normalizeName(r.Name) === normalizedStudent);
     }
     if (filterType !== 'all_time') {
-        let startDate, endDate;
-        if (filterType === 'today') { startDate = endDate = getTodayDateString(); }
-        else if (filterType === 'this_week') { const r = getWeekRange(); startDate = r.start; endDate = r.end; }
-        else if (filterType === 'this_month') { const r = getMonthRange(); startDate = r.start; endDate = r.end; }
-        else if (filterType === 'specificDate') { startDate = endDate = reportDateInput.value; }
-        else if (filterType === 'dateRange') { startDate = startDateInput.value; endDate = endDateInput.value; }
+        let startDateStr, endDateStr;
+        if (filterType === 'today') { startDateStr = endDateStr = getTodayDateString(); }
+        else if (filterType === 'this_week') { const r = getWeekRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'specificDate') { startDateStr = endDateStr = reportDateInput.value; }
+        else if (filterType === 'dateRange') { startDateStr = startDateInput.value; endDateStr = endDateInput.value; }
         
-        if (startDate && endDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
+        if (startDateStr && endDateStr) {
+            // **THE FIX**: Appending T00:00:00 forces JS to interpret the date in the local timezone, not UTC.
+            const start = new Date(startDateStr + 'T00:00:00');
+            const end = new Date(endDateStr + 'T23:59:59');
             filteredData = filteredData.filter(r => {
                 const recordDate = new Date(r.Date);
                 return recordDate >= start && recordDate <= end;
@@ -150,6 +149,12 @@ function switchTab(tab) {
 }
 
 function generateAttendanceReport() {
+    if (!appState.data.allSignOuts) {
+        attendanceReportMessageP.textContent = "Initial data is still loading. Please wait a moment...";
+        attendanceReportMessageP.classList.remove('hidden');
+        return;
+    }
+    
     const selectedClass = attendanceClassDropdown.value;
     const selectedDate = attendanceDateInput.value;
     
@@ -164,10 +169,9 @@ function generateAttendanceReport() {
     attendanceReportTable.classList.remove('hidden');
     attendanceReportTableBody.innerHTML = '';
     
-    const start = new Date(selectedDate);
-    start.setHours(0,0,0,0);
-    const end = new Date(selectedDate);
-    end.setHours(23,59,59,999);
+    // **THE FIX**: Apply the same timezone fix here.
+    const start = new Date(selectedDate + 'T00:00:00');
+    const end = new Date(selectedDate + 'T23:59:59');
 
     const dailySignOuts = appState.data.allSignOuts.filter(record => {
         const recordDate = new Date(record.Date);
@@ -312,8 +316,14 @@ reloadDataBtn.addEventListener('click', fetchAllSignOutData);
     if(el) el.addEventListener('change', renderSignOutReport);
 });
 dateFilterType.addEventListener('change', toggleDateInputs);
-signOutReportTab.addEventListener('click', () => switchTab('signOut'));
-attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
+signOutReportTab.addEventListener('click', () => {
+    switchTab('signOut');
+    renderSignOutReport();
+});
+attendanceReportTab.addEventListener('click', () => {
+    switchTab('attendance');
+    generateAttendanceReport();
+});
 attendanceClassDropdown.addEventListener('change', generateAttendanceReport);
 attendanceDateInput.addEventListener('change', generateAttendanceReport);
 attendanceReportTableBody.addEventListener('click', (event) => {
