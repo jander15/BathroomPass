@@ -136,13 +136,20 @@
                     <label class="font-medium text-gray-700 w-24 flex-shrink-0" for="attendanceDate">Date:</label>
                     <input type="date" id="attendanceDate" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                 </div>
+                <div class="flex justify-center mt-6">
+                    <button id="generateAttendanceReportBtn" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none transition-colors duration-200">
+                        Generate Attendance Report
+                    </button>
+                </div>
                 <div id="attendanceReportOutput" class="mt-8 overflow-x-auto">
                     <p id="attendanceReportMessage" class="text-center text-gray-600">Select a class and date to view the attendance report.</p>
                     <table id="attendanceReportTable" class="min-w-full bg-white border border-gray-300 hidden">
                         <thead>
                             <tr>
-                                <th class="py-2 px-4 border-b">Student Name</th>
-                                <th class="py-2 px-4 border-b">Status</th>
+                                <th class="py-2 px-4 border-b">Name</th>
+                                <th class="py-2 px-4 border-b">Late Sign In</th>
+                                <th class="py-2 px-4 border-b"># of Sign Outs</th>
+                                <th class="py-2 px-4 border-b">Sign Out Durations</th>
                             </tr>
                         </thead>
                         <tbody id="attendanceReportTableBody">
