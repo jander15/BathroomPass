@@ -1,105 +1,45 @@
 // js/teacher_dashboard.js
 
-// --- DOM Element References (Declared, but assigned in cacheTeacherDashboardDOMElements) ---
-let dashboardClassDropdown;
+// --- DOM Element Caching (Elements specific to the Teacher Dashboard page) ---
+const dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
+const dateFilterType = document.getElementById('dateFilterType');
+const specificDateInputDiv = document.getElementById('specificDateInput');
+const reportDateInput = document.getElementById('reportDate');
+const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
+const startDateInput = document.getElementById('startDate');
+const endDateInput = document.getElementById('endDate');
+const filterLongDurationsCheckbox = document.getElementById('filterLongDurations'); // New checkbox
+const generateReportBtn = document.getElementById('generateReportBtn');
+const reportOutputDiv = document.getElementById('reportOutput');
+const reportMessageP = document.getElementById('reportMessage');
+const reportTable = document.getElementById('reportTable');
+const reportTableBody = document.getElementById('reportTableBody');
 
-// Tab Buttons
-let attendanceReportTabBtn;
-let signOutHistoryTabBtn;
 
-// Tab Content Divs
-let attendanceReportTabContent;
-let signOutHistoryTabContent;
-
-// Tab 1: Attendance Report elements (Simplified for initial implementation)
-let attendanceReportMessageP;
-let attendanceReportTable;
-let attendanceReportTableBody;
-let generateAttendanceReportBtn; 
-
-// Tab 2: Sign Out History elements
-let signOutHistoryDateFilterType;
-let signOutHistorySpecificDateInputDiv;
-let signOutHistoryReportDateInput;
-let signOutHistoryDateRangeInputsDiv;
-let signOutHistoryStartDateInput;
-let signOutHistoryEndDateInput;
-let filterLongDurationsCheckbox; 
-let generateSignOutHistoryBtn;
-let signOutHistoryReportMessageP;
-let signOutHistoryReportTable;
-let signOutHistoryReportTableBody;
-
+// --- Dashboard Page Specific Functions (All function declarations first) ---
 
 /**
- * Caches DOM elements specific to the Teacher Dashboard page.
- * This should be called only after DOMContentLoaded.
+ * Toggles the visibility of date input fields based on the selected filter type.
  */
-function cacheTeacherDashboardDOMElements() {
-    dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
-    attendanceReportTabBtn = document.getElementById('attendanceReportTabBtn');
-    signOutHistoryTabBtn = document.getElementById('signOutHistoryTabBtn');
-    attendanceReportTabContent = document.getElementById('attendanceReportTabContent');
-    signOutHistoryTabContent = document.getElementById('signOutHistoryTabContent');
+function toggleDateInputs() {
+    const selectedFilter = dateFilterType.value;
+    specificDateInputDiv.classList.add('hidden');
+    dateRangeInputsDiv.classList.add('hidden');
 
-    attendanceReportMessageP = document.getElementById('attendanceReportMessage');
-    attendanceReportTable = document.getElementById('attendanceReportTable');
-    attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-    generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
-
-    signOutHistoryDateFilterType = document.getElementById('signOutHistoryDateFilterType');
-    signOutHistorySpecificDateInputDiv = document.getElementById('signOutHistorySpecificDateInput');
-    signOutHistoryReportDateInput = document.getElementById('signOutHistoryReportDate');
-    signOutHistoryDateRangeInputsDiv = document.getElementById('signOutHistoryDateRangeInputs');
-    signOutHistoryStartDateInput = document.getElementById('signOutHistoryStartDate');
-    signOutHistoryEndDateInput = document.getElementById('signOutHistoryEndDate');
-    filterLongDurationsCheckbox = document.getElementById('filterLongDurations'); 
-    generateSignOutHistoryBtn = document.getElementById('generateSignOutHistoryBtn');
-    signOutHistoryReportMessageP = document.getElementById('signOutHistoryReportMessage');
-    signOutHistoryReportTable = document.getElementById('signOutHistoryReportTable');
-    signOutHistoryReportTableBody = document.getElementById('signOutHistoryReportTableBody');
-}
-
-
-// --- Dashboard Page Specific Functions ---
-
-/**
- * Shows a specific dashboard tab and updates button styles.
- * @param {string} tabId - The ID of the tab content div to show (e.g., 'attendanceReportTabContent').
- */
-function showDashboardTab(tabId) {
-    // Hide all tab contents
-    attendanceReportTabContent.classList.add('hidden');
-    signOutHistoryTabContent.classList.add('hidden');
-
-    // Reset all tab button styles to inactive and set w-1/2 for 2 tabs
-    attendanceReportTabBtn.classList.remove('bg-blue-600', 'text-white', 'w-1/3');
-    attendanceReportTabBtn.classList.add('bg-gray-200', 'text-gray-800', 'w-1/2');
-    signOutHistoryTabBtn.classList.remove('bg-blue-600', 'text-white', 'w-1/3');
-    signOutHistoryTabBtn.classList.add('bg-gray-200', 'text-gray-800', 'w-1/2');
-
-
-    // Show the selected tab content and set its button to active style
-    if (tabId === 'attendanceReportTabContent') {
-        attendanceReportTabContent.classList.remove('hidden');
-        attendanceReportTabBtn.classList.add('bg-blue-600', 'text-white');
-        attendanceReportTabBtn.classList.remove('bg-gray-200', 'text-gray-800');
-    } else if (tabId === 'signOutHistoryTabContent') {
-        signOutHistoryTabContent.classList.remove('hidden');
-        signOutHistoryTabBtn.classList.add('bg-blue-600', 'text-white');
-        signOutHistoryTabBtn.classList.remove('bg-gray-200', 'text-gray-800');
+    if (selectedFilter === 'specificDate') {
+        specificDateInputDiv.classList.remove('hidden');
+    } else if (selectedFilter === 'dateRange') {
+        dateRangeInputsDiv.classList.remove('hidden');
     }
-    // Store current active tab for reset purposes
-    appState.ui.currentDashboardTab = tabId;
 }
 
 /**
- * Generates today's date inilizce-MM-DD format.
+ * Generates today's date investre-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split('T')[0]; // Formats to वर्षे-MM-DD
 }
 
 /**
@@ -110,6 +50,7 @@ function getTodayDateString() {
 function formatDate(dateInput) {
     if (!dateInput) return '';
     const d = new Date(dateInput);
+    // Ensure padding for month and day
     return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
 }
 
@@ -121,122 +62,19 @@ function formatDate(dateInput) {
 function formatTime(dateInput) {
     if (!dateInput) return '';
     const d = new Date(dateInput);
+    // Ensure padding for hours, minutes, and seconds
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
 }
 
 /**
- * Converts seconds to MM:SS format.
- * @param {number} totalSeconds - Total seconds.
- * @returns {string} Formatted time string (MM:SS).
- */
-function formatDuration(totalSeconds) {
-    if (typeof totalSeconds !== 'number' || isNaN(totalSeconds)) return 'N/A';
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-/**
- * Renders the Attendance Report table with all students in the selected class (roster view).
- * @param {string} selectedClass - The currently selected class name.
- */
-function renderAttendanceReport(selectedClass) {
-    attendanceReportTableBody.innerHTML = '';
-    attendanceReportTable.classList.remove('hidden');
-    attendanceReportMessageP.classList.add('hidden');
-
-    // Filter appState.data.allNamesFromSheet for students in the currently selected class
-    const studentsInSelectedClass = appState.data.allNamesFromSheet.filter(student => 
-        student.Class === selectedClass 
-    ).map(student => student.Name).sort(); // Get unique names and sort
-
-    if (studentsInSelectedClass.length === 0) {
-        attendanceReportMessageP.textContent = `No students found in the selected class: ${selectedClass}.`;
-        attendanceReportTable.classList.add('hidden');
-        attendanceReportMessageP.classList.remove('hidden'); // Ensure message is visible
-        return;
-    }
-
-    studentsInSelectedClass.forEach(studentName => {
-        const tr = document.createElement('tr');
-        tr.classList.add('report-table-row'); 
-        tr.innerHTML = `
-            <td class="py-2 px-4 border-b">${studentName}</td>
-            <td class="py-2 px-4 border-b"></td>
-            <td class="py-2 px-4 border-b"></td>
-            <td class="py-2 px-4 border-b"></td>
-        `;
-        attendanceReportTableBody.appendChild(tr);
-    });
-
-    attendanceReportMessageP.textContent = `Roster for ${selectedClass} loaded successfully.`;
-    attendanceReportMessageP.classList.remove('hidden'); // Ensure message is visible
-}
-
-
-/**
- * Generates the Attendance Report. (Currently just shows class roster)
- */
-async function generateAttendanceReport() {
-    console.log('generateAttendanceReport called.');
-    attendanceReportMessageP.textContent = "Loading Roster...";
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportTableBody.innerHTML = '';
-    showErrorAlert(''); 
-    showSuccessAlert(''); 
-
-    const selectedClass = dashboardClassDropdown.value;
-
-    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
-        showErrorAlert("Please select a class to generate the report.");
-        attendanceReportMessageP.textContent = "Select a class, then click 'Generate Report'.";
-        return;
-    }
-
-    generateAttendanceReportBtn.disabled = true;
-    generateAttendanceReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Loading Roster...";
-
-    try {
-        // No backend call needed for simple roster if allNamesFromSheet is already populated
-        renderAttendanceReport(selectedClass);
-        
-    } catch (error) { // Catch block for consistency, though less likely now
-        console.error('Error generating attendance roster:', error);
-        showErrorAlert("Failed to generate roster. Please try again.");
-        attendanceReportMessageP.textContent = "Failed to generate roster. Please try again.";
-    } finally {
-        generateAttendanceReportBtn.disabled = false;
-        generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        generateAttendanceReportBtn.textContent = "Generate Report";
-    }
-}
-
-
-/**
- * Toggles the visibility of date input fields for Sign Out History based on the selected filter type.
- */
-function toggleSignOutHistoryDateInputs() {
-    const selectedFilter = signOutHistoryDateFilterType.value;
-    signOutHistorySpecificDateInputDiv.classList.add('hidden');
-    signOutHistoryDateRangeInputsDiv.classList.add('hidden');
-
-    if (selectedFilter === 'specificDate') {
-        signOutHistorySpecificDateInputDiv.classList.remove('hidden');
-    } else if (selectedFilter === 'dateRange') {
-        signOutHistoryDateRangeInputsDiv.classList.remove('hidden');
-    }
-}
-
-/**
- * Applies the duration filter (show only > 5 minutes) to the Sign Out History report table rows.
+ * Applies the duration filter (show only > 5 minutes) to the report table rows.
  * This is done client-side after the report is fetched.
  */
-function applySignOutHistoryDurationFilter() {
+function applyDurationFilter() {
     const showLongDurationsOnly = filterLongDurationsCheckbox.checked;
     const thresholdSeconds = TARDY_THRESHOLD_MINUTES * 60; // 5 minutes in seconds
 
-    Array.from(signOutHistoryReportTableBody.rows).forEach(row => {
+    Array.from(reportTableBody.rows).forEach(row => {
         const typeCell = row.cells[3]; // 'Type' column
         const durationCell = row.cells[4]; // 'Duration (s)' column
 
@@ -244,12 +82,13 @@ function applySignOutHistoryDurationFilter() {
         let isSignOut = typeCell.textContent === "Sign Out";
 
         if (isSignOut && durationCell.textContent !== "N/A") {
+            // Convert MM:SS to seconds or read raw seconds
             let totalSeconds = 0;
             if (durationCell.textContent.includes(':')) {
                 const parts = durationCell.textContent.split(':');
                 totalSeconds = parseInt(parts[0] || '0') * 60 + parseInt(parts[1] || '0');
             } else {
-                totalSeconds = parseFloat(durationCell.textContent || '0');
+                totalSeconds = parseFloat(durationCell.textContent || '0'); // Assuming it's already a number
             }
             isLongDuration = totalSeconds > thresholdSeconds;
         }
@@ -274,24 +113,26 @@ function applySignOutHistoryDurationFilter() {
     });
 }
 
+
 /**
- * Generates and displays the Sign Out History report. (Existing functionality, adapted for tab)
+ * Generates and displays the report based on selected class and date filter.
  */
-async function generateSignOutHistoryReport() {
-    signOutHistoryReportMessageP.textContent = "Generating report...";
-    signOutHistoryReportTable.classList.add('hidden');
-    signOutHistoryReportTableBody.innerHTML = '';
-    showErrorAlert(''); 
-    showSuccessAlert(''); 
+async function generateReport() {
+    reportMessageP.textContent = "Generating report...";
+    reportTable.classList.add('hidden');
+    reportTableBody.innerHTML = '';
+    showErrorAlert(''); // Clear previous errors
+    showSuccessAlert(''); // Clear previous successes
 
     const selectedClass = dashboardClassDropdown.value;
-    const filterType = signOutHistoryDateFilterType.value;
+    const filterType = dateFilterType.value;
+    // filterLongDurationsCheckbox.checked is now handled client-side after fetch
     let startDate = null;
     let endDate = null;
 
     if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
         showErrorAlert("Please select a class to generate the report.");
-        signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+        reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
         return;
     }
 
@@ -300,56 +141,59 @@ async function generateSignOutHistoryReport() {
         startDate = today;
         endDate = today;
     } else if (filterType === 'specificDate') {
-        startDate = signOutHistoryReportDateInput.value;
-        endDate = signOutHistoryReportDateInput.value;
+        startDate = reportDateInput.value;
+        endDate = reportDateInput.value;
         if (!startDate) {
             showErrorAlert("Please select a specific date.");
-            signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
             return;
         }
     } else if (filterType === 'dateRange') {
-        startDate = signOutHistoryStartDateInput.value;
-        endDate = signOutHistoryEndDateInput.value;
+        startDate = startDateInput.value;
+        endDate = endDateInput.value;
         if (!startDate || !endDate) {
             showErrorAlert("Please select both start and end dates for the range.");
-            signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
             return;
         }
+        // Basic date validation
         if (new Date(startDate) > new Date(endDate)) {
             showErrorAlert("Start date cannot be after end date.");
-            signOutHistoryReportMessageP.textContent = "Start date cannot be after end date.";
+            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
             return;
         }
     }
 
-    generateSignOutHistoryBtn.disabled = true;
-    generateSignOutHistoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    generateSignOutHistoryBtn.textContent = "Loading Report...";
+    generateReportBtn.disabled = true;
+    generateReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    generateReportBtn.textContent = "Loading Report...";
 
     try {
         const payload = {
-            action: ACTION_GET_REPORT_DATA, // Use this action, backend returns all data for range
+            action: ACTION_GET_REPORT_DATA,
             class: selectedClass,
             startDate: startDate,
             endDate: endDate,
+            // filterLongDurations is NOT sent to backend anymore
             userEmail: appState.currentUser.email
         };
 
         const data = await sendAuthenticatedRequest(payload);
 
         if (data.result === 'success' && Array.isArray(data.report)) {
-            appState.data.currentSignOutHistoryRawData = data.report; // Store the raw, unfiltered report data
+            appState.data.currentReportData = data.report; // Store the raw, unfiltered report data
 
-            if (appState.data.currentSignOutHistoryRawData.length === 0) {
-                signOutHistoryReportMessageP.textContent = `No sign-out data found for ${selectedClass} within the selected date range.`;
-                signOutHistoryReportTable.classList.add('hidden');
+            if (appState.data.currentReportData.length === 0) {
+                reportMessageP.textContent = `No sign-out data found for ${selectedClass} within the selected date range.`;
+                reportTable.classList.add('hidden');
             } else {
-                signOutHistoryReportMessageP.classList.add('hidden');
-                signOutHistoryReportTable.classList.remove('hidden');
+                reportMessageP.classList.add('hidden'); // Hide message if data is found
+                reportTable.classList.remove('hidden');
                 
-                signOutHistoryReportTableBody.innerHTML = ''; 
+                // Clear existing rows before appending new ones
+                reportTableBody.innerHTML = ''; 
 
-                appState.data.currentSignOutHistoryRawData.forEach(row => {
+                appState.data.currentReportData.forEach(row => {
                     const tr = document.createElement('tr');
                     let type = "Sign Out";
                     let durationDisplay = row.Seconds;
@@ -358,7 +202,10 @@ async function generateSignOutHistoryReport() {
                         type = "Late Sign In";
                         durationDisplay = "N/A";
                     } else if (typeof row.Seconds === 'number') {
-                        durationDisplay = formatDuration(row.Seconds);
+                         const totalSeconds = row.Seconds;
+                         const minutes = Math.floor(totalSeconds / 60);
+                         const seconds = totalSeconds % 60;
+                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     }
 
                     tr.innerHTML = `
@@ -368,75 +215,54 @@ async function generateSignOutHistoryReport() {
                         <td class="py-2 px-4 border-b">${type}</td>
                         <td class="py-2 px-4 border-b">${durationDisplay}</td>
                     `;
-                    signOutHistoryReportTableBody.appendChild(tr);
+                    reportTableBody.appendChild(tr);
                 });
                 
-                applySignOutHistoryDurationFilter(); // Apply the filter after all rows are rendered
+                // Apply the filter after all rows are rendered
+                applyDurationFilter();
             }
         } else {
             showErrorAlert(`Error generating report: ${data.error || 'Unknown error'}`);
-            signOutHistoryReportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
+            reportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
         }
     } catch (error) {
         console.error('Error fetching report data:', error);
         showErrorAlert("Failed to generate report. Network or authentication issue. Please ensure you are signed in.");
-        signOutHistoryReportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
+        reportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
     } finally {
-        generateSignOutHistoryBtn.disabled = false;
-        generateSignOutHistoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        generateSignOutHistoryBtn.textContent = "Generate Report";
+        generateReportBtn.disabled = false;
+        generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        generateReportBtn.textContent = "Generate Report";
     }
 }
-
 
 /**
  * Initializes the Teacher Dashboard application elements and fetches initial data.
  * This is the page-specific initialization called by common.js.
  */
 async function initializePageSpecificApp() {
-    // Cache specific DOM elements for this page first
-    cacheTeacherDashboardDOMElements();
-
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
 
     populateDropdown('dashboardClassDropdown', [], LOADING_OPTION, "");
     dashboardClassDropdown.setAttribute("disabled", "disabled");
 
-    // Initialize all date filters to 'today' and set current date strings
-    const todayStr = getTodayDateString();
+    // Pre-select 'Today' and hide other date inputs
+    dateFilterType.value = 'today';
+    toggleDateInputs();
+    reportDateInput.value = getTodayDateString(); 
+    startDateInput.value = getTodayDateString();
+    endDateInput.value = getTodayDateString();
 
-    // Attendance Report tab
-    // Date filter elements are present in HTML, so initialize them
-    // This call is now inside the DOMContentLoaded listener.
-    // So toggleAttendanceDateInputs() is called here.
-    
-    // Sign Out History tab
-    signOutHistoryDateFilterType.value = 'today';
-    toggleSignOutHistoryDateInputs();
-    signOutHistoryReportDateInput.value = todayStr;
-    signOutHistoryStartDateInput.value = todayStr;
-    signOutHistoryEndDateInput.value = todayStr;
-    filterLongDurationsCheckbox.checked = false; // Reset checkbox
+    filterLongDurationsCheckbox.checked = false; // Ensure checkbox is reset on init
 
-    // Reset report output messages and tables for all tabs
-    attendanceReportMessageP.textContent = "Select a class, then click 'Generate Report'."; 
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportTableBody.innerHTML = '';
+    generateReportBtn.disabled = false;
+    generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    generateReportBtn.textContent = "Generate Report";
 
-    signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-    signOutHistoryReportTable.classList.add('hidden');
-    signOutHistoryReportTableBody.innerHTML = '';
-    
-    // Default button states
-    generateAttendanceReportBtn.disabled = false;
-    generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Generate Report";
-
-    generateSignOutHistoryBtn.disabled = false;
-    generateSignOutHistoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateSignOutHistoryBtn.textContent = "Generate Report";
-
+    reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
+    reportTable.classList.add('hidden');
+    reportTableBody.innerHTML = '';
 
     console.log("initializePageSpecificApp (Dashboard): Current user state:", appState.currentUser);
 
@@ -446,24 +272,18 @@ async function initializePageSpecificApp() {
             await fetchAllStudentData(); // common.js function to get all student data (which includes classes)
             console.log("initializePageSpecificApp (Dashboard): appState.data.allNamesFromSheet:", appState.data.allNamesFromSheet);
             
-            // Populate main class dropdown for dashboard
-            populateCourseDropdownFromData(); // This function is in common.js and populates appState.data.courses
+            populateCourseDropdownFromData(); // This function is in common.js
+            console.log("initializePageSpecificApp (Dashboard): appState.data.courses (after populateCourseDropdownFromData):", appState.data.courses);
+
             populateDropdown('dashboardClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             dashboardClassDropdown.removeAttribute("disabled");
-            
-            // Trigger change event on dashboardClassDropdown if a class is pre-selected,
-            // to ensure initial roster is loaded and messages are cleared.
-            if (dashboardClassDropdown.value !== "" && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
-                const event = new Event('change');
-                dashboardClassDropdown.dispatchEvent(event);
-            } else {
-                // If no class is selected by default, ensure attendance report message is set
-                attendanceReportMessageP.textContent = "Select a class, then click 'Generate Report'.";
-                attendanceReportTable.classList.add('hidden');
-            }
 
-            // Set default tab to Attendance Report
-            showDashboardTab('attendanceReportTabContent');
+            // Optionally, trigger initial report if a class is pre-selected or default
+            // This is generally not done automatically on dashboard load,
+            // but left here for quick testing if needed.
+            // if (dashboardClassDropdown.value && dashboardClassDropdown.value !== DEFAULT_CLASS_OPTION) {
+            //      generateReport();
+            // }
 
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
@@ -483,72 +303,33 @@ async function initializePageSpecificApp() {
  */
 function resetPageSpecificAppState() {
     // Reset appState.data for a clean slate
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentSignOutHistoryRawData: [], currentAttendanceReportRawData: [] }; 
+    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; // Reset currentReportData too
 
-    // Reset class dropdown
+    // Reset dropdowns
     populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
     dashboardClassDropdown.setAttribute("disabled", "disabled");
 
-    // Reset date filters for Sign Out History tab
-    signOutHistoryDateFilterType.value = 'today';
-    toggleSignOutHistoryDateInputs();
-    signOutHistoryReportDateInput.value = '';
-    signOutHistoryStartDateInput.value = '';
-    signOutHistoryEndDateInput.value = '';
+    // Reset date filters
+    dateFilterType.value = 'today';
+    toggleDateInputs(); // Ensure only 'today' input is visible
+    reportDateInput.value = '';
+    startDateInput.value = '';
+    endDateInput.value = '';
     filterLongDurationsCheckbox.checked = false; // Reset checkbox
 
-    // Clear report output for all tabs
-    attendanceReportTableBody.innerHTML = '';
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportMessageP.textContent = "Select a class, then click 'Generate Report'.";
+    // Clear report output
+    reportTableBody.innerHTML = '';
+    reportTable.classList.add('hidden');
+    reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
 
-    signOutHistoryReportTableBody.innerHTML = '';
-    signOutHistoryReportTable.classList.add('hidden');
-    signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-
-    // Reset button states
-    generateAttendanceReportBtn.disabled = false;
-    generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Generate Report";
-
-    generateSignOutHistoryBtn.disabled = false;
-    generateSignOutHistoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateSignOutHistoryBtn.textContent = "Generate Report";
-
-    // Show default tab (Attendance Report)
-    showDashboardTab('attendanceReportTabContent');
+    // Reset button state
+    generateReportBtn.disabled = false;
+    generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    generateReportBtn.textContent = "Generate Report";
 }
 
 // --- Event Listeners specific to Teacher Dashboard page (All function calls go here, after functions are defined) ---
-// Tab Buttons
-attendanceReportTabBtn.addEventListener('click', () => showDashboardTab('attendanceReportTabContent'));
-signOutHistoryTabBtn.addEventListener('click', () => showDashboardTab('signOutHistoryTabContent'));
-
-// Class Dropdown - Main filter for the dashboard
-dashboardClassDropdown.addEventListener('change', () => {
-    // When class changes, clear reports for all tabs
-    attendanceReportTableBody.innerHTML = '';
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportMessageP.textContent = "Select a class, then click 'Generate Report'."; // Simpler message for Attendance
-
-    signOutHistoryReportTableBody.innerHTML = '';
-    signOutHistoryReportTable.classList.add('hidden');
-    signOutHistoryReportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'."; // Full message for Sign Out History
-});
-
-
-// Tab 1: Attendance Report Listeners
-generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
-
-
-// Tab 2: Sign Out History Listeners
-signOutHistoryDateFilterType.addEventListener('change', toggleSignOutHistoryDateInputs);
-generateSignOutHistoryBtn.addEventListener('click', generateSignOutHistoryReport);
-filterLongDurationsCheckbox.addEventListener('change', applySignOutHistoryDurationFilter);
-
-
-// Call initGoogleSignIn on DOM load for this specific page.
-// This is handled by common.js, which has a central DOMContentLoaded listener
-// and calls initGoogleSignIn. initGoogleSignIn then calls initializePageSpecificApp.
-// This file does not need its own DOMContentLoaded listener anymore.
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+document.addEventListener('DOMContentLoaded', initGoogleSignIn); // Initialize GSI on DOM load for this page
+dateFilterType.addEventListener('change', toggleDateInputs);
+generateReportBtn.addEventListener('click', generateReport);
+filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter); // New event listener for the checkbox
