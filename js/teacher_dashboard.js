@@ -13,7 +13,6 @@ const startDateInput = document.getElementById('startDate');
 const endDateInput = document.getElementById('endDate');
 const filterProblemsCheckbox = document.getElementById('filterProblemsCheckbox');
 const reloadDataBtn = document.getElementById('reloadDataBtn');
-const reportOutputDiv = document.getElementById('reportOutput');
 const reportMessageP = document.getElementById('reportMessage');
 const reportTable = document.getElementById('reportTable');
 const reportTableBody = document.getElementById('reportTableBody');
@@ -22,8 +21,6 @@ const attendanceReportTab = document.getElementById('attendanceReportTab');
 const signOutReportContent = document.getElementById('signOutReportContent');
 const attendanceReportContent = document.getElementById('attendanceReportContent');
 const attendanceDateInput = document.getElementById('attendanceDate');
-const generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
-const attendanceReportOutputDiv = document.getElementById('attendanceReportOutput');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
@@ -32,15 +29,15 @@ const attendanceReportTableBody = document.getElementById('attendanceReportTable
 
 function normalizeName(name) {
     if (typeof name !== 'string') return '';
-    const parenthesisIndex = name.indexOf('(');
-    return parenthesisIndex > -1 ? name.substring(0, parenthesisIndex).trim() : name.trim();
+    const idx = name.indexOf('(');
+    return idx > -1 ? name.substring(0, idx).trim() : name.trim();
 }
 
 function getWeekRange() {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const firstDay = new Date(now.setDate(now.getDate() - dayOfWeek));
-    const lastDay = new Date(now.setDate(now.getDate() + 6));
+    const first = now.getDate() - now.getDay();
+    const firstDay = new Date(now.setDate(first));
+    const lastDay = new Date(now.setDate(first + 6));
     return { start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] };
 }
 
@@ -52,9 +49,9 @@ function getMonthRange() {
 }
 
 function toggleDateInputs() {
-    const selectedFilter = dateFilterType.value;
-    specificDateInputDiv.classList.toggle('hidden', selectedFilter !== 'specificDate');
-    dateRangeInputsDiv.classList.toggle('hidden', selectedFilter !== 'dateRange');
+    const filter = dateFilterType.value;
+    specificDateInputDiv.classList.toggle('hidden', filter !== 'specificDate');
+    dateRangeInputsDiv.classList.toggle('hidden', filter !== 'dateRange');
 }
 
 function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
@@ -71,23 +68,20 @@ function renderSignOutReport() {
     }
     reportMessageP.classList.add('hidden');
 
-    // 1. Get all filter values
     const selectedClass = signOutClassDropdown.value;
     const selectedStudent = studentFilterDropdown.value;
     const filterType = dateFilterType.value;
     const isStudentFilterActive = !studentFilterDiv.classList.contains('hidden') && selectedStudent !== "All Students";
     const showProblemsOnly = filterProblemsCheckbox.checked;
 
-    // 2. Start with the full local dataset
     let filteredData = [...appState.data.allSignOuts];
 
-    // 3. Apply filters sequentially
     if (selectedClass !== "All Classes") {
-        filteredData = filteredData.filter(record => record.Class === selectedClass);
+        filteredData = filteredData.filter(r => r.Class === selectedClass);
     }
     if (isStudentFilterActive) {
-        const normalizedSelectedStudent = normalizeName(selectedStudent);
-        filteredData = filteredData.filter(record => normalizeName(record.Name) === normalizedSelectedStudent);
+        const normalizedStudent = normalizeName(selectedStudent);
+        filteredData = filteredData.filter(r => normalizeName(r.Name) === normalizedStudent);
     }
     if (filterType !== 'all_time') {
         let startDate, endDate;
@@ -102,18 +96,17 @@ function renderSignOutReport() {
             start.setHours(0, 0, 0, 0);
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-            filteredData = filteredData.filter(record => {
-                const recordDate = new Date(record.Date);
+            filteredData = filteredData.filter(r => {
+                const recordDate = new Date(r.Date);
                 return recordDate >= start && recordDate <= end;
             });
         }
     }
     if (showProblemsOnly) {
         const threshold = TARDY_THRESHOLD_MINUTES * 60;
-        filteredData = filteredData.filter(record => record.Seconds === "Late Sign In" || (typeof record.Seconds === 'number' && record.Seconds > threshold));
+        filteredData = filteredData.filter(r => r.Seconds === "Late Sign In" || (typeof r.Seconds === 'number' && r.Seconds > threshold));
     }
 
-    // 4. Render the `filteredData` to the table
     reportTableBody.innerHTML = '';
     if (filteredData.length === 0) {
         reportMessageP.textContent = `No sign-out data found for the selected criteria.`;
@@ -136,12 +129,11 @@ function renderSignOutReport() {
                     tr.classList.add('bg-red-200');
                 }
             }
-            tr.innerHTML = `<td class="py-2 px-4 border-b">${formatDate(row.Date)}</td><td class="py-2 px-4 border-b">${formatTime(row.Date)}</td><td class="py-2 px-4 border-b">${row.Class || 'N/A'}</td><td class="py-2 px-4 border-b">${row.Name || 'N/A'}</td><td class="py-2 px-4 border-b">${type}</td><td class="py-2 px-4 border-b">${durationDisplay}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${row.Class}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
 }
-
 
 function switchTab(tab) {
     const isAttendance = tab === 'attendance';
@@ -157,141 +149,120 @@ function switchTab(tab) {
     attendanceReportTab.classList.toggle('text-gray-500', !isAttendance);
 }
 
-async function generateAttendanceReport() {
-    attendanceReportMessageP.textContent = "Generating attendance report...";
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportTableBody.innerHTML = '';
-    attendanceReportMessageP.classList.add('hidden');
+function generateAttendanceReport() {
     const selectedClass = attendanceClassDropdown.value;
     const selectedDate = attendanceDateInput.value;
+    
     if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION || !selectedDate) {
         attendanceReportMessageP.textContent = "Please select a class and a date.";
         attendanceReportMessageP.classList.remove('hidden');
+        attendanceReportTable.classList.add('hidden');
         return;
     }
-    generateAttendanceReportBtn.disabled = true;
-    generateAttendanceReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Loading...";
-    try {
-        const payload = { action: ACTION_GET_REPORT_DATA, class: selectedClass, startDate: selectedDate, endDate: selectedDate, userEmail: appState.currentUser.email };
-        const reportData = await sendAuthenticatedRequest(payload);
-        if (reportData.result !== 'success' || !Array.isArray(reportData.report)) {
-            throw new Error(reportData.error || 'Failed to fetch report data.');
+    
+    attendanceReportMessageP.classList.add('hidden');
+    attendanceReportTable.classList.remove('hidden');
+    attendanceReportTableBody.innerHTML = '';
+    
+    const start = new Date(selectedDate);
+    start.setHours(0,0,0,0);
+    const end = new Date(selectedDate);
+    end.setHours(23,59,59,999);
+
+    const dailySignOuts = appState.data.allSignOuts.filter(record => {
+        const recordDate = new Date(record.Date);
+        return recordDate >= start && recordDate <= end && record.Class === selectedClass;
+    });
+
+    const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
+    
+    let presentStudentIndex = 0;
+    allStudentsInClass.forEach(studentName => {
+        const normalizedStudentName = normalizeName(studentName);
+        const studentRecords = dailySignOuts.filter(r => normalizeName(r.Name) === normalizedStudentName);
+        let status = "Present", reason = "N/A", hasLong = false, hasLate = false;
+        if (studentRecords.length > 0) {
+            let longCount = 0, outCount = 0;
+            studentRecords.forEach(r => {
+                if (r.Seconds === "Late Sign In") hasLate = true;
+                else if (typeof r.Seconds === 'number') {
+                    outCount++;
+                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) { hasLong = true; longCount++; }
+                }
+            });
+            let reasons = [];
+            if (hasLate) reasons.push("Late Sign In");
+            if (outCount > 0) reasons.push(`${outCount} Sign Out(s)`);
+            if (longCount > 0) reasons.push(`(${longCount} > 5 min)`);
+            reason = reasons.join(' ');
+            status = (hasLate || hasLong) ? "Needs Review" : "Activity Recorded";
         }
-        const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
-        if (allStudentsInClass.length === 0) {
-            attendanceReportMessageP.textContent = `No students found for class ${selectedClass}.`;
-            attendanceReportMessageP.classList.remove('hidden');
-            return;
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        if (studentRecords.length > 0) {
+            tr.classList.add('cursor-pointer');
+            tr.dataset.accordionToggle = "true";
+            if (hasLate || hasLong) tr.classList.add('bg-red-200');
+            else tr.classList.add('bg-blue-100');
+        } else {
+            if (presentStudentIndex % 2 !== 0) tr.classList.add('bg-gray-50');
+            presentStudentIndex++;
         }
-        attendanceReportTable.classList.remove('hidden');
-        attendanceReportTableBody.innerHTML = '';
-        let presentStudentIndex = 0;
-        allStudentsInClass.forEach(studentName => {
-            const normalizedStudentName = normalizeName(studentName);
-            const studentRecords = reportData.report.filter(record => normalizeName(record.Name) === normalizedStudentName);
-            let attendanceStatus = "Present", reason = "N/A", hasLongSignOut = false, hasLateSignIn = false;
-            if (studentRecords.length > 0) {
-                let longSignOutCount = 0, signOutCount = 0;
-                studentRecords.forEach(record => {
-                    if (record.Seconds === "Late Sign In") hasLateSignIn = true;
-                    else if (typeof record.Seconds === 'number') {
-                        signOutCount++;
-                        if (record.Seconds > (TARDY_THRESHOLD_MINUTES * 60)) {
-                            hasLongSignOut = true;
-                            longSignOutCount++;
-                        }
-                    }
-                });
-                let reasons = [];
-                if (hasLateSignIn) reasons.push("Late Sign In");
-                if (signOutCount > 0) reasons.push(`${signOutCount} Sign Out(s)`);
-                if (longSignOutCount > 0) reasons.push(`(${longSignOutCount} > 5 min)`);
-                reason = reasons.join(' ');
-                attendanceStatus = (hasLateSignIn || hasLongSignOut) ? "Needs Review" : "Activity Recorded";
-            }
-            const tr = document.createElement('tr');
-            tr.className = 'border-t';
-            if (studentRecords.length > 0) {
-                tr.classList.add('cursor-pointer');
-                tr.dataset.accordionToggle = "true";
-                if (hasLateSignIn || hasLongSignOut) tr.classList.add('bg-red-200');
-                else tr.classList.add('bg-blue-100');
-            } else {
-                if (presentStudentIndex % 2 !== 0) tr.classList.add('bg-gray-50');
-                presentStudentIndex++;
-            }
-            const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
-            tr.innerHTML = `<td class="py-3 px-4">${studentName} ${arrowSvg}</td><td class="py-3 px-4">${attendanceStatus}</td><td class="py-3 px-4">${reason}</td>`;
-            attendanceReportTableBody.appendChild(tr);
-            if (studentRecords.length > 0) {
-                const detailsTr = document.createElement('tr');
-                detailsTr.className = 'hidden';
-                detailsTr.classList.add((hasLateSignIn || hasLongSignOut) ? 'bg-red-50' : 'bg-blue-50');
-                const detailsTd = document.createElement('td');
-                detailsTd.colSpan = 3;
-                detailsTd.className = 'p-0';
-                let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="py-2 px-4 border-b text-left">Date</th><th class="py-2 px-4 border-b text-left">Time</th><th class="py-2 px-4 border-b text-left">Type</th><th class="py-2 px-4 border-b text-left">Duration (min:sec)</th></tr></thead><tbody>`;
-                studentRecords.forEach(record => {
-                    let type = "Sign Out", durationDisplay = "N/A", detailRowClass = '';
-                    if (record.Seconds === "Late Sign In") {
-                        type = "Late Sign In";
-                        detailRowClass = 'bg-yellow-200';
-                    } else if (typeof record.Seconds === 'number') {
-                        const minutes = Math.floor(record.Seconds / 60);
-                        const seconds = record.Seconds % 60;
-                        durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                        if (record.Seconds > (TARDY_THRESHOLD_MINUTES * 60)) detailRowClass = 'bg-red-100';
-                    }
-                    detailsTableHtml += `<tr class="border-t ${detailRowClass}"><td class="py-2 px-4">${formatDate(record.Date)}</td><td class="py-2 px-4">${formatTime(record.Date)}</td><td class="py-2 px-4">${type}</td><td class="py-2 px-4">${durationDisplay}</td></tr>`;
-                });
-                detailsTd.innerHTML = detailsTableHtml + '</tbody></table></div>';
-                detailsTr.appendChild(detailsTd);
-                attendanceReportTableBody.appendChild(detailsTr);
-            }
-        });
-    } catch (error) {
-        console.error('Error generating attendance report:', error);
-        attendanceReportMessageP.textContent = "Failed to generate attendance report. Check console for details.";
-        attendanceReportMessageP.classList.remove('hidden');
-    } finally {
-        generateAttendanceReportBtn.disabled = false;
-        generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        generateAttendanceReportBtn.textContent = "Generate Attendance Report";
-    }
+        const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
+        tr.innerHTML = `<td class="py-3 px-4">${studentName}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
+        attendanceReportTableBody.appendChild(tr);
+        if (studentRecords.length > 0) {
+            const detailsTr = document.createElement('tr');
+            detailsTr.className = 'hidden';
+            detailsTr.classList.add((hasLate || hasLong) ? 'bg-red-50' : 'bg-blue-50');
+            const detailsTd = document.createElement('td');
+            detailsTd.colSpan = 3;
+            detailsTd.className = 'p-0';
+            let detailsHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th></tr></thead><tbody>`;
+            studentRecords.forEach(r => {
+                let type = "Sign Out", duration = "N/A", rowClass = '';
+                if (r.Seconds === "Late Sign In") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
+                else if (typeof r.Seconds === 'number') {
+                    duration = `${Math.floor(r.Seconds / 60)}:${(r.Seconds % 60).toString().padStart(2, '0')}`;
+                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) rowClass = 'bg-red-100';
+                }
+                detailsHtml += `<tr class="border-t ${rowClass}"><td class="p-2">${formatDate(r.Date)}</td><td class="p-2">${formatTime(r.Date)}</td><td class="p-2">${type}</td><td class="p-2">${duration}</td></tr>`;
+            });
+            detailsTd.innerHTML = detailsHtml + '</tbody></table></div>';
+            detailsTr.appendChild(detailsTd);
+            attendanceReportTableBody.appendChild(detailsTr);
+        }
+    });
 }
 
-async function fetchAllSignOuts() {
+
+async function fetchAllSignOutData() {
     reportMessageP.textContent = "Loading all sign-out data for the year...";
     reportMessageP.classList.remove('hidden');
     reportTable.classList.add('hidden');
+    reloadDataBtn.disabled = true;
+    reloadDataBtn.classList.add('opacity-50');
     try {
-        const classList = appState.data.courses;
-        const promises = classList.map(className => {
-            const payload = { action: ACTION_GET_REPORT_DATA, userEmail: appState.currentUser.email, class: className };
-            return sendAuthenticatedRequest(payload);
-        });
-        const results = await Promise.allSettled(promises);
-        let allReports = [];
-        results.forEach(result => {
-            if (result.status === 'fulfilled' && result.value.result === 'success' && Array.isArray(result.value.report)) {
-                allReports.push(...result.value.report);
-            }
-        });
-        appState.data.allSignOuts = allReports;
-        renderSignOutReport();
+        const payload = { action: 'getAllSignOutsForTeacher', userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+        const data = await sendAuthenticatedRequest(payload);
+        if (data.result === 'success' && Array.isArray(data.report)) {
+            appState.data.allSignOuts = data.report;
+            renderSignOutReport();
+        } else {
+            throw new Error(data.error || "Failed to fetch all data.");
+        }
     } catch (error) {
         console.error("Failed to fetch all sign out data:", error);
         reportMessageP.textContent = "Could not load all report data. Please try reloading.";
+    } finally {
+        reloadDataBtn.disabled = false;
+        reloadDataBtn.classList.remove('opacity-50');
     }
 }
 
 async function initializePageSpecificApp() {
     [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
-        if(dd) {
-            populateDropdown(dd.id, [], LOADING_OPTION, "");
-            dd.setAttribute("disabled", "disabled");
-        }
+        if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     dateFilterType.value = 'today';
     toggleDateInputs();
@@ -299,38 +270,30 @@ async function initializePageSpecificApp() {
     startDateInput.value = getTodayDateString();
     endDateInput.value = getTodayDateString();
     attendanceDateInput.value = getTodayDateString();
-
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
             await fetchAllStudentData(); 
             await populateCourseDropdownFromData();
-            
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
-            
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             attendanceClassDropdown.removeAttribute("disabled");
-
-            await fetchAllSignOuts(); // Fetch all data on load
-
+            await fetchAllSignOutData();
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
             [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
         }
     } else {
-        console.warn("User not authenticated for dashboard. Cannot fetch data.");
+        console.warn("User not authenticated.");
         [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
     }
     switchTab('signOut');
 }
 
 function resetPageSpecificAppState() {
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [], allSignOuts: [] }; 
+    appState.data = { allNamesFromSheet: [], courses: [], allSignOuts: [] }; 
     [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
-        if(dd) {
-            populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, "");
-            dd.setAttribute("disabled", "disabled");
-        }
+        if(dd) { populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     studentFilterDiv.classList.add('hidden');
     dateFilterType.value = 'today';
@@ -344,14 +307,15 @@ function resetPageSpecificAppState() {
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initGoogleSignIn);
-reloadDataBtn.addEventListener('click', fetchAllSignOuts);
+reloadDataBtn.addEventListener('click', fetchAllSignOutData);
 [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
     if(el) el.addEventListener('change', renderSignOutReport);
 });
 dateFilterType.addEventListener('change', toggleDateInputs);
 signOutReportTab.addEventListener('click', () => switchTab('signOut'));
 attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
-generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
+attendanceClassDropdown.addEventListener('change', generateAttendanceReport);
+attendanceDateInput.addEventListener('change', generateAttendanceReport);
 attendanceReportTableBody.addEventListener('click', (event) => {
     const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
     if (headerRow) {
@@ -378,10 +342,4 @@ signOutClassDropdown.addEventListener('change', () => {
         studentFilterDiv.classList.add('hidden');
     }
     renderSignOutReport();
-});
-
-attendanceClassDropdown.addEventListener('change', () => {
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportMessageP.textContent = "Class changed. Click 'Generate Attendance Report' to see new data.";
-    attendanceReportMessageP.classList.remove('hidden');
 });
