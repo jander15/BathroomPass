@@ -15,7 +15,7 @@ const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
 const ACTION_GET_ALL_DATA = 'getAllData';
 const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;
-const EMOJI_LIST = ['�', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
+const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
 const FORM_COLOR_OUT = "#f6b26b"; // Orange
 const FORM_COLOR_TARDY = "#ef4444"; // Red
@@ -213,6 +213,25 @@ async function fetchAllStudentData() {
     }
 }
 
+/**
+ * Populates the course dropdown using the fetched student data.
+ * This function is now in common.js as it's needed by both pages.
+ */
+function populateCourseDropdownFromData() {
+    if (appState.data.allNamesFromSheet.length > 0) {
+        const uniqueClassNames = new Set();
+        appState.data.allNamesFromSheet.forEach(item => {
+            if (item && item.Class) {
+                uniqueClassNames.add(item.Class);
+            }
+        });
+        appState.data.courses = Array.from(uniqueClassNames).sort(); 
+        // No direct populateDropdown call here, page-specific init will handle
+    } else {
+        appState.data.courses = [];
+    }
+}
+
 
 // --- Google Sign-In Initialization & Handlers ---
 
@@ -233,7 +252,7 @@ function initGoogleSignIn() {
     });
 
     // Only render button if the element exists on the page
-    if (googleSignInButton) { // googleSignInButton is now correctly cached by cacheCommonDOMElements()
+    if (googleSignInButton) { 
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
@@ -245,7 +264,7 @@ function initGoogleSignIn() {
     // Add profile menu listeners only if elements exist
     if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
         profilePicture.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent document click from closing it immediately
+            event.stopPropagation(); 
             profileDropdown.classList.toggle('hidden');
         });
 
@@ -325,6 +344,6 @@ function handleGoogleSignOut() {
 // --- Main App Initialization Flow (Centralized DOMContentLoaded handling) ---
 // This ensures common DOM elements are cached and GSI is initialized after the DOM is ready.
 document.addEventListener('DOMContentLoaded', () => {
-    cacheCommonDOMElements(); // Cache elements first
-    initGoogleSignIn();        // Then initialize GSI
+    cacheCommonDOMElements(); // Cache all common DOM elements first
+    initGoogleSignIn();        // Then initialize GSI and render button
 });
