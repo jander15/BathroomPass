@@ -114,7 +114,17 @@ async function generateReport() {
     generateReportBtn.textContent = "Loading Report...";
 
     try {
-        const payload = { action: ACTION_GET_REPORT_DATA, class: selectedClass, startDate, endDate, userEmail: appState.currentUser.email };
+        // **THE FIX**: Omit the class property if "All Classes" is selected.
+        const payload = { 
+            action: ACTION_GET_REPORT_DATA, 
+            startDate, 
+            endDate, 
+            userEmail: appState.currentUser.email 
+        };
+        if (selectedClass !== "All Classes") {
+            payload.class = selectedClass;
+        }
+
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success' && Array.isArray(data.report)) {
             if (data.report.length === 0) {
@@ -203,6 +213,9 @@ async function generateAttendanceReport() {
         attendanceReportMessageP.classList.add('hidden');
         attendanceReportTable.classList.remove('hidden');
         attendanceReportTableBody.innerHTML = '';
+        
+        let presentStudentIndex = 0; // Counter for zebra striping
+
         allStudentsInClass.forEach(studentName => {
             const normalizedStudentName = normalizeName(studentName);
             const studentRecords = reportData.report.filter(record => normalizeName(record.Name) === normalizedStudentName);
@@ -231,7 +244,17 @@ async function generateAttendanceReport() {
             if (studentRecords.length > 0) {
                 tr.classList.add('cursor-pointer');
                 tr.dataset.accordionToggle = "true";
-                if (hasLateSignIn || hasLongSignOut) tr.classList.add('bg-red-200', 'font-bold');
+                if (hasLateSignIn || hasLongSignOut) {
+                    tr.classList.add('bg-red-200'); // Red for "Needs Review"
+                } else {
+                    tr.classList.add('bg-blue-100'); // Blue for normal activity
+                }
+            } else {
+                // Zebra striping for "Present" students
+                if (presentStudentIndex % 2 !== 0) {
+                    tr.classList.add('bg-gray-50');
+                }
+                presentStudentIndex++;
             }
             const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
             tr.innerHTML = `<td class="py-3 px-4">${studentName} ${arrowSvg}</td><td class="py-3 px-4">${attendanceStatus}</td><td class="py-3 px-4">${reason}</td>`;
@@ -239,7 +262,7 @@ async function generateAttendanceReport() {
             if (studentRecords.length > 0) {
                 const detailsTr = document.createElement('tr');
                 detailsTr.className = 'hidden';
-                detailsTr.classList.add((hasLateSignIn || hasLongSignOut) ? 'bg-red-50' : 'bg-gray-50');
+                detailsTr.classList.add((hasLateSignIn || hasLongSignOut) ? 'bg-red-50' : 'bg-blue-50');
                 const detailsTd = document.createElement('td');
                 detailsTd.colSpan = 3;
                 detailsTd.className = 'p-0';
@@ -276,13 +299,10 @@ async function generateAttendanceReport() {
 async function initializePageSpecificApp() {
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
-
-    // Disable dropdowns initially
     [signOutClassDropdown, attendanceClassDropdown].forEach(dd => {
         populateDropdown(dd.id, [], LOADING_OPTION, "");
         dd.setAttribute("disabled", "disabled");
     });
-
     dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
@@ -294,25 +314,17 @@ async function initializePageSpecificApp() {
         try {
             await fetchAllStudentData(); 
             populateCourseDropdownFromData();
-            
-            // Populate Sign Out dropdown with "All Classes"
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
-
-            // Populate Attendance dropdown normally
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             attendanceClassDropdown.removeAttribute("disabled");
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
-            [signOutClassDropdown, attendanceClassDropdown].forEach(dd => {
-                populateDropdown(dd.id, [], "Error loading classes", "");
-            });
+            [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
         }
     } else {
         console.warn("User not authenticated for dashboard. Cannot fetch data.");
-        [signOutClassDropdown, attendanceClassDropdown].forEach(dd => {
-            populateDropdown(dd.id, [], "Sign in to load classes", "");
-        });
+        [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
     }
     switchTab('signOut');
 }
@@ -366,10 +378,5 @@ function clearReportOnChange(reportTableEl, messageEl, messageText) {
     messageEl.classList.remove('hidden');
 }
 
-signOutClassDropdown.addEventListener('change', () => {
-    clearReportOnChange(reportTable, reportMessageP, "Class changed. Click 'Generate Report' to see new data.");
-});
-
-attendanceClassDropdown.addEventListener('change', () => {
-    clearReportOnChange(attendanceReportTable, attendanceReportMessageP, "Class changed. Click 'Generate Attendance Report' to see new data.");
-});
+signOutClassDropdown.addEventListener('change', () => clearReportOnChange(reportTable, reportMessageP, "Filters changed. Click 'Generate Report' to see new data."));
+attendanceClassDropdown.addEventListener('change', () => clearReportOnChange(attendanceReportTable, attendanceReportMessageP, "Class changed. Click 'Generate Attendance Report' to see new data."));
