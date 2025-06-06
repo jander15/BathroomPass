@@ -58,6 +58,11 @@
             </div>
         
             <div id="signOutReportContent">
+                <div class="flex justify-end mt-2">
+                     <button id="reloadDataBtn" class="px-4 py-2 text-sm bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 focus:outline-none transition-colors duration-200">
+                        Reload All Data
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div>
                         <label class="font-medium text-gray-700" for="signOutClassDropdown">Class:</label>
@@ -93,17 +98,12 @@
                         <input type="date" id="endDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                     </div>
                 </div>
-                <div class="flex justify-center mt-6">
-                    <button id="generateReportBtn" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none transition-colors duration-200">
-                        Generate Report
-                    </button>
+                <div class="flex items-center mt-6 justify-center">
+                    <input type="checkbox" id="filterProblemsCheckbox" class="form-checkbox h-5 w-5 text-blue-600 rounded-md">
+                    <label for="filterProblemsCheckbox" class="ml-2 text-gray-700">Show only durations > 5 minutes & Late Sign Ins</label>
                 </div>
-                <div class="flex items-center mt-4 justify-center">
-                    <input type="checkbox" id="filterLongDurations" class="form-checkbox h-5 w-5 text-blue-600 rounded-md">
-                    <label for="filterLongDurations" class="ml-2 text-gray-700">Show only durations > 5 minutes & Late Sign Ins</label>
-                </div>
-                <div id="reportOutput" class="mt-8 overflow-x-auto">
-                    <p id="reportMessage" class="text-center text-gray-600">Select filters and click "Generate Report".</p>
+                <div id="reportOutput" class="mt-4 overflow-x-auto">
+                    <p id="reportMessage" class="text-center text-gray-600">Select filters to view data.</p>
                     <table id="reportTable" class="min-w-full bg-white hidden">
                         <thead>
                             <tr class="bg-gray-100">
