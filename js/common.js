@@ -37,23 +37,23 @@ const appState = {
 };
 
 
-// --- DOM Element Caching (Elements common to multiple pages or global) ---
-// These are cached here once to avoid repeated document.getElementById calls.
-const signInPage = document.getElementById('signInPage');
-const googleSignInButton = document.getElementById('googleSignInButton');
-const signInError = document.getElementById('signInError');
-const appContent = document.getElementById('appContent');
-const bodyElement = document.getElementById('body');
-const profileMenuContainer = document.getElementById('profileMenuContainer');
-const profilePicture = document.getElementById('profilePicture');
-const profileDropdown = document.getElementById('profileDropdown');
-const dropdownUserName = document.getElementById('dropdownUserName');
-const dropdownUserEmail = document.getElementById('dropdownUserEmail');
-const dropdownSignOutButton = document.getElementById('dropdownSignOutButton');
-const alertDiv = document.getElementById('alertDiv');
-const alertMessageSpan = document.getElementById('alertMessage');
-const errorAlertDiv = document.getElementById('errorAlertDiv');
-const errorAlertMessageSpan = document.getElementById('errorAlertMessage');
+// --- DOM Element References (Declared, but assigned after DOMContentLoaded) ---
+// These are declared as 'let' so they can be assigned later.
+let signInPage;
+let googleSignInButton;
+let signInError;
+let appContent;
+let bodyElement;
+let profileMenuContainer;
+let profilePicture;
+let profileDropdown;
+let dropdownUserName;
+let dropdownUserEmail;
+let dropdownSignOutButton;
+let alertDiv;
+let alertMessageSpan;
+let errorAlertDiv;
+let errorAlertMessageSpan;
 
 
 // --- Utility Functions ---
@@ -78,10 +78,14 @@ function decodeJwtResponse(token) {
  * @param {string} message - The message to display.
  */
 function showSuccessAlert(message) {
-    alertDiv.classList.remove("hidden", "bg-red-100", "border-red-400", "text-red-700");
-    alertDiv.classList.add("bg-green-100", "border-green-400", "text-green-700");
-    alertMessageSpan.textContent = message;
-    setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+    if (alertDiv && alertMessageSpan) {
+        alertDiv.classList.remove("hidden", "bg-red-100", "border-red-400", "text-red-700");
+        alertDiv.classList.add("bg-green-100", "border-green-400", "text-green-700");
+        alertMessageSpan.textContent = message;
+        setTimeout(() => alertDiv.classList.add('hidden'), 5000);
+    } else {
+        console.warn("Success alert elements not found.");
+    }
 }
 
 /**
@@ -89,10 +93,14 @@ function showSuccessAlert(message) {
  * @param {string} message - The message to display.
  */
 function showErrorAlert(message) {
-    errorAlertDiv.classList.remove("hidden", "bg-green-100", "border-green-400", "text-green-700");
-    errorAlertDiv.classList.add("bg-red-100", "border-red-400", "text-red-700");
-    errorAlertMessageSpan.textContent = message;
-    setTimeout(() => errorAlertDiv.classList.add('hidden'), 10000);
+    if (errorAlertDiv && errorAlertMessageSpan) {
+        errorAlertDiv.classList.remove("hidden", "bg-green-100", "border-green-400", "text-green-700");
+        errorAlertDiv.classList.add("bg-red-100", "border-red-400", "text-red-700");
+        errorAlertMessageSpan.textContent = message;
+        setTimeout(() => errorAlertDiv.classList.add('hidden'), 10000);
+    } else {
+        console.warn("Error alert elements not found.");
+    }
 }
 
 /**
@@ -190,9 +198,13 @@ async function fetchAllStudentData() {
  * Initializes the Google Identity Services client and renders the sign-in button.
  */
 function initGoogleSignIn() {
+    // Cache common DOM elements right at the start of GSI init
+    // This function is expected to be called by each page's DOMContentLoaded.
+    cacheCommonDOMElements(); 
+
     if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
         console.error("Google Identity Services library not loaded.");
-        // Potentially show a user-facing error or retry mechanism
+        if (signInError) showErrorAlert("Google Sign-In library failed to load. Please check your internet connection.");
         return;
     }
 
@@ -200,10 +212,34 @@ function initGoogleSignIn() {
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleSignInResponse 
     });
-    google.accounts.id.renderButton(
-        googleSignInButton,
-        { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
-    );
+
+    // Only render button if the element exists on the page
+    if (googleSignInButton) {
+        google.accounts.id.renderButton(
+            googleSignInButton,
+            { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
+        );
+    } else {
+        console.warn("Google Sign-In button element (googleSignInButton) not found on this page. If this is not the sign-in page, this is expected.");
+    }
+
+    // Add profile menu listeners only if elements exist
+    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
+        profilePicture.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent document click from closing it immediately
+            profileDropdown.classList.toggle('hidden');
+        });
+
+        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+
+        bodyElement.addEventListener('click', (event) => { 
+            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
+    } else {
+        console.warn("Common UI elements for profile menu not found on this page. If this is not the main app content page, this is expected.");
+    }
 }
 
 /**
@@ -221,15 +257,15 @@ function handleGoogleSignInResponse(response) {
     appState.currentUser.idToken = response.credential;
 
     // Update profile menu UI (common to all app pages)
-    profilePicture.src = appState.currentUser.profilePic;
-    dropdownUserName.textContent = appState.currentUser.name;
-    dropdownUserEmail.textContent = appState.currentUser.email;
+    if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+    if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+    if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
 
-    // Hide sign-in page and show app content (common to all app pages)
-    signInPage.classList.add('hidden');
-    appContent.classList.remove('hidden');
-    bodyElement.classList.remove('justify-center');
-    profileMenuContainer.classList.remove('hidden');
+    // Transition UI (common to all app pages)
+    if (signInPage) signInPage.classList.add('hidden');
+    if (appContent) appContent.classList.remove('hidden');
+    if (bodyElement) bodyElement.classList.remove('justify-center');
+    if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
     // Call the page-specific initialization function.
     // This function MUST be defined in the page-specific JS file (e.g., bathroom_pass.js, teacher_dashboard.js)
@@ -252,11 +288,11 @@ function handleGoogleSignOut() {
     
     appState.currentUser = { email: '', name: '', profilePic: '', idToken: '' };
 
-    appContent.classList.add('hidden');
-    signInPage.classList.remove('hidden');
-    bodyElement.classList.add('justify-center');
-    profileMenuContainer.classList.add('hidden');
-    profileDropdown.classList.add('hidden');
+    if (appContent) appContent.classList.add('hidden');
+    if (signInPage) signInPage.classList.remove('hidden');
+    if (bodyElement) bodyElement.classList.add('justify-center');
+    if (profileMenuContainer) profileMenuContainer.classList.add('hidden');
+    if (profileDropdown) profileDropdown.classList.add('hidden');
 
     // Call the page-specific reset function.
     // This function MUST be defined in the page-specific JS file.
@@ -267,26 +303,5 @@ function handleGoogleSignOut() {
     }
 }
 
-// --- Global Event Listeners ---
-
-// Event listeners for the Google Profile dropdown.
-if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
-    profilePicture.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent document click from closing it immediately
-        profileDropdown.classList.toggle('hidden');
-    });
-
-    dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-
-    // Close profile dropdown when clicking outside of it.
-    bodyElement.addEventListener('click', (event) => { 
-        if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
-            profileDropdown.classList.add('hidden');
-        }
-    });
-} else {
-    console.error("Common UI elements for profile menu not found. Ensure HTML IDs are correct.");
-}
-
-// initGoogleSignIn will be called by each page's DOMContentLoaded.
-// The main common.js file does not call it directly anymore.
+// Common DOMContentLoaded is handled by each page's JS now.
+// Global constants are defined outside any function for immediate availability.
