@@ -55,6 +55,28 @@ let alertMessageSpan;
 let errorAlertDiv;
 let errorAlertMessageSpan;
 
+/**
+ * Caches common DOM elements by their IDs.
+ * This should be called after DOMContentLoaded to ensure elements are available.
+ */
+function cacheCommonDOMElements() {
+    signInPage = document.getElementById('signInPage');
+    googleSignInButton = document.getElementById('googleSignInButton');
+    signInError = document.getElementById('signInError');
+    appContent = document.getElementById('appContent');
+    bodyElement = document.getElementById('body');
+    profileMenuContainer = document.getElementById('profileMenuContainer');
+    profilePicture = document.getElementById('profilePicture');
+    profileDropdown = document.getElementById('profileDropdown');
+    dropdownUserName = document.getElementById('dropdownUserName');
+    dropdownUserEmail = document.getElementById('dropdownUserEmail');
+    dropdownSignOutButton = document.getElementById('dropdownSignOutButton');
+    alertDiv = document.getElementById('alertDiv');
+    alertMessageSpan = document.getElementById('alertMessage');
+    errorAlertDiv = document.getElementById('errorAlertDiv');
+    errorAlertMessageSpan = document.getElementById('errorAlertMessage');
+}
+
 
 // --- Utility Functions ---
 
