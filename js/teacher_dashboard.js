@@ -98,7 +98,7 @@ function applyDurationFilter() {
                 const parts = durationCell.textContent.split(':');
                 totalSeconds = parseInt(parts[0] || '0') * 60 + parseInt(parts[1] || '0');
             } else {
-                totalSeconds = parseFloat(durationCell.textContent || '0'); // Assuming it's already a number
+                totalSeconds = parseFloat(durationCell.textContent || '0');
             }
             isLongDuration = totalSeconds > thresholdSeconds;
         }
@@ -131,8 +131,8 @@ async function generateReport() {
     reportMessageP.textContent = "Generating report...";
     reportTable.classList.add('hidden');
     reportTableBody.innerHTML = '';
-    showErrorAlert(''); // Clear previous errors
-    showSuccessAlert(''); // Clear previous successes
+    showErrorAlert(''); 
+    showSuccessAlert(''); 
 
     const selectedClass = dashboardClassDropdown.value;
     const filterType = dateFilterType.value;
@@ -358,7 +358,7 @@ async function generateAttendanceReport() {
             tr.className = 'border-t';
             if (studentRecords.length > 0) {
                 tr.classList.add('cursor-pointer');
-                tr.dataset.accordionToggle = "true"; // Add data attribute for the click listener
+                tr.dataset.accordionToggle = "true";
             }
             if (hasLateSignIn || hasLongSignOut) {
                 tr.classList.add('bg-yellow-100', 'font-bold');
@@ -482,7 +482,6 @@ async function initializePageSpecificApp() {
         dashboardClassDropdown.setAttribute("disabled", "disabled");
     }
     
-    // Set the initial tab view
     switchTab('signOut');
 }
 
@@ -522,7 +521,7 @@ function resetPageSpecificAppState() {
     switchTab('signOut');
 }
 
-// --- Event Listeners specific to Teacher Dashboard page (All function calls go here, after functions are defined) ---
+// --- Event Listeners specific to Teacher Dashboard page ---
 document.addEventListener('DOMContentLoaded', initGoogleSignIn);
 dateFilterType.addEventListener('change', toggleDateInputs);
 generateReportBtn.addEventListener('click', generateReport);
@@ -532,23 +531,20 @@ filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter);
 signOutReportTab.addEventListener('click', () => switchTab('signOut'));
 attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
 
-// Attendance Report listener
+// Report generation listener
 generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
 
-// New, single listener for the accordion rows in the attendance table
+// Event Delegation for Accordion Rows
 attendanceReportTableBody.addEventListener('click', (event) => {
     const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
-
-    if (!headerRow) {
-        return; // Clicked somewhere that isn't a clickable row
-    }
-
-    const detailsRow = headerRow.nextElementSibling;
-    if (detailsRow) {
-        detailsRow.classList.toggle('hidden');
-        const arrow = headerRow.querySelector('svg');
-        if (arrow) {
-            arrow.classList.toggle('rotate-180');
+    if (headerRow) {
+        const detailsRow = headerRow.nextElementSibling;
+        if (detailsRow) {
+            detailsRow.classList.toggle('hidden');
+            const arrow = headerRow.querySelector('svg');
+            if (arrow) {
+                arrow.classList.toggle('rotate-180');
+            }
         }
     }
 });
