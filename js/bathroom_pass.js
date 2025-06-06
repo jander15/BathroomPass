@@ -665,7 +665,7 @@ nameDropdown.addEventListener("change", handleNameSelectionChange);
 // No specific listener needed for emojiDropdown change, value is read on sign out
 signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
 mainForm.addEventListener("submit", handleMainFormSubmit); // Main sign-in form submission
-lateSignInForm.addEventListener('submit', handleLateSignInFormFormSubmit); // Late sign-in form submission
+lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit); // Corrected: Renamed from handleLateSignInFormFormSubmit
 lateNameDropdown.addEventListener('change', handleLateNameSelectionChange);
 nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility);
 addToQueueButton.addEventListener('click', handleAddToQueueClick);
@@ -674,5 +674,6 @@ queueViewBtn.addEventListener('click', showQueueView);
 lateSignInViewBtn.addEventListener('click', showLateSignInView);
 
 
-// Ensure all elements exist before adding listeners. This is handled by DOMContentLoaded in common.js.
-// DOMContentLoaded listener is now in common.js, which then calls initializePageSpecificApp
+// Call initGoogleSignIn only after the DOM for this specific page is loaded.
+// This is done here rather than common.js to ensure page-specific DOM is ready.
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
