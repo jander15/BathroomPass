@@ -1,55 +1,106 @@
 // js/teacher_dashboard.js
 
-// --- DOM Element Caching (Elements specific to the Teacher Dashboard page) ---
-const dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
+// --- DOM Element References (Declared, but assigned in cacheTeacherDashboardDOMElements) ---
+let dashboardClassDropdown;
 
 // Tab Buttons
-const attendanceReportTabBtn = document.getElementById('attendanceReportTabBtn');
-const signOutHistoryTabBtn = document.getElementById('signOutHistoryTabBtn');
-const studentHistoryTabBtn = document.getElementById('studentHistoryTabBtn');
+let attendanceReportTabBtn;
+let signOutHistoryTabBtn;
+let studentHistoryTabBtn;
 
 // Tab Content Divs
-const attendanceReportTabContent = document.getElementById('attendanceReportTabContent');
-const signOutHistoryTabContent = document.getElementById('signOutHistoryTabContent');
-const studentHistoryTabContent = document.getElementById('studentHistoryTabContent');
+let attendanceReportTabContent;
+let signOutHistoryTabContent;
+let studentHistoryTabContent;
 
 // Tab 1: Attendance Report elements
-const attendanceDateFilterType = document.getElementById('attendanceDateFilterType');
-const attendanceSpecificDateInputDiv = document.getElementById('attendanceSpecificDateInput');
-const attendanceReportDateInput = document.getElementById('attendanceReportDate');
-const attendanceDateRangeInputsDiv = document.getElementById('attendanceDateRangeInputs');
-const attendanceStartDateInput = document.getElementById('attendanceStartDate');
-const attendanceEndDateInput = document.getElementById('attendanceEndDate');
-const generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
-const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
-const attendanceReportTable = document.getElementById('attendanceReportTable');
-const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+let attendanceDateFilterType;
+let attendanceSpecificDateInputDiv;
+let attendanceReportDateInput;
+let attendanceDateRangeInputsDiv;
+let attendanceStartDateInput;
+let attendanceEndDateInput;
+let generateAttendanceReportBtn;
+let attendanceReportMessageP;
+let attendanceReportTable;
+let attendanceReportTableBody;
 
 // Tab 2: Sign Out History elements (re-caching from previous version)
-const signOutHistoryDateFilterType = document.getElementById('signOutHistoryDateFilterType');
-const signOutHistorySpecificDateInputDiv = document.getElementById('signOutHistorySpecificDateInput');
-const signOutHistoryReportDateInput = document.getElementById('signOutHistoryReportDate');
-const signOutHistoryDateRangeInputsDiv = document.getElementById('signOutHistoryDateRangeInputs');
-const signOutHistoryStartDateInput = document.getElementById('signOutHistoryStartDate');
-const signOutHistoryEndDateInput = document.getElementById('signOutHistoryEndDate');
-const filterLongDurationsCheckbox = document.getElementById('filterLongDurations'); 
-const generateSignOutHistoryBtn = document.getElementById('generateSignOutHistoryBtn');
-const signOutHistoryReportMessageP = document.getElementById('signOutHistoryReportMessage');
-const signOutHistoryReportTable = document.getElementById('signOutHistoryReportTable');
-const signOutHistoryReportTableBody = document.getElementById('signOutHistoryReportTableBody');
+let signOutHistoryDateFilterType;
+let signOutHistorySpecificDateInputDiv;
+let signOutHistoryReportDateInput;
+let signOutHistoryDateRangeInputsDiv;
+let signOutHistoryStartDateInput;
+let signOutHistoryEndDateInput;
+let filterLongDurationsCheckbox; 
+let generateSignOutHistoryBtn;
+let signOutHistoryReportMessageP;
+let signOutHistoryReportTable;
+let signOutHistoryReportTableBody;
 
 // Tab 3: Student History elements
-const studentHistoryDropdown = document.getElementById('studentHistoryDropdown');
-const studentHistoryDateFilterType = document.getElementById('studentHistoryDateFilterType');
-const studentHistorySpecificDateInputDiv = document.getElementById('studentHistorySpecificDateInput');
-const studentHistoryReportDateInput = document.getElementById('studentHistoryReportDate');
-const studentHistoryDateRangeInputsDiv = document.getElementById('studentHistoryDateRangeInputs');
-const studentHistoryStartDateInput = document.getElementById('studentHistoryStartDate');
-const studentHistoryEndDateInput = document.getElementById('studentHistoryEndDate');
-const generateStudentHistoryBtn = document.getElementById('generateStudentHistoryBtn');
-const studentHistoryReportMessageP = document.getElementById('studentHistoryReportMessage');
-const studentHistoryReportTable = document.getElementById('studentHistoryReportTable');
-const studentHistoryReportTableBody = document.getElementById('studentHistoryReportTableBody');
+let studentHistoryDropdown;
+let studentHistoryDateFilterType;
+let studentHistorySpecificDateInputDiv;
+let studentHistoryReportDateInput;
+let studentHistoryDateRangeInputsDiv;
+let studentHistoryStartDateInput;
+let studentHistoryEndDateInput;
+let generateStudentHistoryBtn;
+let studentHistoryReportMessageP;
+let studentHistoryReportTable;
+let studentHistoryReportTableBody;
+
+/**
+ * Caches DOM elements specific to the Teacher Dashboard page.
+ * This should be called only after DOMContentLoaded to ensure elements are available.
+ */
+function cacheTeacherDashboardDOMElements() {
+    dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
+
+    attendanceReportTabBtn = document.getElementById('attendanceReportTabBtn');
+    signOutHistoryTabBtn = document.getElementById('signOutHistoryTabBtn');
+    studentHistoryTabBtn = document.getElementById('studentHistoryTabBtn');
+
+    attendanceReportTabContent = document.getElementById('attendanceReportTabContent');
+    signOutHistoryTabContent = document.getElementById('signOutHistoryTabContent');
+    studentHistoryTabContent = document.getElementById('studentHistoryTabContent');
+
+    attendanceDateFilterType = document.getElementById('attendanceDateFilterType');
+    attendanceSpecificDateInputDiv = document.getElementById('attendanceSpecificDateInput');
+    attendanceReportDateInput = document.getElementById('attendanceReportDate');
+    attendanceDateRangeInputsDiv = document.getElementById('attendanceDateRangeInputs');
+    attendanceStartDateInput = document.getElementById('attendanceStartDate');
+    attendanceEndDateInput = document.getElementById('attendanceEndDate');
+    generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
+    attendanceReportMessageP = document.getElementById('attendanceReportMessage');
+    attendanceReportTable = document.getElementById('attendanceReportTable');
+    attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+
+    signOutHistoryDateFilterType = document.getElementById('signOutHistoryDateFilterType');
+    signOutHistorySpecificDateInputDiv = document.getElementById('signOutHistorySpecificDateInput');
+    signOutHistoryReportDateInput = document.getElementById('signOutHistoryReportDate');
+    signOutHistoryDateRangeInputsDiv = document.getElementById('signOutHistoryDateRangeInputs');
+    signOutHistoryStartDateInput = document.getElementById('signOutHistoryStartDate');
+    signOutHistoryEndDateInput = document.getElementById('signOutHistoryEndDate');
+    filterLongDurationsCheckbox = document.getElementById('filterLongDurations'); 
+    generateSignOutHistoryBtn = document.getElementById('generateSignOutHistoryBtn');
+    signOutHistoryReportMessageP = document.getElementById('signOutHistoryReportMessage');
+    signOutHistoryReportTable = document.getElementById('signOutHistoryReportTable');
+    signOutHistoryReportTableBody = document.getElementById('signOutHistoryReportTableBody');
+
+    studentHistoryDropdown = document.getElementById('studentHistoryDropdown');
+    studentHistoryDateFilterType = document.getElementById('studentHistoryDateFilterType');
+    studentHistorySpecificDateInputDiv = document.getElementById('studentHistorySpecificDateInput');
+    studentHistoryReportDateInput = document.getElementById('studentHistoryReportDate');
+    studentHistoryDateRangeInputsDiv = document.getElementById('studentHistoryDateRangeInputs');
+    studentHistoryStartDateInput = document.getElementById('studentHistoryStartDate');
+    studentHistoryEndDateInput = document.getElementById('studentHistoryEndDate');
+    generateStudentHistoryBtn = document.getElementById('generateStudentHistoryBtn');
+    studentHistoryReportMessageP = document.getElementById('studentHistoryReportMessage');
+    studentHistoryReportTable = document.getElementById('studentHistoryReportTable');
+    studentHistoryReportTableBody = document.getElementById('studentHistoryReportTableBody');
+}
 
 
 // --- Dashboard Page Specific Functions (All function declarations first) ---
@@ -136,12 +187,12 @@ function toggleStudentHistoryDateInputs() {
 }
 
 /**
- * Generates today's date in YYYY-MM-DD format.
+ * Generates today's date investre-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
+    return today.toISOString().split('T')[0]; // Formats to वर्षे-MM-DD
 }
 
 /**
@@ -281,7 +332,7 @@ function aggregateRangeStudentActivity(studentActivities) {
  * @param {string} selectedDate - The date for single-day reports.
  */
 function renderAttendanceReport(reportData, filterType, selectedDate) {
-    reportTableBody.innerHTML = '';
+    attendanceReportTableBody.innerHTML = '';
     attendanceReportTable.classList.remove('hidden');
     attendanceReportMessageP.classList.add('hidden');
 
@@ -775,6 +826,9 @@ async function generateStudentHistoryReport() {
  * This is the page-specific initialization called by common.js.
  */
 async function initializePageSpecificApp() {
+    // Cache specific DOM elements for this page first
+    cacheTeacherDashboardDOMElements();
+
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
 
@@ -954,7 +1008,7 @@ signOutHistoryTabBtn.addEventListener('click', () => showDashboardTab('signOutHi
 studentHistoryTabBtn.addEventListener('click', () => showDashboardTab('studentHistoryTabContent'));
 
 // Class Dropdown - Main filter for the dashboard
-dashboardClassDropdown.addEventListener('change', async () => {
+dashboardClassDropdown.addEventListener('change', () => {
     // When class changes, disable student history dropdown if default class is selected
     if (dashboardClassDropdown.value === "" || dashboardClassDropdown.value === DEFAULT_CLASS_OPTION) {
         studentHistoryDropdown.setAttribute("disabled", "disabled");
