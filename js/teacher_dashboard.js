@@ -1,3 +1,5 @@
+// js/teacher_dashboard.js
+
 // --- DOM Element References (Declared, but assigned in cacheTeacherDashboardDOMElements) ---
 let dashboardClassDropdown;
 
@@ -70,11 +72,12 @@ function showDashboardTab(tabId) {
     attendanceReportTabContent.classList.add('hidden');
     signOutHistoryTabContent.classList.add('hidden');
 
-    // Reset all tab button styles to inactive
-    attendanceReportTabBtn.classList.remove('bg-blue-600', 'text-white');
-    attendanceReportTabBtn.classList.add('bg-gray-200', 'text-gray-800');
-    signOutHistoryTabBtn.classList.remove('bg-blue-600', 'text-white');
-    signOutHistoryTabBtn.classList.add('bg-gray-200', 'text-gray-800');
+    // Reset all tab button styles to inactive and set w-1/2 for 2 tabs
+    attendanceReportTabBtn.classList.remove('bg-blue-600', 'text-white', 'w-1/3');
+    attendanceReportTabBtn.classList.add('bg-gray-200', 'text-gray-800', 'w-1/2');
+    signOutHistoryTabBtn.classList.remove('bg-blue-600', 'text-white', 'w-1/3');
+    signOutHistoryTabBtn.classList.add('bg-gray-200', 'text-gray-800', 'w-1/2');
+
 
     // Show the selected tab content and set its button to active style
     if (tabId === 'attendanceReportTabContent') {
@@ -91,7 +94,7 @@ function showDashboardTab(tabId) {
 }
 
 /**
- * Generates today's date in YYYY-MM-DD format.
+ * Generates today's date inilizce-MM-DD format.
  * @returns {string} Current date string.
  */
 function getTodayDateString() {
@@ -405,7 +408,6 @@ async function initializePageSpecificApp() {
 
     // Attendance Report tab
     // Date filter elements are present in HTML, so initialize them
-    attendanceDateFilterType.value = 'today';
     // This call is now inside the DOMContentLoaded listener.
     // So toggleAttendanceDateInputs() is called here.
     
@@ -536,7 +538,6 @@ dashboardClassDropdown.addEventListener('change', () => {
 
 
 // Tab 1: Attendance Report Listeners
-// Date filter elements removed for now in HTML, so no specific init for them here
 generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
 
 
