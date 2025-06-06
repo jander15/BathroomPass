@@ -112,7 +112,7 @@ function applyDurationFilter() {
             isLongDuration = totalSeconds > thresholdSeconds;
         }
         if (isSignOut && isLongDuration) row.classList.add('bg-red-200');
-        else row.classList.remove('bg-red-200');
+        else if (typeCell.textContent !== "Late Sign In") row.classList.remove('bg-red-200');
         if (showLongDurationsOnly) row.classList.toggle('hidden', !(isSignOut && isLongDuration));
         else row.classList.remove('hidden');
     });
@@ -162,8 +162,11 @@ async function generateReport() {
                 data.report.forEach(row => {
                     const tr = document.createElement('tr');
                     let type = "Sign Out", durationDisplay = "N/A";
-                    if (row.Seconds === "Late Sign In") type = "Late Sign In";
-                    else if (typeof row.Seconds === 'number') {
+                    // **THE CHANGE**: Highlight late sign-in rows in yellow
+                    if (row.Seconds === "Late Sign In") {
+                        type = "Late Sign In";
+                        tr.classList.add('bg-yellow-200');
+                    } else if (typeof row.Seconds === 'number') {
                         const minutes = Math.floor(row.Seconds / 60);
                         const seconds = row.Seconds % 60;
                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -210,8 +213,6 @@ async function generateAttendanceReport() {
     attendanceReportMessageP.textContent = "Generating attendance report...";
     attendanceReportTable.classList.add('hidden');
     attendanceReportTableBody.innerHTML = '';
-    const oldDiagnosticDiv = attendanceReportOutputDiv.querySelector('.troubleshooting-info');
-    if (oldDiagnosticDiv) oldDiagnosticDiv.remove();
     showErrorAlert('');
     showSuccessAlert('');
 
@@ -246,7 +247,6 @@ async function generateAttendanceReport() {
         attendanceReportTableBody.innerHTML = '';
 
         allStudentsInClass.forEach(studentName => {
-            // **THE FIX**: Normalize names from both lists before comparing them.
             const normalizedStudentName = normalizeName(studentName);
             const studentRecords = reportData.report.filter(record => normalizeName(record.Name) === normalizedStudentName);
 
@@ -276,9 +276,11 @@ async function generateAttendanceReport() {
             const tr = document.createElement('tr');
             tr.className = 'border-t';
             if (studentRecords.length > 0) {
-                tr.classList.add('cursor-pointer', 'bg-blue-100'); // Blue background for any activity
+                tr.classList.add('cursor-pointer');
                 tr.dataset.accordionToggle = "true";
-                if (hasLateSignIn || hasLongSignOut) tr.classList.add('font-bold');
+                if (hasLateSignIn || hasLongSignOut) {
+                    tr.classList.add('bg-red-200', 'font-bold');
+                }
             }
 
             const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
@@ -287,20 +289,26 @@ async function generateAttendanceReport() {
 
             if (studentRecords.length > 0) {
                 const detailsTr = document.createElement('tr');
-                detailsTr.className = 'hidden bg-blue-50'; // Slightly lighter blue for details
+                detailsTr.className = 'hidden';
+                detailsTr.classList.add((hasLateSignIn || hasLongSignOut) ? 'bg-red-50' : 'bg-gray-50');
                 const detailsTd = document.createElement('td');
                 detailsTd.colSpan = 3;
                 detailsTd.className = 'p-0';
                 let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="py-2 px-4 border-b text-left">Date</th><th class="py-2 px-4 border-b text-left">Time</th><th class="py-2 px-4 border-b text-left">Type</th><th class="py-2 px-4 border-b text-left">Duration (min:sec)</th></tr></thead><tbody>`;
                 studentRecords.forEach(record => {
-                    let type = "Sign Out", durationDisplay = "N/A";
-                    if (record.Seconds === "Late Sign In") type = "Late Sign In";
-                    else if (typeof record.Seconds === 'number') {
+                    let type = "Sign Out", durationDisplay = "N/A", detailRowClass = '';
+                    // **THE CHANGE**: Highlight late sign-in or long duration rows in child table
+                    if (record.Seconds === "Late Sign In") {
+                        type = "Late Sign In";
+                        detailRowClass = 'bg-yellow-200';
+                    } else if (typeof record.Seconds === 'number') {
                         const minutes = Math.floor(record.Seconds / 60);
                         const seconds = record.Seconds % 60;
                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        if (record.Seconds > (TARDY_THRESHOLD_MINUTES * 60)) {
+                            detailRowClass = 'bg-red-100';
+                        }
                     }
-                    const detailRowClass = (record.Seconds > (TARDY_THRESHOLD_MINUTES * 60)) ? 'bg-red-100' : '';
                     detailsTableHtml += `<tr class="border-t ${detailRowClass}"><td class="py-2 px-4">${formatDate(record.Date)}</td><td class="py-2 px-4">${formatTime(record.Date)}</td><td class="py-2 px-4">${type}</td><td class="py-2 px-4">${durationDisplay}</td></tr>`;
                 });
                 detailsTd.innerHTML = detailsTableHtml + '</tbody></table></div>';
