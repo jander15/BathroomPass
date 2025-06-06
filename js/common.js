@@ -13,6 +13,7 @@ const STATUS_IS_NEXT = "IS NEXT";
 const ACTION_LOG_SIGN_IN = 'logSignIn';
 const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
 const ACTION_GET_ALL_DATA = 'getAllData';
+const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;
 const EMOJI_LIST = ['🚽', '🚿', '🛁', '🧻', '🧼', '🧴', '💦', '💧', '🏃‍♂️', '💨', '🤫', '🚶‍♀️', '😅', '✨', '🚻', '🚾'];
 const FORM_COLOR_AVAILABLE = "#4ade80"; // Green
@@ -49,11 +50,6 @@ const profileDropdown = document.getElementById('profileDropdown');
 const dropdownUserName = document.getElementById('dropdownUserName');
 const dropdownUserEmail = document.getElementById('dropdownUserEmail');
 const dropdownSignOutButton = document.getElementById('dropdownSignOutButton');
-const studentOutHeader = document.getElementById('studentOutHeader');
-const emojiLeft = document.getElementById('emojiLeft');
-const studentOutNameSpan = document.getElementById('studentOutName');
-const headerStatusSpan = document.getElementById('headerStatus');
-const emojiRight = document.getElementById('emojiRight');
 const alertDiv = document.getElementById('alertDiv');
 const alertMessageSpan = document.getElementById('alertMessage');
 const errorAlertDiv = document.getElementById('errorAlertDiv');
@@ -164,11 +160,34 @@ async function sendAuthenticatedRequest(payload) {
     return response.json();
 }
 
+/**
+ * Fetches all student data for the current teacher from the backend.
+ * This is a common utility for both Bathroom Pass and Teacher Dashboard.
+ */
+async function fetchAllStudentData() {
+    try {
+        const data = await sendAuthenticatedRequest({ action: ACTION_GET_ALL_DATA });
+        if (data && Array.isArray(data)) { // Apps Script returns raw array for getAllData
+            appState.data.allNamesFromSheet = data;
+        } else {
+            console.error('Error: fetchAllStudentData received non-array data:', data);
+            appState.data.allNamesFromSheet = [];
+            showErrorAlert("Failed to load student data. Server returned unexpected format. Please check Apps Script logs.");
+            throw new Error("Invalid data format from server.");
+        }
+    } catch (error) {
+        console.error('Error fetching all student data:', error);
+        appState.data.allNamesFromSheet = [];
+        showErrorAlert("Failed to load student data. Network or authorization issue. Please check connection, ensure app is authorized, and refresh.");
+        throw error; // Re-throw to propagate error to page-specific init
+    }
+}
+
 
 // --- Google Sign-In Initialization & Handlers ---
 
 /**
- * Initializes the Google Identity Services client.
+ * Initializes the Google Identity Services client and renders the sign-in button.
  */
 function initGoogleSignIn() {
     if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
@@ -189,6 +208,7 @@ function initGoogleSignIn() {
 
 /**
  * Callback function for successful Google Sign-In.
+ * Updates global appState and transitions UI.
  * @param {CredentialResponse} response - The credential response from GSI.
  */
 function handleGoogleSignInResponse(response) {
@@ -200,26 +220,31 @@ function handleGoogleSignInResponse(response) {
     appState.currentUser.profilePic = profile.picture;
     appState.currentUser.idToken = response.credential;
 
-    passLabel.textContent = `Bathroom Pass for ${appState.currentUser.name}'s Class`;
+    // Update profile menu UI (common to all app pages)
     profilePicture.src = appState.currentUser.profilePic;
     dropdownUserName.textContent = appState.currentUser.name;
     dropdownUserEmail.textContent = appState.currentUser.email;
 
+    // Hide sign-in page and show app content (common to all app pages)
     signInPage.classList.add('hidden');
     appContent.classList.remove('hidden');
     bodyElement.classList.remove('justify-center');
     profileMenuContainer.classList.remove('hidden');
 
-    // Call the page-specific initialization function (expected to be in bathroom_pass.js or teacher_dashboard.js)
+    // Call the page-specific initialization function.
+    // This function MUST be defined in the page-specific JS file (e.g., bathroom_pass.js, teacher_dashboard.js)
+    // and should handle its own DOMContentLoaded or ensure it's available globally before this is called.
     if (typeof initializePageSpecificApp === 'function') {
         initializePageSpecificApp();
     } else {
-        console.warn("initializePageSpecificApp not found. Page-specific initialization skipped.");
+        console.error("initializePageSpecificApp not found. Page-specific initialization skipped. Ensure it's defined in the page's JS file and loaded.");
+        showErrorAlert("Application could not initialize. Please contact support.");
     }
 }
 
 /**
  * Handles Google Sign-Out.
+ * Resets global appState and transitions UI.
  */
 function handleGoogleSignOut() {
     google.accounts.id.disableAutoSelect();
@@ -233,7 +258,8 @@ function handleGoogleSignOut() {
     profileMenuContainer.classList.add('hidden');
     profileDropdown.classList.add('hidden');
 
-    // Call the page-specific reset function (expected to be in bathroom_pass.js or teacher_dashboard.js)
+    // Call the page-specific reset function.
+    // This function MUST be defined in the page-specific JS file.
     if (typeof resetPageSpecificAppState === 'function') {
         resetPageSpecificAppState();
     } else {
@@ -243,20 +269,24 @@ function handleGoogleSignOut() {
 
 // --- Global Event Listeners ---
 
-// Initialize Google Sign-In when the DOM is fully loaded.
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
-
 // Event listeners for the Google Profile dropdown.
-profilePicture.addEventListener('click', (event) => {
-    event.stopPropagation(); // Prevent document click from closing it immediately
-    profileDropdown.classList.toggle('hidden');
-});
+if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
+    profilePicture.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent document click from closing it immediately
+        profileDropdown.classList.toggle('hidden');
+    });
 
-dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+    dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
 
-// Close profile dropdown when clicking outside of it.
-bodyElement.addEventListener('click', (event) => { 
-    if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
-        profileDropdown.classList.add('hidden');
-    }
-});
+    // Close profile dropdown when clicking outside of it.
+    bodyElement.addEventListener('click', (event) => { 
+        if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+            profileDropdown.classList.add('hidden');
+        }
+    });
+} else {
+    console.error("Common UI elements for profile menu not found. Ensure HTML IDs are correct.");
+}
+
+// initGoogleSignIn will be called by each page's DOMContentLoaded.
+// The main common.js file does not call it directly anymore.
