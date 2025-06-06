@@ -49,7 +49,7 @@ function toggleDateInputs() {
  */
 function getTodayDateString() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to tpConst-MM-DD
+    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
 }
 
 /**
@@ -356,8 +356,13 @@ async function generateAttendanceReport() {
 
             const tr = document.createElement('tr');
             tr.className = 'border-t';
-            if (studentRecords.length > 0) tr.classList.add('cursor-pointer');
-            if (hasLateSignIn || hasLongSignOut) tr.classList.add('bg-yellow-100', 'font-bold');
+            if (studentRecords.length > 0) {
+                tr.classList.add('cursor-pointer');
+                tr.dataset.accordionToggle = "true"; // Add data attribute for the click listener
+            }
+            if (hasLateSignIn || hasLongSignOut) {
+                tr.classList.add('bg-yellow-100', 'font-bold');
+            }
 
             const arrowSvg = studentRecords.length > 0 
                 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` 
@@ -397,9 +402,7 @@ async function generateAttendanceReport() {
                         const seconds = totalSeconds % 60;
                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     }
-
                     const detailRowClass = (record.Seconds > (TARDY_THRESHOLD_MINUTES * 60)) ? 'bg-red-100' : '';
-
                     detailsTableHtml += `
                         <tr class="border-t ${detailRowClass}">
                             <td class="py-2 px-4">${formatDate(record.Date)}</td>
@@ -409,17 +412,10 @@ async function generateAttendanceReport() {
                         </tr>
                     `;
                 });
-
                 detailsTableHtml += '</tbody></table></div>';
                 detailsTd.innerHTML = detailsTableHtml;
                 detailsTr.appendChild(detailsTd);
                 attendanceReportTableBody.appendChild(detailsTr);
-
-                tr.addEventListener('click', () => {
-                    detailsTr.classList.toggle('hidden');
-                    const arrow = tr.querySelector('svg');
-                    if (arrow) arrow.classList.toggle('rotate-180');
-                });
             }
         });
 
@@ -538,6 +534,24 @@ attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
 
 // Attendance Report listener
 generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
+
+// New, single listener for the accordion rows in the attendance table
+attendanceReportTableBody.addEventListener('click', (event) => {
+    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
+
+    if (!headerRow) {
+        return; // Clicked somewhere that isn't a clickable row
+    }
+
+    const detailsRow = headerRow.nextElementSibling;
+    if (detailsRow) {
+        detailsRow.classList.toggle('hidden');
+        const arrow = headerRow.querySelector('svg');
+        if (arrow) {
+            arrow.classList.toggle('rotate-180');
+        }
+    }
+});
 
 // Clear reports when class changes
 dashboardClassDropdown.addEventListener('change', () => {
