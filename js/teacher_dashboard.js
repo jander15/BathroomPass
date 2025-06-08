@@ -24,9 +24,13 @@ const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
-const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+// New Edit/Delete Modal Elements
+const editModal = document.getElementById('editModal');
+const editStudentName = document.getElementById('editStudentName');
+const editDuration = document.getElementById('editDuration');
+const saveEditBtn = document.getElementById('saveEditBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 
 // --- Helper & Formatting Functions ---
 
@@ -34,6 +38,12 @@ function normalizeName(name) {
     if (typeof name !== 'string') return '';
     const idx = name.indexOf('(');
     return idx > -1 ? name.substring(0, idx).trim() : name.trim();
+}
+
+function getShortClassName(fullClassName) {
+    if (typeof fullClassName !== 'string') return 'N/A';
+    const match = fullClassName.match(/Period (\d+)/);
+    return match ? `P${match[1]}` : fullClassName;
 }
 
 function getWeekRange() {
@@ -130,7 +140,9 @@ function renderSignOutReport() {
                     tr.classList.add('bg-red-200');
                 }
             }
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${row.Class}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td>`;
+            const shortClassName = getShortClassName(row.Class);
+            const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -170,7 +182,7 @@ function renderAttendanceReport() {
     
     const start = new Date(selectedDate + 'T00:00:00');
     const end = new Date(selectedDate + 'T23:59:59');
-
+    
     const dailySignOuts = appState.data.allSignOuts.filter(record => {
         const recordDate = new Date(record.Date);
         return !record.Deleted && recordDate >= start && recordDate <= end && record.Class === selectedClass;
@@ -213,62 +225,51 @@ function renderAttendanceReport() {
         const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
         tr.innerHTML = `<td class="py-3 px-4">${studentName}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
-        if (studentRecords.length > 0) {
-            const detailsTr = document.createElement('tr');
-            detailsTr.className = 'hidden';
-            detailsTr.classList.add((hasLate || hasLong) ? 'bg-red-50' : 'bg-blue-50');
-            const detailsTd = document.createElement('td');
-            detailsTd.colSpan = 3;
-            detailsTd.className = 'p-0';
-            let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th><th class="p-2 border-b text-left"></th></tr></thead><tbody>`;
-            studentRecords.forEach(r => {
-                let type = "Sign Out", duration = "N/A", rowClass = '';
-                if (r.Seconds === "Late Sign In") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
-                else if (typeof r.Seconds === 'number') {
-                    duration = `${Math.floor(r.Seconds / 60)}:${(r.Seconds % 60).toString().padStart(2, '0')}`;
-                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) rowClass = 'bg-red-100';
-                }
-                const deleteButton = `<button class="text-red-600 hover:text-red-900 delete-btn" data-timestamp="${r.Date}">Delete</button>`;
-                detailsTableHtml += `<tr class="border-t ${rowClass}"><td class="p-2">${formatDate(r.Date)}</td><td class="p-2">${formatTime(r.Date)}</td><td class="p-2">${type}</td><td class="p-2">${duration}</td><td class="p-2 text-right">${deleteButton}</td></tr>`;
-            });
-            detailsTd.innerHTML = detailsHtml + '</tbody></table></div>';
-            detailsTr.appendChild(detailsTd);
-            attendanceReportTableBody.appendChild(detailsTr);
-        }
     });
 }
 
 async function handleDeleteEntry(timestamp) {
-    console.log("Attempting to delete entry with timestamp:", timestamp);
-    const payload = {
-        action: 'deleteEntry',
-        entryTimestamp: timestamp,
-        userEmail: appState.currentUser.email,
-        idToken: appState.currentUser.idToken
-    };
+    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            console.log('Successfully marked entry as deleted.');
-            // Update the local data to reflect the deletion
             const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
             if (entryIndex > -1) {
                 appState.data.allSignOuts[entryIndex].Deleted = true;
             }
-            // Re-render both reports to show the change
             renderSignOutReport();
             renderAttendanceReport();
         } else {
-            throw new Error(response.error || 'Failed to delete entry.');
+            throw new Error(response.error || 'Failed to delete entry from server.');
         }
     } catch (error) {
         console.error('Error deleting entry:', error);
-        // In a real app, you would show this error to the user in a non-alert way
     }
 }
 
+async function handleEditEntry(originalTimestamp, newName, newSeconds) {
+    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+    try {
+        const response = await sendAuthenticatedRequest(payload);
+        if (response.result === 'success') {
+            // Update local data for instant refresh
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
+            if(entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Name = newName;
+                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
+            }
+            renderSignOutReport(); // Re-render the table with the new data
+        } else {
+            throw new Error(response.error || 'Failed to edit entry on server.');
+        }
+    } catch (error) {
+        console.error('Error editing entry:', error);
+    }
+}
+
+
 async function fetchAllSignOutData() {
-    reportMessageP.textContent = "Loading all sign-out data for the year...";
+    reportMessageP.textContent = "Loading all sign-out data...";
     reportMessageP.classList.remove('hidden');
     reportTable.classList.add('hidden');
     reloadDataBtn.disabled = true;
@@ -344,44 +345,51 @@ reloadDataBtn.addEventListener('click', fetchAllSignOutData);
 });
 dateFilterType.addEventListener('change', toggleDateInputs);
 signOutReportTab.addEventListener('click', () => switchTab('signOut'));
-attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
+attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
 attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
-// Event Delegation for Accordion and Delete buttons
-attendanceReportTableBody.addEventListener('click', (event) => {
-    const deleteButton = event.target.closest('.delete-btn');
-    if (deleteButton) {
-        event.stopPropagation(); // Prevent accordion from toggling
-        const timestamp = deleteButton.dataset.timestamp;
-        deleteConfirmationModal.classList.remove('hidden');
-        // Store timestamp on the confirm button to pass to the handler
-        confirmDeleteBtn.dataset.timestamp = timestamp;
-        return;
-    }
-
-    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
-    if (headerRow) {
-        const detailsRow = headerRow.nextElementSibling;
-        if (detailsRow) {
-            detailsRow.classList.toggle('hidden');
-            const arrow = headerRow.querySelector('svg');
-            if (arrow) arrow.classList.toggle('rotate-180');
+// Event Delegation for Edit buttons on Sign Out Report
+reportTableBody.addEventListener('click', (event) => {
+    const editButton = event.target.closest('.edit-btn');
+    if (editButton) {
+        const timestamp = editButton.dataset.timestamp;
+        const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
+        if (record) {
+            editModal.classList.remove('hidden');
+            editStudentName.value = record.Name;
+            editDuration.value = (typeof record.Seconds === 'number') ? Math.round(record.Seconds / 60) : '';
+            saveEditBtn.dataset.timestamp = timestamp;
+            deleteEntryBtn.dataset.timestamp = timestamp;
         }
     }
 });
 
 // Modal button listeners
-cancelDeleteBtn.addEventListener('click', () => {
-    deleteConfirmationModal.classList.add('hidden');
-});
-confirmDeleteBtn.addEventListener('click', () => {
-    const timestamp = confirmDeleteBtn.dataset.timestamp;
-    if (timestamp) {
-        handleDeleteEntry(timestamp);
+cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
+
+saveEditBtn.addEventListener('click', () => {
+    const timestamp = saveEditBtn.dataset.timestamp;
+    const newName = editStudentName.value;
+    const durationMins = editDuration.value;
+    const newSeconds = (durationMins === '' || durationMins === null) ? 'Late Sign In' : parseInt(durationMins) * 60;
+    
+    if (timestamp && newName) {
+        handleEditEntry(timestamp, newName, newSeconds);
     }
-    deleteConfirmationModal.classList.add('hidden');
+    editModal.classList.add('hidden');
 });
+
+deleteEntryBtn.addEventListener('click', () => {
+    const timestamp = deleteEntryBtn.dataset.timestamp;
+    if (timestamp) {
+        if (confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
+            handleDeleteEntry(timestamp);
+        }
+    }
+    editModal.classList.add('hidden');
+});
+
 
 signOutClassDropdown.addEventListener('change', () => {
     const selectedClass = signOutClassDropdown.value;
