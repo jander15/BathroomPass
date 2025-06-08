@@ -31,6 +31,7 @@ const editDuration = document.getElementById('editDuration');
 const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const deleteEntryBtn = document.getElementById('deleteEntryBtn');
+const dashboardContent = document.getElementById('dashboardContent');
 
 // --- Helper & Formatting Functions ---
 
@@ -142,7 +143,14 @@ function renderSignOutReport() {
             }
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `
+                <td class="p-2 border-b">${formatDate(row.Date)}</td>
+                <td class="p-2 border-b">${formatTime(row.Date)}</td>
+                <td class="p-2 border-b">${shortClassName}</td>
+                <td class="p-2 border-b">${row.Name}</td>
+                <td class="p-2 border-b">${type}</td>
+                <td class="p-2 border-b">${durationDisplay}</td>
+                <td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -225,6 +233,28 @@ function renderAttendanceReport() {
         const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
         tr.innerHTML = `<td class="py-3 px-4">${studentName}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
+        if (studentRecords.length > 0) {
+            const detailsTr = document.createElement('tr');
+            detailsTr.className = 'hidden';
+            detailsTr.classList.add((hasLate || hasLong) ? 'bg-red-50' : 'bg-blue-50');
+            const detailsTd = document.createElement('td');
+            detailsTd.colSpan = 3;
+            detailsTd.className = 'p-0';
+            // **THE FIX**: Removed delete button from this table, header now has 4 columns to match
+            let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th></tr></thead><tbody>`;
+            studentRecords.forEach(r => {
+                let type = "Sign Out", duration = "N/A", rowClass = '';
+                if (r.Seconds === "Late Sign In") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
+                else if (typeof r.Seconds === 'number') {
+                    duration = `${Math.floor(r.Seconds / 60)}:${(r.Seconds % 60).toString().padStart(2, '0')}`;
+                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) rowClass = 'bg-red-100';
+                }
+                detailsTableHtml += `<tr class="border-t ${rowClass}"><td class="p-2">${formatDate(r.Date)}</td><td class="p-2">${formatTime(r.Date)}</td><td class="p-2">${type}</td><td class="p-2">${duration}</td></tr>`;
+            });
+            detailsTd.innerHTML = detailsTableHtml + '</tbody></table></div>';
+            detailsTr.appendChild(detailsTd);
+            attendanceReportTableBody.appendChild(detailsTr);
+        }
     });
 }
 
@@ -252,13 +282,13 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            // Update local data for instant refresh
             const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
             if(entryIndex > -1) {
                 appState.data.allSignOuts[entryIndex].Name = newName;
                 appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
             }
-            renderSignOutReport(); // Re-render the table with the new data
+            renderSignOutReport();
+            renderAttendanceReport();
         } else {
             throw new Error(response.error || 'Failed to edit entry on server.');
         }
@@ -349,10 +379,13 @@ attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); r
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
 attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
-// Event Delegation for Edit buttons on Sign Out Report
-reportTableBody.addEventListener('click', (event) => {
+// Event Delegation for both tables
+dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
+    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
+
     if (editButton) {
+        event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
         const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
         if (record) {
@@ -362,10 +395,16 @@ reportTableBody.addEventListener('click', (event) => {
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
         }
+    } else if (headerRow) {
+        const detailsRow = headerRow.nextElementSibling;
+        if (detailsRow) {
+            detailsRow.classList.toggle('hidden');
+            const arrow = headerRow.querySelector('svg');
+            if (arrow) arrow.classList.toggle('rotate-180');
+        }
     }
 });
 
-// Modal button listeners
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
 saveEditBtn.addEventListener('click', () => {
@@ -389,7 +428,6 @@ deleteEntryBtn.addEventListener('click', () => {
     }
     editModal.classList.add('hidden');
 });
-
 
 signOutClassDropdown.addEventListener('change', () => {
     const selectedClass = signOutClassDropdown.value;
