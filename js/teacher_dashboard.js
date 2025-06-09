@@ -343,8 +343,6 @@ attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
-    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
-
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
@@ -352,7 +350,7 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => student.Name) // Get full names from roster
+                .map(student => student.Name) 
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
@@ -360,11 +358,11 @@ dashboardContent.addEventListener('click', (event) => {
             editStudentName.innerHTML = ''; 
             uniqueStudents.forEach(studentFullName => {
                 const option = document.createElement('option');
-                option.value = studentFullName; // The value is the full name with ID
-                option.textContent = normalizeName(studentFullName); // Display the clean name
+                option.value = studentFullName; 
+                option.textContent = normalizeName(studentFullName); 
                 editStudentName.appendChild(option);
             });
-            // **THE FIX**: Set the value of the dropdown to the full name from the record
+            // This ensures the correct option is selected even if the log name is clean
             editStudentName.value = record.Name; 
             
             editType.value = record.Type || 'bathroom';
@@ -381,23 +379,19 @@ dashboardContent.addEventListener('click', (event) => {
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
         }
-    } else if (headerRow) {
-        const detailsRow = headerRow.nextElementSibling;
-        if (detailsRow) {
-            detailsRow.classList.toggle('hidden');
-            const arrow = headerRow.querySelector('svg');
-            if (arrow) arrow.classList.toggle('rotate-180');
-        }
     }
+});
+
+editType.addEventListener('change', () => {
+    editDurationDiv.classList.toggle('hidden', editType.value === 'late');
 });
 
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    // **THE FIX**: Get the full name from the dropdown, then normalize it for the backend
-    const newNameWithId = editStudentName.value;
-    const newCleanName = normalizeName(newNameWithId);
+    // **THE FIX**: The value of the dropdown is the full name, which is what we want to save
+    const newName = editStudentName.value;
     
     const newType = editType.value;
     
@@ -410,8 +404,8 @@ saveEditBtn.addEventListener('click', () => {
         newSeconds = (minutes * 60) + seconds;
     }
 
-    if (timestamp && newCleanName) {
-        handleEditEntry(timestamp, newCleanName, newSeconds, newType);
+    if (timestamp && newName) {
+        handleEditEntry(timestamp, newName, newSeconds, newType);
     }
     editModal.classList.add('hidden');
 });
@@ -431,7 +425,7 @@ signOutClassDropdown.addEventListener('change', () => {
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => student.Name) // Use the full name with ID
+            .map(student => student.Name)
             .sort();
         
         const uniqueStudents = [...new Set(studentsInClass)];
@@ -444,8 +438,10 @@ signOutClassDropdown.addEventListener('change', () => {
 
         uniqueStudents.forEach(studentFullName => {
             const option = document.createElement('option');
-            option.value = studentFullName; 
-            option.textContent = normalizeName(studentFullName);
+            // **THE FIX**: Use the clean name for both value and text content in this filter
+            const cleanName = normalizeName(studentFullName);
+            option.value = cleanName; 
+            option.textContent = cleanName;
             studentFilterDropdown.appendChild(option);
         });
         
