@@ -232,7 +232,7 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            await fetchAllSignOutData(); // Refresh all data from the source
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
 }
@@ -242,7 +242,7 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) 
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            await fetchAllSignOutData(); // Refresh all data
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
@@ -367,8 +367,9 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    const newName = editStudentName.value;
+    const newName = editStudentName.value; 
     const newType = editType.value;
+    
     let newSeconds;
     if (newType === 'late') {
         newSeconds = 'Late Sign In';
@@ -377,6 +378,7 @@ saveEditBtn.addEventListener('click', () => {
         const seconds = parseInt(editSeconds.value) || 0;
         newSeconds = (minutes * 60) + seconds;
     }
+
     if (timestamp && newName) {
         handleEditEntry(timestamp, newName, newSeconds, newType);
     }
