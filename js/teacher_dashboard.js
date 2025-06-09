@@ -24,6 +24,7 @@ const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+// New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
 const editType = document.getElementById('editType');
@@ -109,7 +110,10 @@ function renderSignOutReport() {
         if (startDateStr && endDateStr) {
             const start = new Date(startDateStr + 'T00:00:00');
             const end = new Date(endDateStr + 'T23:59:59');
-            filteredData = filteredData.filter(r => new Date(r.Date) >= start && new Date(r.Date) <= end);
+            filteredData = filteredData.filter(r => {
+                const recordDate = new Date(r.Date);
+                return recordDate >= start && recordDate <= end;
+            });
         }
     }
     if (showProblemsOnly) {
@@ -232,7 +236,11 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            await fetchAllSignOutData();
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
+            if (entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Deleted = true;
+            }
+            renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
 }
@@ -242,7 +250,13 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) 
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            await fetchAllSignOutData();
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
+            if(entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Name = newName;
+                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
+                appState.data.allSignOuts[entryIndex].Type = newType;
+            }
+            renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
@@ -329,6 +343,8 @@ attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
+    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
+
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
@@ -336,11 +352,20 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => normalizeName(student.Name))
+                .map(student => student.Name) // Get full names from roster
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
-            populateDropdown('editStudentName', uniqueStudents, '', normalizeName(record.Name));
+            
+            editStudentName.innerHTML = ''; 
+            uniqueStudents.forEach(studentFullName => {
+                const option = document.createElement('option');
+                option.value = studentFullName; // The value is the full name with ID
+                option.textContent = normalizeName(studentFullName); // Display the clean name
+                editStudentName.appendChild(option);
+            });
+            // **THE FIX**: Set the value of the dropdown to the full name from the record
+            editStudentName.value = record.Name; 
             
             editType.value = record.Type || 'bathroom';
             editDurationDiv.classList.toggle('hidden', editType.value === 'late');
@@ -356,18 +381,24 @@ dashboardContent.addEventListener('click', (event) => {
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
         }
+    } else if (headerRow) {
+        const detailsRow = headerRow.nextElementSibling;
+        if (detailsRow) {
+            detailsRow.classList.toggle('hidden');
+            const arrow = headerRow.querySelector('svg');
+            if (arrow) arrow.classList.toggle('rotate-180');
+        }
     }
-});
-
-editType.addEventListener('change', () => {
-    editDurationDiv.classList.toggle('hidden', editType.value === 'late');
 });
 
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    const newName = editStudentName.value; 
+    // **THE FIX**: Get the full name from the dropdown, then normalize it for the backend
+    const newNameWithId = editStudentName.value;
+    const newCleanName = normalizeName(newNameWithId);
+    
     const newType = editType.value;
     
     let newSeconds;
@@ -379,8 +410,8 @@ saveEditBtn.addEventListener('click', () => {
         newSeconds = (minutes * 60) + seconds;
     }
 
-    if (timestamp && newName) {
-        handleEditEntry(timestamp, newName, newSeconds, newType);
+    if (timestamp && newCleanName) {
+        handleEditEntry(timestamp, newCleanName, newSeconds, newType);
     }
     editModal.classList.add('hidden');
 });
@@ -400,11 +431,24 @@ signOutClassDropdown.addEventListener('change', () => {
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => normalizeName(student.Name))
+            .map(student => student.Name) // Use the full name with ID
             .sort();
         
         const uniqueStudents = [...new Set(studentsInClass)];
-        populateDropdown('studentFilterDropdown', uniqueStudents, "All Students", "All Students");
+        
+        studentFilterDropdown.innerHTML = '';
+        const allStudentsOption = document.createElement('option');
+        allStudentsOption.value = "All Students";
+        allStudentsOption.textContent = "All Students";
+        studentFilterDropdown.appendChild(allStudentsOption);
+
+        uniqueStudents.forEach(studentFullName => {
+            const option = document.createElement('option');
+            option.value = studentFullName; 
+            option.textContent = normalizeName(studentFullName);
+            studentFilterDropdown.appendChild(option);
+        });
+        
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
