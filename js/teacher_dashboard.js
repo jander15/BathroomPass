@@ -24,7 +24,6 @@ const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-// New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
 const editMinutes = document.getElementById('editMinutes');
@@ -95,7 +94,6 @@ function renderSignOutReport() {
         filteredData = filteredData.filter(r => r.Class === selectedClass);
     }
     if (isStudentFilterActive) {
-        // Now comparing clean name to clean name
         filteredData = filteredData.filter(r => normalizeName(r.Name) === selectedStudent);
     }
     if (filterType !== 'all_time') {
@@ -117,7 +115,7 @@ function renderSignOutReport() {
     }
     if (showProblemsOnly) {
         const threshold = TARDY_THRESHOLD_MINUTES * 60;
-        filteredData = filteredData.filter(r => r.Seconds === "Late Sign In" || (typeof r.Seconds === 'number' && r.Seconds > threshold));
+        filteredData = filteredData.filter(r => r.Type === "late" || (typeof r.Seconds === 'number' && r.Seconds > threshold));
     }
 
     reportTableBody.innerHTML = '';
@@ -130,9 +128,11 @@ function renderSignOutReport() {
         filteredData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
         filteredData.forEach(row => {
             const tr = document.createElement('tr');
-            let type = "Sign Out", durationDisplay = "N/A";
-            if (row.Seconds === "Late Sign In") {
-                type = "Late Sign In";
+            let typeDisplay = "Bathroom", durationDisplay = "N/A";
+            
+            // **THE CHANGE**: Check row.Type for logic
+            if (row.Type === 'late') {
+                typeDisplay = "Late Sign In";
                 tr.classList.add('bg-yellow-200');
             } else if (typeof row.Seconds === 'number') {
                 const minutes = Math.floor(row.Seconds / 60);
@@ -144,7 +144,7 @@ function renderSignOutReport() {
             }
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -200,8 +200,9 @@ function renderAttendanceReport() {
         if (studentRecords.length > 0) {
             let longCount = 0, outCount = 0;
             studentRecords.forEach(r => {
-                if (r.Seconds === "Late Sign In") hasLate = true;
-                else if (typeof r.Seconds === 'number') {
+                // **THE CHANGE**: Check row.Type for logic
+                if (r.Type === "late") hasLate = true;
+                else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
                     outCount++;
                     if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) { hasLong = true; longCount++; }
                 }
@@ -236,9 +237,10 @@ function renderAttendanceReport() {
             detailsTd.className = 'p-0';
             let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th></tr></thead><tbody>`;
             studentRecords.forEach(r => {
-                let type = "Sign Out", duration = "N/A", rowClass = '';
-                if (r.Seconds === "Late Sign In") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
-                else if (typeof r.Seconds === 'number') {
+                let type = "Bathroom", duration = "N/A", rowClass = '';
+                // **THE CHANGE**: Check row.Type for logic
+                if (r.Type === "late") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
+                else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
                     duration = `${Math.floor(r.Seconds / 60)}:${(r.Seconds % 60).toString().padStart(2, '0')}`;
                     if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) rowClass = 'bg-red-100';
                 }
@@ -257,9 +259,7 @@ async function handleDeleteEntry(timestamp) {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
             const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Deleted = true;
-            }
+            if (entryIndex > -1) appState.data.allSignOuts[entryIndex].Deleted = true;
             renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
@@ -274,6 +274,7 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds) {
             if(entryIndex > -1) {
                 appState.data.allSignOuts[entryIndex].Name = newName;
                 appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
+                appState.data.allSignOuts[entryIndex].Type = (newSeconds === 'Late Sign In') ? 'late' : 'bathroom';
             }
             renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
@@ -370,10 +371,9 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => normalizeName(student.Name)) // **THE FIX**
+                .map(student => normalizeName(student.Name))
                 .sort();
             
-            // Use a Set to ensure unique names for the dropdown
             const uniqueStudents = [...new Set(studentsInClass)];
             
             editStudentName.innerHTML = ''; 
@@ -383,10 +383,9 @@ dashboardContent.addEventListener('click', (event) => {
                 option.textContent = studentName; 
                 editStudentName.appendChild(option);
             });
-            // Select the correct student by their clean name
             editStudentName.value = normalizeName(record.Name); 
             
-            if (typeof record.Seconds === 'number') {
+            if (record.Type === 'bathroom' && typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
                 editSeconds.value = record.Seconds % 60;
             } else {
@@ -439,24 +438,11 @@ signOutClassDropdown.addEventListener('change', () => {
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => normalizeName(student.Name)) // **THE FIX**
+            .map(student => normalizeName(student.Name))
             .sort();
-
+        
         const uniqueStudents = [...new Set(studentsInClass)];
-        
-        studentFilterDropdown.innerHTML = '';
-        const allStudentsOption = document.createElement('option');
-        allStudentsOption.value = "All Students";
-        allStudentsOption.textContent = "All Students";
-        studentFilterDropdown.appendChild(allStudentsOption);
-
-        uniqueStudents.forEach(studentName => {
-            const option = document.createElement('option');
-            option.value = studentName;
-            option.textContent = studentName;
-            studentFilterDropdown.appendChild(option);
-        });
-        
+        populateDropdown('studentFilterDropdown', uniqueStudents, "All Students", "All Students");
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
