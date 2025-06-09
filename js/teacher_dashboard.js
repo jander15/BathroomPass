@@ -358,7 +358,7 @@ dashboardContent.addEventListener('click', (event) => {
             editStudentName.innerHTML = ''; 
             uniqueStudents.forEach(studentFullName => {
                 const option = document.createElement('option');
-                option.value = studentFullName; 
+                option.value = normalizeName(studentFullName); 
                 option.textContent = normalizeName(studentFullName); 
                 editStudentName.appendChild(option);
             });
