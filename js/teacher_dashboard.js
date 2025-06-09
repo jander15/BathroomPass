@@ -24,6 +24,7 @@ const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+// New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
 const editType = document.getElementById('editType');
@@ -64,23 +65,15 @@ function getMonthRange() {
     return { start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] };
 }
 
-function getLast30DaysRange() {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 30);
-    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-}
-
-
 function toggleDateInputs() {
     const filter = dateFilterType.value;
-    singleDateInputDiv.classList.toggle('hidden', filter !== 'single_day');
+    specificDateInputDiv.classList.toggle('hidden', filter !== 'specificDate');
     dateRangeInputsDiv.classList.toggle('hidden', filter !== 'dateRange');
 }
 
 function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
-function formatDate(d) { return d ? new Date(d).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric'}) : ''; }
-function formatTime(d) { return d ? new Date(d).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''; }
+function formatDate(d) { return d ? new Date(d).toLocaleDateString() : ''; }
+function formatTime(d) { return d ? new Date(d).toLocaleTimeString() : ''; }
 
 // --- Report Generation & UI Functions ---
 
@@ -104,19 +97,23 @@ function renderSignOutReport() {
         filteredData = filteredData.filter(r => r.Class === selectedClass);
     }
     if (isStudentFilterActive) {
-        filteredData = filteredData.filter(r => r.Name === selectedStudent);
+        filteredData = filteredData.filter(r => normalizeName(r.Name) === selectedStudent);
     }
     if (filterType !== 'all_time') {
         let startDateStr, endDateStr;
-        if (filterType === 'single_day') { startDateStr = endDateStr = reportDateInput.value; }
+        if (filterType === 'today') { startDateStr = endDateStr = getTodayDateString(); }
         else if (filterType === 'this_week') { const r = getWeekRange(); startDateStr = r.start; endDateStr = r.end; }
-        else if (filterType === 'last_30_days') { const r = getLast30DaysRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'specificDate') { startDateStr = endDateStr = reportDateInput.value; }
         else if (filterType === 'dateRange') { startDateStr = startDateInput.value; endDateStr = endDateInput.value; }
         
         if (startDateStr && endDateStr) {
             const start = new Date(startDateStr + 'T00:00:00');
             const end = new Date(endDateStr + 'T23:59:59');
-            filteredData = filteredData.filter(r => new Date(r.Date) >= start && new Date(r.Date) <= end);
+            filteredData = filteredData.filter(r => {
+                const recordDate = new Date(r.Date);
+                return recordDate >= start && recordDate <= end;
+            });
         }
     }
     if (showProblemsOnly) {
@@ -148,7 +145,7 @@ function renderSignOutReport() {
             }
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -169,7 +166,7 @@ function switchTab(tab) {
 }
 
 function renderAttendanceReport() {
-    if (!appState.data.allSignOuts || !appState.data.allNamesFromSheet) {
+    if (!appState.data.allSignOuts) {
         attendanceReportMessageP.textContent = "Initial data is still loading. Please wait a moment...";
         attendanceReportMessageP.classList.remove('hidden');
         return;
@@ -197,8 +194,9 @@ function renderAttendanceReport() {
     const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
     
     let presentStudentIndex = 0;
-    allStudentsInClass.forEach(studentName => {
-        const studentRecords = dailySignOuts.filter(r => r.Name === studentName);
+    allStudentsInClass.forEach(studentFullName => {
+        const normalizedStudentName = normalizeName(studentFullName);
+        const studentRecords = dailySignOuts.filter(r => normalizeName(r.Name) === normalizedStudentName);
         let status = "Present", reason = "N/A", hasLong = false, hasLate = false;
         if (studentRecords.length > 0) {
             let longCount = 0, outCount = 0;
@@ -228,7 +226,7 @@ function renderAttendanceReport() {
             presentStudentIndex++;
         }
         const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
-        tr.innerHTML = `<td class="py-3 px-4">${studentName}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
+        tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
     });
 }
@@ -239,7 +237,9 @@ async function handleDeleteEntry(timestamp) {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
             const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) appState.data.allSignOuts[entryIndex].Deleted = true;
+            if (entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Deleted = true;
+            }
             renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
@@ -271,10 +271,6 @@ async function fetchAllSignOutData() {
         const payload = { action: 'getAllSignOutsForTeacher', userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success' && Array.isArray(data.report)) {
-            // **THE CHANGE**: Normalize names immediately after fetching
-            data.report.forEach(record => {
-                record.Name = normalizeName(record.Name);
-            });
             appState.data.allSignOuts = data.report;
             renderSignOutReport();
             renderAttendanceReport();
@@ -292,7 +288,7 @@ async function initializePageSpecificApp() {
     [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
@@ -301,12 +297,6 @@ async function initializePageSpecificApp() {
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
             await fetchAllStudentData(); 
-            // **THE CHANGE**: Normalize roster names right after fetching
-            if (appState.data.allNamesFromSheet) {
-                appState.data.allNamesFromSheet.forEach(student => {
-                    student.Name = normalizeName(student.Name);
-                });
-            }
             await populateCourseDropdownFromData();
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
@@ -330,7 +320,7 @@ function resetPageSpecificAppState() {
         if(dd) { populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     studentFilterDiv.classList.add('hidden');
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
     toggleDateInputs();
     reportTable.classList.add('hidden');
     reportMessageP.textContent = "Select filters to view data.";
@@ -360,11 +350,20 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => student.Name) // Names are already clean
+                .map(student => student.Name) 
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
-            populateDropdown('editStudentName', uniqueStudents, '', record.Name);
+            
+            editStudentName.innerHTML = ''; 
+            uniqueStudents.forEach(studentFullName => {
+                const option = document.createElement('option');
+                option.value = normalizeName(studentFullName); 
+                option.textContent = normalizeName(studentFullName); 
+                editStudentName.appendChild(option);
+            });
+            // This ensures the correct option is selected even if the log name is clean
+            editStudentName.value = record.Name; 
             
             editType.value = record.Type || 'bathroom';
             editDurationDiv.classList.toggle('hidden', editType.value === 'late');
@@ -391,8 +390,11 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
+    // **THE FIX**: The value of the dropdown is the full name, which is what we want to save
     const newName = editStudentName.value;
+    
     const newType = editType.value;
+    
     let newSeconds;
     if (newType === 'late') {
         newSeconds = 'Late Sign In';
@@ -401,6 +403,7 @@ saveEditBtn.addEventListener('click', () => {
         const seconds = parseInt(editSeconds.value) || 0;
         newSeconds = (minutes * 60) + seconds;
     }
+
     if (timestamp && newName) {
         handleEditEntry(timestamp, newName, newSeconds, newType);
     }
@@ -426,7 +429,22 @@ signOutClassDropdown.addEventListener('change', () => {
             .sort();
         
         const uniqueStudents = [...new Set(studentsInClass)];
-        populateDropdown('studentFilterDropdown', uniqueStudents, "All Students", "All Students");
+        
+        studentFilterDropdown.innerHTML = '';
+        const allStudentsOption = document.createElement('option');
+        allStudentsOption.value = "All Students";
+        allStudentsOption.textContent = "All Students";
+        studentFilterDropdown.appendChild(allStudentsOption);
+
+        uniqueStudents.forEach(studentFullName => {
+            const option = document.createElement('option');
+            // **THE FIX**: Use the clean name for both value and text content in this filter
+            const cleanName = normalizeName(studentFullName);
+            option.value = cleanName; 
+            option.textContent = cleanName;
+            studentFilterDropdown.appendChild(option);
+        });
+        
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
