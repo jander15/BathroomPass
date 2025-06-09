@@ -95,8 +95,8 @@ function renderSignOutReport() {
         filteredData = filteredData.filter(r => r.Class === selectedClass);
     }
     if (isStudentFilterActive) {
-        const normalizedStudent = normalizeName(selectedStudent);
-        filteredData = filteredData.filter(r => normalizeName(r.Name) === normalizedStudent);
+        // Now comparing clean name to clean name
+        filteredData = filteredData.filter(r => normalizeName(r.Name) === selectedStudent);
     }
     if (filterType !== 'all_time') {
         let startDateStr, endDateStr;
@@ -144,7 +144,7 @@ function renderSignOutReport() {
             }
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -193,8 +193,8 @@ function renderAttendanceReport() {
     const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
     
     let presentStudentIndex = 0;
-    allStudentsInClass.forEach(studentName => {
-        const normalizedStudentName = normalizeName(studentName);
+    allStudentsInClass.forEach(studentFullName => {
+        const normalizedStudentName = normalizeName(studentFullName);
         const studentRecords = dailySignOuts.filter(r => normalizeName(r.Name) === normalizedStudentName);
         let status = "Present", reason = "N/A", hasLong = false, hasLate = false;
         if (studentRecords.length > 0) {
@@ -225,7 +225,7 @@ function renderAttendanceReport() {
             presentStudentIndex++;
         }
         const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
-        tr.innerHTML = `<td class="py-3 px-4">${studentName}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
+        tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
         if (studentRecords.length > 0) {
             const detailsTr = document.createElement('tr');
@@ -370,17 +370,21 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => student.Name)
+                .map(student => normalizeName(student.Name)) // **THE FIX**
                 .sort();
             
+            // Use a Set to ensure unique names for the dropdown
+            const uniqueStudents = [...new Set(studentsInClass)];
+            
             editStudentName.innerHTML = ''; 
-            studentsInClass.forEach(studentFullName => {
+            uniqueStudents.forEach(studentName => {
                 const option = document.createElement('option');
-                option.value = studentFullName; // The value sent to the backend needs the ID
-                option.textContent = normalizeName(studentFullName); // Display the clean name
+                option.value = studentName; 
+                option.textContent = studentName; 
                 editStudentName.appendChild(option);
             });
-            editStudentName.value = record.Name; 
+            // Select the correct student by their clean name
+            editStudentName.value = normalizeName(record.Name); 
             
             if (typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
@@ -407,7 +411,6 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    // **THE FIX**: Send the full name (with parens) from the dropdown value to the backend.
     const newName = editStudentName.value; 
     const minutes = parseInt(editMinutes.value) || 0;
     const seconds = parseInt(editSeconds.value) || 0;
@@ -436,18 +439,21 @@ signOutClassDropdown.addEventListener('change', () => {
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => student.Name)
+            .map(student => normalizeName(student.Name)) // **THE FIX**
             .sort();
-        // **THE FIX**: Populate the student filter dropdown with the full names, but display the clean names.
-        studentFilterDropdown.innerHTML = ''; // Clear existing
+
+        const uniqueStudents = [...new Set(studentsInClass)];
+        
+        studentFilterDropdown.innerHTML = '';
         const allStudentsOption = document.createElement('option');
         allStudentsOption.value = "All Students";
         allStudentsOption.textContent = "All Students";
         studentFilterDropdown.appendChild(allStudentsOption);
-        studentsInClass.forEach(studentFullName => {
+
+        uniqueStudents.forEach(studentName => {
             const option = document.createElement('option');
-            option.value = studentFullName; // Value has the ID
-            option.textContent = normalizeName(studentFullName); // Display is clean
+            option.value = studentName;
+            option.textContent = studentName;
             studentFilterDropdown.appendChild(option);
         });
         
