@@ -361,6 +361,8 @@ attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
+    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
+
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
@@ -370,7 +372,16 @@ dashboardContent.addEventListener('click', (event) => {
                 .filter(student => student.Class === record.Class)
                 .map(student => student.Name)
                 .sort();
-            populateDropdown('editStudentName', studentsInClass, 'Select Student', record.Name);
+            
+            // **THE FIX**: Manually populate the dropdown without the "Select Student" option
+            editStudentName.innerHTML = ''; // Clear previous options
+            studentsInClass.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student;
+                option.textContent = student;
+                editStudentName.appendChild(option);
+            });
+            editStudentName.value = record.Name; // Set the current student as selected
             
             if (typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
@@ -382,6 +393,13 @@ dashboardContent.addEventListener('click', (event) => {
             editModal.classList.remove('hidden');
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
+        }
+    } else if (headerRow) {
+        const detailsRow = headerRow.nextElementSibling;
+        if (detailsRow) {
+            detailsRow.classList.toggle('hidden');
+            const arrow = headerRow.querySelector('svg');
+            if (arrow) arrow.classList.toggle('rotate-180');
         }
     }
 });
