@@ -373,15 +373,14 @@ dashboardContent.addEventListener('click', (event) => {
                 .map(student => student.Name)
                 .sort();
             
-            // **THE FIX**: Manually populate the dropdown without the "Select Student" option
-            editStudentName.innerHTML = ''; // Clear previous options
-            studentsInClass.forEach(student => {
+            editStudentName.innerHTML = ''; 
+            studentsInClass.forEach(studentName => {
                 const option = document.createElement('option');
-                option.value = student;
-                option.textContent = student;
+                option.value = studentName;
+                option.textContent = normalizeName(studentName); // **THE FIX**
                 editStudentName.appendChild(option);
             });
-            editStudentName.value = record.Name; // Set the current student as selected
+            editStudentName.value = record.Name; 
             
             if (typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
