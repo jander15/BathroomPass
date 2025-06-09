@@ -26,6 +26,8 @@ const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
+const editType = document.getElementById('editType');
+const editDurationDiv = document.getElementById('editDurationDiv');
 const editMinutes = document.getElementById('editMinutes');
 const editSeconds = document.getElementById('editSeconds');
 const saveEditBtn = document.getElementById('saveEditBtn');
@@ -107,15 +109,12 @@ function renderSignOutReport() {
         if (startDateStr && endDateStr) {
             const start = new Date(startDateStr + 'T00:00:00');
             const end = new Date(endDateStr + 'T23:59:59');
-            filteredData = filteredData.filter(r => {
-                const recordDate = new Date(r.Date);
-                return recordDate >= start && recordDate <= end;
-            });
+            filteredData = filteredData.filter(r => new Date(r.Date) >= start && new Date(r.Date) <= end);
         }
     }
     if (showProblemsOnly) {
         const threshold = TARDY_THRESHOLD_MINUTES * 60;
-        filteredData = filteredData.filter(r => r.Type === "late" || (typeof r.Seconds === 'number' && r.Seconds > threshold));
+        filteredData = filteredData.filter(r => r.Type === "late" || (r.Type === 'bathroom' && typeof r.Seconds === 'number' && r.Seconds > threshold));
     }
 
     reportTableBody.innerHTML = '';
@@ -129,8 +128,6 @@ function renderSignOutReport() {
         filteredData.forEach(row => {
             const tr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
-            
-            // **THE CHANGE**: Check row.Type for logic
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 tr.classList.add('bg-yellow-200');
@@ -143,7 +140,7 @@ function renderSignOutReport() {
                 }
             }
             const shortClassName = getShortClassName(row.Class);
-            const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
+            const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
             tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
@@ -200,7 +197,6 @@ function renderAttendanceReport() {
         if (studentRecords.length > 0) {
             let longCount = 0, outCount = 0;
             studentRecords.forEach(r => {
-                // **THE CHANGE**: Check row.Type for logic
                 if (r.Type === "late") hasLate = true;
                 else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
                     outCount++;
@@ -228,28 +224,6 @@ function renderAttendanceReport() {
         const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
         tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
-        if (studentRecords.length > 0) {
-            const detailsTr = document.createElement('tr');
-            detailsTr.className = 'hidden';
-            detailsTr.classList.add((hasLate || hasLong) ? 'bg-red-50' : 'bg-blue-50');
-            const detailsTd = document.createElement('td');
-            detailsTd.colSpan = 3;
-            detailsTd.className = 'p-0';
-            let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th></tr></thead><tbody>`;
-            studentRecords.forEach(r => {
-                let type = "Bathroom", duration = "N/A", rowClass = '';
-                // **THE CHANGE**: Check row.Type for logic
-                if (r.Type === "late") { type = "Late Sign In"; rowClass = 'bg-yellow-200'; }
-                else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
-                    duration = `${Math.floor(r.Seconds / 60)}:${(r.Seconds % 60).toString().padStart(2, '0')}`;
-                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) rowClass = 'bg-red-100';
-                }
-                detailsTableHtml += `<tr class="border-t ${rowClass}"><td class="p-2">${formatDate(r.Date)}</td><td class="p-2">${formatTime(r.Date)}</td><td class="p-2">${type}</td><td class="p-2">${duration}</td></tr>`;
-            });
-            detailsTd.innerHTML = detailsTableHtml + '</tbody></table></div>';
-            detailsTr.appendChild(detailsTd);
-            attendanceReportTableBody.appendChild(detailsTr);
-        }
     });
 }
 
@@ -258,25 +232,17 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) appState.data.allSignOuts[entryIndex].Deleted = true;
-            renderSignOutReport();
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
 }
 
-async function handleEditEntry(originalTimestamp, newName, newSeconds) {
-    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) {
+    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
-            if(entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Name = newName;
-                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
-                appState.data.allSignOuts[entryIndex].Type = (newSeconds === 'Late Sign In') ? 'late' : 'bathroom';
-            }
-            renderSignOutReport();
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
@@ -293,6 +259,7 @@ async function fetchAllSignOutData() {
         if (data.result === 'success' && Array.isArray(data.report)) {
             appState.data.allSignOuts = data.report;
             renderSignOutReport();
+            renderAttendanceReport();
         } else { throw new Error(data.error || "Failed to fetch all data."); }
     } catch (error) {
         console.error("Failed to fetch all sign out data:", error);
@@ -362,8 +329,6 @@ attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
-    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
-
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
@@ -375,16 +340,11 @@ dashboardContent.addEventListener('click', (event) => {
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
+            populateDropdown('editStudentName', uniqueStudents, '', normalizeName(record.Name));
             
-            editStudentName.innerHTML = ''; 
-            uniqueStudents.forEach(studentName => {
-                const option = document.createElement('option');
-                option.value = studentName; 
-                option.textContent = studentName; 
-                editStudentName.appendChild(option);
-            });
-            editStudentName.value = normalizeName(record.Name); 
-            
+            editType.value = record.Type || 'bathroom';
+            editDurationDiv.classList.toggle('hidden', editType.value === 'late');
+
             if (record.Type === 'bathroom' && typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
                 editSeconds.value = record.Seconds % 60;
@@ -396,14 +356,11 @@ dashboardContent.addEventListener('click', (event) => {
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
         }
-    } else if (headerRow) {
-        const detailsRow = headerRow.nextElementSibling;
-        if (detailsRow) {
-            detailsRow.classList.toggle('hidden');
-            const arrow = headerRow.querySelector('svg');
-            if (arrow) arrow.classList.toggle('rotate-180');
-        }
     }
+});
+
+editType.addEventListener('change', () => {
+    editDurationDiv.classList.toggle('hidden', editType.value === 'late');
 });
 
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
@@ -411,14 +368,19 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
     const newName = editStudentName.value; 
-    const minutes = parseInt(editMinutes.value) || 0;
-    const seconds = parseInt(editSeconds.value) || 0;
-    let newSeconds = (minutes * 60) + seconds;
-    if (editMinutes.value === '' && editSeconds.value === '') {
+    const newType = editType.value;
+    
+    let newSeconds;
+    if (newType === 'late') {
         newSeconds = 'Late Sign In';
+    } else {
+        const minutes = parseInt(editMinutes.value) || 0;
+        const seconds = parseInt(editSeconds.value) || 0;
+        newSeconds = (minutes * 60) + seconds;
     }
+
     if (timestamp && newName) {
-        handleEditEntry(timestamp, newName, newSeconds);
+        handleEditEntry(timestamp, newName, newSeconds, newType);
     }
     editModal.classList.add('hidden');
 });
