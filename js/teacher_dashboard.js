@@ -6,7 +6,8 @@ const attendanceClassDropdown = document.getElementById('attendanceClassDropdown
 const studentFilterDiv = document.getElementById('studentFilterDiv');
 const studentFilterDropdown = document.getElementById('studentFilterDropdown');
 const dateFilterType = document.getElementById('dateFilterType');
-const singleDateInputDiv = document.getElementById('singleDateInput');
+// **THE FIX**: Changed the ID to match the HTML file
+const singleDateInputDiv = document.getElementById('specificDateInput'); 
 const reportDateInput = document.getElementById('reportDate');
 const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
 const startDateInput = document.getElementById('startDate');
@@ -68,7 +69,8 @@ function getLast30DaysRange() {
 
 function toggleDateInputs() {
     const filter = dateFilterType.value;
-    singleDateInputDiv.classList.toggle('hidden', filter !== 'single_day');
+    // **THE FIX**: Check against 'specificDate' which is the value in the HTML
+    singleDateInputDiv.classList.toggle('hidden', filter !== 'specificDate'); 
     dateRangeInputsDiv.classList.toggle('hidden', filter !== 'dateRange');
 }
 
@@ -102,9 +104,10 @@ function renderSignOutReport() {
     }
     if (filterType !== 'all_time') {
         let startDateStr, endDateStr;
-        if (filterType === 'single_day') { startDateStr = endDateStr = reportDateInput.value; }
+        if (filterType === 'today') { startDateStr = endDateStr = getTodayDateString(); }
         else if (filterType === 'this_week') { const r = getWeekRange(); startDateStr = r.start; endDateStr = r.end; }
         else if (filterType === 'last_30_days') { const r = getLast30DaysRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'specificDate') { startDateStr = endDateStr = reportDateInput.value; }
         else if (filterType === 'dateRange') { startDateStr = startDateInput.value; endDateStr = endDateInput.value; }
         
         if (startDateStr && endDateStr) {
@@ -279,7 +282,8 @@ async function initializePageSpecificApp() {
     [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
+    // **THE FIX**: Call toggleDateInputs to set the initial visibility correctly
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
@@ -314,7 +318,7 @@ function resetPageSpecificAppState() {
         if(dd) { populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     studentFilterDiv.classList.add('hidden');
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
     toggleDateInputs();
     reportTable.classList.add('hidden');
     reportMessageP.textContent = "Select filters to view data.";
