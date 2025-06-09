@@ -6,7 +6,7 @@ const attendanceClassDropdown = document.getElementById('attendanceClassDropdown
 const studentFilterDiv = document.getElementById('studentFilterDiv');
 const studentFilterDropdown = document.getElementById('studentFilterDropdown');
 const dateFilterType = document.getElementById('dateFilterType');
-const singleDateInputDiv = document.getElementById('singleDateInput');
+const specificDateInputDiv = document.getElementById('specificDateInput');
 const reportDateInput = document.getElementById('reportDate');
 const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
 const startDateInput = document.getElementById('startDate');
@@ -64,22 +64,15 @@ function getMonthRange() {
     return { start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] };
 }
 
-function getLast30DaysRange() {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 30);
-    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-}
-
 function toggleDateInputs() {
     const filter = dateFilterType.value;
-    singleDateInputDiv.classList.toggle('hidden', filter !== 'single_day');
+    specificDateInputDiv.classList.toggle('hidden', filter !== 'specificDate');
     dateRangeInputsDiv.classList.toggle('hidden', filter !== 'dateRange');
 }
 
 function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
-function formatDate(d) { return d ? new Date(d).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric'}) : ''; }
-function formatTime(d) { return d ? new Date(d).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''; }
+function formatDate(d) { return d ? new Date(d).toLocaleDateString() : ''; }
+function formatTime(d) { return d ? new Date(d).toLocaleTimeString() : ''; }
 
 // --- Report Generation & UI Functions ---
 
@@ -107,9 +100,10 @@ function renderSignOutReport() {
     }
     if (filterType !== 'all_time') {
         let startDateStr, endDateStr;
-        if (filterType === 'single_day') { startDateStr = endDateStr = reportDateInput.value; }
+        if (filterType === 'today') { startDateStr = endDateStr = getTodayDateString(); }
         else if (filterType === 'this_week') { const r = getWeekRange(); startDateStr = r.start; endDateStr = r.end; }
-        else if (filterType === 'last_30_days') { const r = getLast30DaysRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDateStr = r.start; endDateStr = r.end; }
+        else if (filterType === 'specificDate') { startDateStr = endDateStr = reportDateInput.value; }
         else if (filterType === 'dateRange') { startDateStr = startDateInput.value; endDateStr = endDateInput.value; }
         
         if (startDateStr && endDateStr) {
@@ -125,7 +119,7 @@ function renderSignOutReport() {
 
     reportTableBody.innerHTML = '';
     if (filteredData.length === 0) {
-        reportMessageP.textContent = `No sign-out data found for the selected criteria. Try a different date filter.`;
+        reportMessageP.textContent = `No sign-out data found for the selected criteria.`;
         reportMessageP.classList.remove('hidden');
         reportTable.classList.add('hidden');
     } else {
@@ -238,11 +232,7 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Deleted = true;
-            }
-            renderSignOutReport();
+            await fetchAllSignOutData(); // Refresh all data from the source
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
 }
@@ -252,13 +242,7 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) 
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
-            if(entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Name = newName;
-                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
-                appState.data.allSignOuts[entryIndex].Type = newType;
-            }
-            renderSignOutReport();
+            await fetchAllSignOutData(); // Refresh all data
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
@@ -290,7 +274,7 @@ async function initializePageSpecificApp() {
     [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
@@ -322,7 +306,7 @@ function resetPageSpecificAppState() {
         if(dd) { populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     studentFilterDiv.classList.add('hidden');
-    dateFilterType.value = 'single_day';
+    dateFilterType.value = 'today';
     toggleDateInputs();
     reportTable.classList.add('hidden');
     reportMessageP.textContent = "Select filters to view data.";
@@ -352,19 +336,11 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => student.Name) 
+                .map(student => normalizeName(student.Name))
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
-            
-            editStudentName.innerHTML = ''; 
-            uniqueStudents.forEach(studentFullName => {
-                const option = document.createElement('option');
-                option.value = studentFullName; 
-                option.textContent = normalizeName(studentFullName); 
-                editStudentName.appendChild(option);
-            });
-            editStudentName.value = record.Name; 
+            populateDropdown('editStudentName', uniqueStudents, '', normalizeName(record.Name));
             
             editType.value = record.Type || 'bathroom';
             editDurationDiv.classList.toggle('hidden', editType.value === 'late');
@@ -391,9 +367,8 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    const newName = editStudentName.value; 
+    const newName = editStudentName.value;
     const newType = editType.value;
-    
     let newSeconds;
     if (newType === 'late') {
         newSeconds = 'Late Sign In';
@@ -402,10 +377,8 @@ saveEditBtn.addEventListener('click', () => {
         const seconds = parseInt(editSeconds.value) || 0;
         newSeconds = (minutes * 60) + seconds;
     }
-
     if (timestamp && newName) {
-        // **THE FIX**: Pass the clean name to the edit handler.
-        handleEditEntry(timestamp, normalizeName(newName), newSeconds, newType);
+        handleEditEntry(timestamp, newName, newSeconds, newType);
     }
     editModal.classList.add('hidden');
 });

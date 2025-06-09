@@ -13,15 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Google Identity Services (GSI) library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <script type="text/javascript">
-    window.onbeforeunload = function() {
-        if (typeof appState !== 'undefined' && appState.timer.intervalId !== null) {
-            return "You have a student signed out on the Bathroom Pass page. Are you sure you want to leave?";
-        }
-        return null;
-    }
-    </script>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
@@ -80,10 +71,11 @@
                     <div>
                         <label class="font-medium text-gray-700" for="dateFilterType">Date Filter:</label>
                         <select id="dateFilterType" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                            <option value="single_day">Single Day</option>
+                            <option value="today">Today</option>
                             <option value="this_week">This Week</option>
-                            <option value="last_30_days">Last 30 Days</option>
+                            <option value="this_month">This Month</option>
                             <option value="all_time">All Time</option>
+                            <option value="specificDate">Specific Date</option>
                             <option value="dateRange">Date Range</option>
                         </select>
                     </div>
@@ -92,7 +84,7 @@
                      <label class="font-medium text-gray-700" for="studentFilterDropdown">Student:</label>
                      <select id="studentFilterDropdown" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
                 </div>
-                <div id="singleDateInput" class="mt-4">
+                <div id="specificDateInput" class="hidden mt-4">
                     <label class="font-medium text-gray-700" for="reportDate">Date:</label>
                     <input type="date" id="reportDate" class="block w-full mt-1 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                 </div>
@@ -197,6 +189,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- External JavaScript Files -->
     <script src="js/common.js"></script>
