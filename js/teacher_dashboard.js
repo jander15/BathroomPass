@@ -374,10 +374,10 @@ dashboardContent.addEventListener('click', (event) => {
                 .sort();
             
             editStudentName.innerHTML = ''; 
-            studentsInClass.forEach(studentName => {
+            studentsInClass.forEach(studentFullName => {
                 const option = document.createElement('option');
-                option.value = studentName;
-                option.textContent = normalizeName(studentName); // **THE FIX**
+                option.value = studentFullName; // The value sent to the backend needs the ID
+                option.textContent = normalizeName(studentFullName); // Display the clean name
                 editStudentName.appendChild(option);
             });
             editStudentName.value = record.Name; 
@@ -407,7 +407,8 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    const newName = editStudentName.value;
+    // **THE FIX**: Send the full name (with parens) from the dropdown value to the backend.
+    const newName = editStudentName.value; 
     const minutes = parseInt(editMinutes.value) || 0;
     const seconds = parseInt(editSeconds.value) || 0;
     let newSeconds = (minutes * 60) + seconds;
@@ -437,7 +438,19 @@ signOutClassDropdown.addEventListener('change', () => {
             .filter(student => student.Class === selectedClass)
             .map(student => student.Name)
             .sort();
-        populateDropdown('studentFilterDropdown', studentsInClass, "All Students", "All Students");
+        // **THE FIX**: Populate the student filter dropdown with the full names, but display the clean names.
+        studentFilterDropdown.innerHTML = ''; // Clear existing
+        const allStudentsOption = document.createElement('option');
+        allStudentsOption.value = "All Students";
+        allStudentsOption.textContent = "All Students";
+        studentFilterDropdown.appendChild(allStudentsOption);
+        studentsInClass.forEach(studentFullName => {
+            const option = document.createElement('option');
+            option.value = studentFullName; // Value has the ID
+            option.textContent = normalizeName(studentFullName); // Display is clean
+            studentFilterDropdown.appendChild(option);
+        });
+        
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
