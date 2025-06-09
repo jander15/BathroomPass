@@ -27,7 +27,8 @@ const attendanceReportTableBody = document.getElementById('attendanceReportTable
 // New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
-const editDuration = document.getElementById('editDuration');
+const editMinutes = document.getElementById('editMinutes');
+const editSeconds = document.getElementById('editSeconds');
 const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const deleteEntryBtn = document.getElementById('deleteEntryBtn');
@@ -143,14 +144,7 @@ function renderSignOutReport() {
             }
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-blue-600 hover:text-blue-900 font-semibold edit-btn" data-timestamp="${row.Date}">Edit</button>`;
-            tr.innerHTML = `
-                <td class="p-2 border-b">${formatDate(row.Date)}</td>
-                <td class="p-2 border-b">${formatTime(row.Date)}</td>
-                <td class="p-2 border-b">${shortClassName}</td>
-                <td class="p-2 border-b">${row.Name}</td>
-                <td class="p-2 border-b">${type}</td>
-                <td class="p-2 border-b">${durationDisplay}</td>
-                <td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${row.Name}</td><td class="p-2 border-b">${type}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
@@ -240,7 +234,6 @@ function renderAttendanceReport() {
             const detailsTd = document.createElement('td');
             detailsTd.colSpan = 3;
             detailsTd.className = 'p-0';
-            // **THE FIX**: Removed delete button from this table, header now has 4 columns to match
             let detailsTableHtml = `<div class="p-4"><table class="min-w-full bg-white"><thead><tr class="bg-gray-200"><th class="p-2 border-b text-left">Date</th><th class="p-2 border-b text-left">Time</th><th class="p-2 border-b text-left">Type</th><th class="p-2 border-b text-left">Duration</th></tr></thead><tbody>`;
             studentRecords.forEach(r => {
                 let type = "Sign Out", duration = "N/A", rowClass = '';
@@ -268,13 +261,8 @@ async function handleDeleteEntry(timestamp) {
                 appState.data.allSignOuts[entryIndex].Deleted = true;
             }
             renderSignOutReport();
-            renderAttendanceReport();
-        } else {
-            throw new Error(response.error || 'Failed to delete entry from server.');
-        }
-    } catch (error) {
-        console.error('Error deleting entry:', error);
-    }
+        } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
+    } catch (error) { console.error('Error deleting entry:', error); }
 }
 
 async function handleEditEntry(originalTimestamp, newName, newSeconds) {
@@ -288,15 +276,9 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds) {
                 appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
             }
             renderSignOutReport();
-            renderAttendanceReport();
-        } else {
-            throw new Error(response.error || 'Failed to edit entry on server.');
-        }
-    } catch (error) {
-        console.error('Error editing entry:', error);
-    }
+        } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
+    } catch (error) { console.error('Error editing entry:', error); }
 }
-
 
 async function fetchAllSignOutData() {
     reportMessageP.textContent = "Loading all sign-out data...";
@@ -310,9 +292,7 @@ async function fetchAllSignOutData() {
         if (data.result === 'success' && Array.isArray(data.report)) {
             appState.data.allSignOuts = data.report;
             renderSignOutReport();
-        } else {
-            throw new Error(data.error || "Failed to fetch all data.");
-        }
+        } else { throw new Error(data.error || "Failed to fetch all data."); }
     } catch (error) {
         console.error("Failed to fetch all sign out data:", error);
         reportMessageP.textContent = "Could not load all report data. Please try reloading.";
@@ -379,28 +359,29 @@ attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); r
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
 attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
-// Event Delegation for both tables
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
-    const headerRow = event.target.closest('tr[data-accordion-toggle="true"]');
-
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
         const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
         if (record) {
+            const studentsInClass = appState.data.allNamesFromSheet
+                .filter(student => student.Class === record.Class)
+                .map(student => student.Name)
+                .sort();
+            populateDropdown('editStudentName', studentsInClass, 'Select Student', record.Name);
+            
+            if (typeof record.Seconds === 'number') {
+                editMinutes.value = Math.floor(record.Seconds / 60);
+                editSeconds.value = record.Seconds % 60;
+            } else {
+                editMinutes.value = '';
+                editSeconds.value = '';
+            }
             editModal.classList.remove('hidden');
-            editStudentName.value = record.Name;
-            editDuration.value = (typeof record.Seconds === 'number') ? Math.round(record.Seconds / 60) : '';
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
-        }
-    } else if (headerRow) {
-        const detailsRow = headerRow.nextElementSibling;
-        if (detailsRow) {
-            detailsRow.classList.toggle('hidden');
-            const arrow = headerRow.querySelector('svg');
-            if (arrow) arrow.classList.toggle('rotate-180');
         }
     }
 });
@@ -410,9 +391,12 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
     const newName = editStudentName.value;
-    const durationMins = editDuration.value;
-    const newSeconds = (durationMins === '' || durationMins === null) ? 'Late Sign In' : parseInt(durationMins) * 60;
-    
+    const minutes = parseInt(editMinutes.value) || 0;
+    const seconds = parseInt(editSeconds.value) || 0;
+    let newSeconds = (minutes * 60) + seconds;
+    if (editMinutes.value === '' && editSeconds.value === '') {
+        newSeconds = 'Late Sign In';
+    }
     if (timestamp && newName) {
         handleEditEntry(timestamp, newName, newSeconds);
     }

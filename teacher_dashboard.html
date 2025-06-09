@@ -160,11 +160,16 @@
                     <div class="mt-4 space-y-4">
                         <div>
                             <label for="editStudentName" class="block text-sm font-medium text-gray-700">Student Name</label>
-                            <input type="text" id="editStudentName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <select id="editStudentName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></select>
                         </div>
                         <div>
-                            <label for="editDuration" class="block text-sm font-medium text-gray-700">Duration (in minutes)</label>
-                            <input type="number" id="editDuration" placeholder="Leave blank for Late Sign In" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <label class="block text-sm font-medium text-gray-700">Duration</label>
+                            <div class="mt-1 flex items-center space-x-2">
+                                <input type="number" id="editMinutes" placeholder="Mins" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                <span class="text-gray-500">:</span>
+                                <input type="number" id="editSeconds" placeholder="Secs" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Leave both blank for "Late Sign In".</p>
                         </div>
                     </div>
                 </div>
@@ -184,6 +189,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- External JavaScript Files -->
     <script src="js/common.js"></script>
