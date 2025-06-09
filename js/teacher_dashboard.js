@@ -24,7 +24,6 @@ const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-// New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
 const editType = document.getElementById('editType');
@@ -110,10 +109,7 @@ function renderSignOutReport() {
         if (startDateStr && endDateStr) {
             const start = new Date(startDateStr + 'T00:00:00');
             const end = new Date(endDateStr + 'T23:59:59');
-            filteredData = filteredData.filter(r => {
-                const recordDate = new Date(r.Date);
-                return recordDate >= start && recordDate <= end;
-            });
+            filteredData = filteredData.filter(r => new Date(r.Date) >= start && new Date(r.Date) <= end);
         }
     }
     if (showProblemsOnly) {
@@ -236,11 +232,7 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Deleted = true;
-            }
-            renderSignOutReport();
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
     } catch (error) { console.error('Error deleting entry:', error); }
 }
@@ -250,13 +242,7 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) 
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
-            if(entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Name = newName;
-                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
-                appState.data.allSignOuts[entryIndex].Type = newType;
-            }
-            renderSignOutReport();
+            await fetchAllSignOutData();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
@@ -350,20 +336,11 @@ dashboardContent.addEventListener('click', (event) => {
         if (record) {
             const studentsInClass = appState.data.allNamesFromSheet
                 .filter(student => student.Class === record.Class)
-                .map(student => student.Name) 
+                .map(student => normalizeName(student.Name))
                 .sort();
             
             const uniqueStudents = [...new Set(studentsInClass)];
-            
-            editStudentName.innerHTML = ''; 
-            uniqueStudents.forEach(studentFullName => {
-                const option = document.createElement('option');
-                option.value = normalizeName(studentFullName); 
-                option.textContent = normalizeName(studentFullName); 
-                editStudentName.appendChild(option);
-            });
-            // This ensures the correct option is selected even if the log name is clean
-            editStudentName.value = record.Name; 
+            populateDropdown('editStudentName', uniqueStudents, '', normalizeName(record.Name));
             
             editType.value = record.Type || 'bathroom';
             editDurationDiv.classList.toggle('hidden', editType.value === 'late');
@@ -390,9 +367,7 @@ cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'))
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    // **THE FIX**: The value of the dropdown is the full name, which is what we want to save
-    const newName = editStudentName.value;
-    
+    const newName = editStudentName.value; 
     const newType = editType.value;
     
     let newSeconds;
@@ -425,26 +400,11 @@ signOutClassDropdown.addEventListener('change', () => {
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => student.Name)
+            .map(student => normalizeName(student.Name))
             .sort();
         
         const uniqueStudents = [...new Set(studentsInClass)];
-        
-        studentFilterDropdown.innerHTML = '';
-        const allStudentsOption = document.createElement('option');
-        allStudentsOption.value = "All Students";
-        allStudentsOption.textContent = "All Students";
-        studentFilterDropdown.appendChild(allStudentsOption);
-
-        uniqueStudents.forEach(studentFullName => {
-            const option = document.createElement('option');
-            // **THE FIX**: Use the clean name for both value and text content in this filter
-            const cleanName = normalizeName(studentFullName);
-            option.value = cleanName; 
-            option.textContent = cleanName;
-            studentFilterDropdown.appendChild(option);
-        });
-        
+        populateDropdown('studentFilterDropdown', uniqueStudents, "All Students", "All Students");
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
