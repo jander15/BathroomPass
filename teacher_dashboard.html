@@ -113,7 +113,7 @@
                                 <th class="py-2 px-4 border-b text-left">Name</th>
                                 <th class="py-2 px-4 border-b text-left">Type</th>
                                 <th class="py-2 px-4 border-b text-left">Duration</th>
-                                <th class="py-2 px-4 border-b text-right w-12">Edit</th>
+                                <th class="py-2 px-4 border-b text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody id="reportTableBody"></tbody>
@@ -163,28 +163,28 @@
                             <select id="editStudentName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></select>
                         </div>
                         <div>
-                            <label for="editType" class="block text-sm font-medium text-gray-700">Type</label>
-                            <select id="editType" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-                                <option value="bathroom">Bathroom</option>
-                                <option value="late">Late Sign In</option>
-                            </select>
-                        </div>
-                        <div id="editDurationDiv">
                             <label class="block text-sm font-medium text-gray-700">Duration</label>
                             <div class="mt-1 flex items-center space-x-2">
                                 <input type="number" id="editMinutes" placeholder="Mins" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
                                 <span class="text-gray-500">:</span>
                                 <input type="number" id="editSeconds" placeholder="Secs" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
                             </div>
+                            <p class="text-xs text-gray-500 mt-1">Leave both blank for "Late Sign In".</p>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse justify-between items-center">
                     <div class="flex">
-                        <button type="button" id="saveEditBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto">Save</button>
-                        <button type="button" id="cancelEditBtn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto">Cancel</button>
+                        <button type="button" id="saveEditBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">
+                            Save Changes
+                        </button>
+                        <button type="button" id="cancelEditBtn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
                     </div>
-                    <button type="button" id="deleteEntryBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-3 sm:w-auto">Delete</button>
+                    <button type="button" id="deleteEntryBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-3 sm:w-auto sm:text-sm">
+                        Delete Entry
+                    </button>
                 </div>
             </div>
         </div>
