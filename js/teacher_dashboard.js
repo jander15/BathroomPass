@@ -30,6 +30,9 @@ const editStudentName = document.getElementById('editStudentName');
 const editDurationDiv = document.getElementById('editDurationDiv');
 const editMinutes = document.getElementById('editMinutes');
 const editSeconds = document.getElementById('editSeconds');
+// *** NEW: Add new elements for time editing ***
+const editTimeDiv = document.getElementById('editTimeDiv');
+const editTimeInput = document.getElementById('editTimeInput');
 const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const deleteEntryBtn = document.getElementById('deleteEntryBtn');
@@ -244,8 +247,9 @@ async function handleDeleteEntry(timestamp) {
     } catch (error) { console.error('Error deleting entry:', error); }
 }
 
-async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) {
-    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+// *** UPDATED: Function signature and payload changed to handle newTimestamp ***
+async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
+    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
@@ -254,6 +258,10 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType) 
                 appState.data.allSignOuts[entryIndex].Name = newName;
                 appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
                 appState.data.allSignOuts[entryIndex].Type = newType;
+                // *** NEW: Update the date locally if it was changed ***
+                if (newTimestamp) {
+                    appState.data.allSignOuts[entryIndex].Date = newTimestamp;
+                }
             }
             renderSignOutReport();
         } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
@@ -361,18 +369,28 @@ dashboardContent.addEventListener('click', (event) => {
                 option.textContent = normalizeName(studentFullName); 
                 editStudentName.appendChild(option);
             });
-            // This ensures the correct option is selected even if the log name is clean
             editStudentName.value = record.Name; 
             
-            editDurationDiv.classList.toggle('hidden', record.Type === 'late');
+            // *** UPDATED: Show/hide time or duration based on record type ***
+            const isLateSignIn = record.Type === 'late';
+            editDurationDiv.classList.toggle('hidden', isLateSignIn);
+            editTimeDiv.classList.toggle('hidden', !isLateSignIn);
 
-            if (record.Type === 'bathroom' && typeof record.Seconds === 'number') {
+            if (isLateSignIn) {
+                // Set time input for late sign-ins
+                const recordDate = new Date(record.Date);
+                const hours = recordDate.getHours().toString().padStart(2, '0');
+                const minutes = recordDate.getMinutes().toString().padStart(2, '0');
+                editTimeInput.value = `${hours}:${minutes}`;
+            } else if (typeof record.Seconds === 'number') {
+                // Set duration inputs for bathroom sign-outs
                 editMinutes.value = Math.floor(record.Seconds / 60);
                 editSeconds.value = record.Seconds % 60;
             } else {
                 editMinutes.value = '';
                 editSeconds.value = '';
             }
+            
             editModal.classList.remove('hidden');
             saveEditBtn.dataset.timestamp = timestamp;
             deleteEntryBtn.dataset.timestamp = timestamp;
@@ -382,6 +400,7 @@ dashboardContent.addEventListener('click', (event) => {
 
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
+// *** UPDATED: Save logic now handles the new time input ***
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
     const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
@@ -392,11 +411,21 @@ saveEditBtn.addEventListener('click', () => {
     }
 
     const newName = editStudentName.value;
-    const newType = record.Type; // Preserve the original type
-    
+    const newType = record.Type;
     let newSeconds;
+    let newTimestamp = null; // Will only be set if time is changed
+
     if (newType === 'late') {
         newSeconds = 'Late Sign In';
+        const newTime = editTimeInput.value; // e.g., "14:30"
+        if (newTime) {
+            const originalDate = new Date(record.Date);
+            const [hours, minutes] = newTime.split(':');
+            originalDate.setHours(parseInt(hours, 10));
+            originalDate.setMinutes(parseInt(minutes, 10));
+            originalDate.setSeconds(0); // Standardize seconds to 0 for time edits
+            newTimestamp = originalDate.toISOString();
+        }
     } else {
         const minutes = parseInt(editMinutes.value) || 0;
         const seconds = parseInt(editSeconds.value) || 0;
@@ -404,7 +433,7 @@ saveEditBtn.addEventListener('click', () => {
     }
 
     if (timestamp && newName) {
-        handleEditEntry(timestamp, newName, newSeconds, newType);
+        handleEditEntry(timestamp, newName, newSeconds, newType, newTimestamp);
     }
     editModal.classList.add('hidden');
 });
@@ -437,7 +466,6 @@ signOutClassDropdown.addEventListener('change', () => {
 
         uniqueStudents.forEach(studentFullName => {
             const option = document.createElement('option');
-            // **THE FIX**: Use the clean name for both value and text content in this filter
             const cleanName = normalizeName(studentFullName);
             option.value = cleanName; 
             option.textContent = cleanName;
