@@ -132,7 +132,7 @@ function preparePassForNextInQueue(nextPerson) {
     
     emojiLeft.textContent = ""; 
     emojiRight.textContent = ""; 
-    emojiDropdown.value = ""; 
+    emojiDropdown.value = NO_EMOJI_OPTION; 
     emojiDropdown.setAttribute("disabled", "disabled"); 
 
     nameQueueDropdown.removeAttribute('disabled'); 
@@ -144,7 +144,7 @@ function preparePassForNextInQueue(nextPerson) {
  * Sets the pass system to the "PASS IS AVAILABLE" state.
  */
 function setPassToAvailableState() {
-    nameDropdown.value = ""; 
+    nameDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
     nameDropdown.removeAttribute("disabled");
     signOutButton.style.display = "none"; 
     updateQueueMessage('The queue is empty. No one is currently signed out.');
@@ -155,11 +155,10 @@ function setPassToAvailableState() {
     
     emojiLeft.textContent = ""; 
     emojiRight.textContent = ""; 
-    emojiDropdown.value = ""; 
-    emojiDropdown.setAttribute("disabled", "disabled"); 
-
+    emojiDropdown.value = NO_EMOJI_OPTION; 
+    
     nameQueueDropdown.setAttribute("disabled", "disabled"); 
-    nameQueueDropdown.value = ""; 
+    nameQueueDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
 }
@@ -257,7 +256,7 @@ async function handleLateSignInFormSubmit(event) {
         const data = await sendAuthenticatedRequest(payload); 
         if (data.result === 'success') {
             showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
-            lateNameDropdown.value = ""; 
+            lateNameDropdown.value = DEFAULT_NAME_OPTION; 
             lateSignInSubmitBtn.classList.add("hidden");
             lateSignInSubmitBtn.disabled = false;
             lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -362,7 +361,7 @@ function handleAddToQueueClick() {
         appState.queue.push(name);
         updateQueueMessage(`${name} has been added to the queue.`);
         updateQueueDisplay();
-        nameQueueDropdown.value = ""; 
+        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         toggleAddToQueueButtonVisibility(); 
 
         if (!appState.passHolder && appState.queue.length === 1) { 
@@ -428,6 +427,7 @@ function handleCourseSelectionChange(){
         nameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
+        emojiDropdown.classList.remove('hidden'); // <-- FIX: Show emoji dropdown
         
         populateDropdown('nameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
         populateDropdown('nameQueue', [], LOADING_OPTION, LOADING_OPTION); 
@@ -446,7 +446,7 @@ function handleCourseSelectionChange(){
             nameQueueDropdown.removeAttribute("disabled");
         }
 
-        emojiDropdown.setAttribute("disabled", "disabled"); 
+        emojiDropdown.removeAttribute("disabled"); 
         emojiDropdown.value = NO_EMOJI_OPTION; 
 
     } else { 
@@ -458,6 +458,7 @@ function handleCourseSelectionChange(){
             ddElement.value = DEFAULT_NAME_OPTION; 
         });
 
+        emojiDropdown.classList.add('hidden'); // <-- FIX: Hide emoji dropdown
         emojiDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.value = NO_EMOJI_OPTION; 
         signOutButton.style.display = "none"; 
@@ -477,8 +478,7 @@ function handleNameSelectionChange(){
 
     if (isDefaultSelected || isTimerRunning || isCurrentStudentSelected) {
         signOutButton.style.display = "none";
-        emojiDropdown.classList.add('hidden'); 
-        emojiDropdown.setAttribute("disabled", "disabled");
+        emojiDropdown.setAttribute("disabled", "disabled"); // Just disable, don't hide
         emojiDropdown.value = NO_EMOJI_OPTION; 
         if (isDefaultSelected || isCurrentStudentSelected) {
             emojiLeft.textContent = "";
@@ -486,14 +486,12 @@ function handleNameSelectionChange(){
         }
     } else { 
         signOutButton.style.display = "block";
-        emojiDropdown.classList.remove('hidden'); 
-        emojiDropdown.removeAttribute("disabled");
+        emojiDropdown.removeAttribute("disabled"); // Enable, don't show
     }
     signInButton.style.display = isTimerRunning ? "block" : "none";
 }
 
 /**
- * *** NEW FUNCTION ***
  * Handles changes in the late sign-in name dropdown to show/hide the submit button.
  */
 function handleLateNameSelectionChange() {
