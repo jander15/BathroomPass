@@ -6,8 +6,7 @@ const attendanceClassDropdown = document.getElementById('attendanceClassDropdown
 const studentFilterDiv = document.getElementById('studentFilterDiv');
 const studentFilterDropdown = document.getElementById('studentFilterDropdown');
 const dateFilterType = document.getElementById('dateFilterType');
-// **THE FIX**: Changed ID from 'singleDateInput' to 'specificDateInput' to match the HTML
-const specificDateInputDiv = document.getElementById('specificDateInput'); 
+const specificDateInputDiv = document.getElementById('specificDateInput');
 const reportDateInput = document.getElementById('reportDate');
 const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
 const startDateInput = document.getElementById('startDate');
@@ -26,6 +25,16 @@ const generateAttendanceReportBtn = document.getElementById('generateAttendanceR
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+// Edit/Delete Modal Elements
+const editModal = document.getElementById('editModal');
+const editStudentName = document.getElementById('editStudentName');
+const editDurationDiv = document.getElementById('editDurationDiv');
+const editMinutes = document.getElementById('editMinutes');
+const editSeconds = document.getElementById('editSeconds');
+const saveEditBtn = document.getElementById('saveEditBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const deleteEntryBtn = document.getElementById('deleteEntryBtn');
+const dashboardContent = document.getElementById('dashboardContent');
 
 // --- Helper & Formatting Functions ---
 
@@ -49,14 +58,11 @@ function getWeekRange() {
     return { start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] };
 }
 
-function getLast30DaysRange() {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 30);
-  return { 
-    start: start.toISOString().split('T')[0], 
-    end: end.toISOString().split('T')[0] 
-  };
+function getMonthRange() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start: firstDay.toISOString().split('T')[0], end: lastDay.toISOString().split('T')[0] };
 }
 
 function toggleDateInputs() {
@@ -105,8 +111,7 @@ async function generateReport() {
 
     if (filterType === 'today') { startDate = endDate = getTodayDateString(); }
     else if (filterType === 'this_week') { const r = getWeekRange(); startDate = r.start; endDate = r.end; }
-    // **THE FIX**: Changed 'this_month' to match the new HTML option value
-    else if (filterType === 'last_30_days') { const r = getLast30DaysRange(); startDate = r.start; endDate = r.end; }
+    else if (filterType === 'this_month') { const r = getMonthRange(); startDate = r.start; endDate = r.end; }
     else if (filterType === 'all_time') { startDate = null; endDate = null; }
     else if (filterType === 'specificDate') {
         startDate = endDate = reportDateInput.value;
@@ -171,7 +176,8 @@ async function generateReport() {
                     }
                 }
                 const shortClassName = getShortClassName(row.Class);
-                tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td>`;
+                const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
+                tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
                 reportTableBody.appendChild(tr);
             });
             applyProblemFilter();
@@ -186,6 +192,7 @@ async function generateReport() {
         generateReportBtn.textContent = "Generate Report";
     }
 }
+
 
 function switchTab(tab) {
     const isAttendance = tab === 'attendance';
