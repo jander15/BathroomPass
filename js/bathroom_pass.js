@@ -90,9 +90,10 @@ function startPassTimerAndTransitionUI() {
         
         updateQueueDisplay(); 
         
-        nameQueueDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
+        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         nameQueueDropdown.removeAttribute('disabled'); 
         toggleAddToQueueButtonVisibility();
+        showQueueView(); // Show queue view on signout.
     }
 }
 
