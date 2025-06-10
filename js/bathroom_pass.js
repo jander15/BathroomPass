@@ -126,7 +126,8 @@ function preparePassForNextInQueue(nextPerson) {
     nameDropdown.setAttribute("disabled", "disabled"); 
     updateQueueMessage(`${nextPerson} can now sign out.`); 
     
-    studentOutNameSpan.textContent = nextPerson;
+    const nameOnly = nextPerson.includes("(") ? nextPerson.substring(0, nextPerson.indexOf("(")-1).trim() : nextPerson.trim();
+    studentOutNameSpan.textContent = nameOnly; 
     headerStatusSpan.textContent = STATUS_IS_NEXT;
     studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE; 
     
