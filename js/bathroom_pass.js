@@ -1,8 +1,15 @@
 // js/bathroom_pass.js
 
 // --- DOM Element Caching (Elements specific to the Bathroom Pass page) ---
+// These elements are expected to be present in index.html
+const studentOutHeader = document.getElementById('studentOutHeader'); // Already in common, but needed for page-specific styling/content
+const emojiLeft = document.getElementById('emojiLeft'); // Already in common, but needed for page-specific content
+const studentOutNameSpan = document.getElementById('studentOutName'); // Already in common, but needed for page-specific content
+const headerStatusSpan = document.getElementById('headerStatus'); // Already in common, but needed for page-specific content
+const emojiRight = document.getElementById('emojiRight'); // Already in common, but needed for page-specific content
+
 const mainForm = document.getElementById('form');
-const passLabel = document.getElementById('passLabel'); // Assuming this is on the bathroom pass page
+const passLabel = document.getElementById('passLabel'); 
 const courseDropdown = document.getElementById('courseDropdown');
 const nameDropdown = document.getElementById('nameDropdown');
 const emojiDropdown = document.getElementById('emojiDropdown');
@@ -15,8 +22,8 @@ const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
 const queueArea = document.getElementById('queueArea');
 const nameQueueDropdown = document.getElementById('nameQueue');
 const addToQueueButton = document.getElementById('add-to-queue');
-const messageArea = document.getElementById('message-area'); // Assuming this is on the bathroom pass page
-const messageText = document.getElementById('message-text'); // Assuming this is on the bathroom pass page
+const messageArea = document.getElementById('message-area'); 
+const messageText = document.getElementById('message-text');
 const queueList = document.getElementById('queue-list');
 const removeFromQueueButton = document.getElementById('remove-from-queue');
 const lateSignInView = document.getElementById('lateSignInView');
@@ -72,7 +79,7 @@ function startPassTimerAndTransitionUI() {
         studentOutHeader.style.backgroundColor = FORM_COLOR_OUT;
 
         const selectedEmoji = emojiDropdown.value;
-        if (selectedEmoji !== NO_EMOJI_OPTION && selectedEmoji !== "") {
+        if (selectedEmoji !== NO_EMOJI_OPTION && selectedEmoji !== "") { // Check against placeholder value
             emojiLeft.textContent = selectedEmoji;
             emojiRight.textContent = selectedEmoji;
         } else {
@@ -184,12 +191,11 @@ async function handleMainFormSubmit(event) {
         Seconds: timeOutSeconds, 
         Name: nameOnly, 
         Class: classValue, 
-        TeacherEmail: appState.currentUser.email,
-        idToken: appState.currentUser.idToken
+        TeacherEmail: appState.currentUser.email, 
     };
 
     try {
-        const data = await sendAuthenticatedRequest(payload); // Using common sendAuthenticatedRequest
+        const data = await sendAuthenticatedRequest(payload); 
 
         if (data.result === 'success') {
             const signedInStudentName = appState.passHolder; 
@@ -211,9 +217,7 @@ async function handleMainFormSubmit(event) {
             signInButton.disabled = false;
             signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
             signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-            if (appState.passHolder) { 
-                appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
-            }
+            appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
         }
     } catch (error) {
         console.error('Error submitting main sign in:', error);
@@ -247,26 +251,31 @@ async function handleLateSignInFormSubmit(event) {
     lateSignInSubmitBtn.textContent = "Processing...";
 
     const nameOnly = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1).trim() : selectedLateName.trim();
-    const classValue = courseDropdown.value;
+    const classValue = courseDropdown.value; // Assuming classDropdown is visible and has a value
 
     const payload = {
         action: ACTION_LOG_LATE_SIGN_IN,
-        Seconds: 'Late Sign In', Name: nameOnly, Class: classValue, TeacherEmail: appState.currentUser.email, idToken: appState.currentUser.idToken
+        Seconds: 'Late Sign In', Name: nameOnly, Class: classValue, TeacherEmail: appState.currentUser.email
     };
 
     try {
-        const data = await sendAuthenticatedRequest(payload); // Using common sendAuthenticatedRequest
+        const data = await sendAuthenticatedRequest(payload); 
         if (data.result === 'success') {
             showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
             lateNameDropdown.value = ""; 
             lateSignInSubmitBtn.classList.add("hidden");
+            lateSignInSubmitBtn.disabled = false;
+            lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            lateSignInSubmitBtn.textContent = originalButtonText;
         } else {
             showErrorAlert(`Error signing in late: ${data.error || 'Unknown error'}`);
+            lateSignInSubmitBtn.disabled = false;
+            lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            lateSignInSubmitBtn.textContent = originalButtonText;
         }
     } catch (error) {
         console.error('Error submitting late sign in:', error);
         showErrorAlert("Failed to submit late sign-in. Network or auth issue.");
-    } finally {
         lateSignInSubmitBtn.disabled = false;
         lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         lateSignInSubmitBtn.textContent = originalButtonText;
@@ -392,47 +401,6 @@ function handleRemoveFromQueueClick() {
 }
 
 /**
- * Fetches all student data for the current teacher from the backend.
- */
-async function fetchAllStudentData() {
-    try {
-        const data = await sendAuthenticatedRequest({ action: ACTION_GET_ALL_DATA });
-        if (Array.isArray(data)) {
-            appState.data.allNamesFromSheet = data;
-        } else {
-            console.error('Error: fetchAllStudentData received non-array data:', data);
-            appState.data.allNamesFromSheet = [];
-            showErrorAlert("Failed to load student data. Server returned unexpected format. Please check Apps Script logs.");
-            populateDropdown('courseDropdown', [], "Data Error", "");
-        }
-    } catch (error) {
-        console.error('Error fetching all student data:', error);
-        appState.data.allNamesFromSheet = [];
-        showErrorAlert("Failed to load student data. Network or authorization issue. Please check connection, ensure app is authorized, and refresh.");
-        populateDropdown('courseDropdown', [], "Network Error", "");
-    }
-}
-
-/**
- * Populates the course dropdown using the fetched student data.
- */
-function populateCourseDropdownFromData() {
-    if (appState.data.allNamesFromSheet.length > 0) {
-        const uniqueClassNames = new Set();
-        appState.data.allNamesFromSheet.forEach(item => {
-            if (item && item.Class) {
-                uniqueClassNames.add(item.Class);
-            }
-        });
-        appState.data.courses = Array.from(uniqueClassNames).sort(); 
-        populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-        courseDropdown.removeAttribute("disabled");
-    } else {
-        populateDropdown('courseDropdown', [], "No classes found", "");
-    }
-}
-
-/**
  * Populates name-related dropdowns based on the selected course.
  * @param {string} selectedCourseName - The name of the selected class.
  */
@@ -447,11 +415,7 @@ function populateNameDropdownsForCourse(selectedCourseName) {
         });
     }
     
-    const sortedNames = Array.from(namesForCourseSet).sort((a, b) => {
-        if (a === DEFAULT_NAME_OPTION) return -1; 
-        if (b === DEFAULT_NAME_OPTION) return 1;
-        return a.localeCompare(b);
-    });
+    const sortedNames = Array.from(namesForCourseSet).sort(); // Sort names alphabetically
     
     populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
     populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
@@ -465,7 +429,8 @@ function handleCourseSelectionChange(){
     const selectedCourse = courseDropdown.value;
     signOutButton.style.display = "none";
 
-    if (selectedCourse && selectedCourse !== DEFAULT_CLASS_OPTION && selectedCourse !== "") {
+
+    if (selectedCourse !== "" && selectedCourse !== DEFAULT_CLASS_OPTION) { // Check for actual class selection
         nameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
@@ -485,7 +450,7 @@ function handleCourseSelectionChange(){
         // Handle queue dropdown state based on current pass holder
         if (!appState.passHolder && appState.queue.length === 0) { 
             nameQueueDropdown.setAttribute("disabled", "disabled");
-            nameQueueDropdown.value = ""; 
+            nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         } else { 
             nameQueueDropdown.removeAttribute("disabled");
         }
@@ -495,15 +460,15 @@ function handleCourseSelectionChange(){
 
     } else { 
         const nameDropdownsToDisable = [
-            { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
-            { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
-            { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+            { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+            { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+            { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION }
         ];
         nameDropdownsToDisable.forEach(ddConfig => {
             const ddElement = document.getElementById(ddConfig.id);
-            populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultText); 
+            populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultValue); 
             ddElement.setAttribute("disabled", "disabled");
-            ddElement.value = ddConfig.defaultText; 
+            ddElement.value = ddConfig.defaultValue; 
         });
 
         emojiDropdown.setAttribute("disabled", "disabled");
@@ -512,7 +477,7 @@ function handleCourseSelectionChange(){
     }
     toggleAddToQueueButtonVisibility();
     handleLateNameSelectionChange(); 
-    handleNameSelectionChange(); 
+    handleNameSelectionChange();
 }
 
 /**
@@ -528,7 +493,7 @@ function handleNameSelectionChange(){
         emojiDropdown.classList.add('hidden'); 
         emojiDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.value = NO_EMOJI_OPTION; 
-        if (isDefaultSelected || isCurrentStudentSelected) { // Clear emojis only if name is default or current
+        if (isDefaultSelected || isCurrentStudentSelected) {
             emojiLeft.textContent = "";
             emojiRight.textContent = "";
         }
@@ -539,20 +504,6 @@ function handleNameSelectionChange(){
     }
     // Only show sign in button if timer is running (student is out)
     signInButton.style.display = isTimerRunning ? "block" : "none";
-}
-
-/**
- * Handles changes in the late name dropdown to toggle late sign-in button.
- */
-function handleLateNameSelectionChange(){
-    if (lateNameDropdown.value === "" || lateNameDropdown.value === DEFAULT_NAME_OPTION ) {
-        lateSignInSubmitBtn.classList.add("hidden");
-    } else {
-        lateSignInSubmitBtn.classList.remove("hidden");
-        lateSignInSubmitBtn.disabled = false;
-        lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        lateSignInSubmitBtn.textContent = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
-    }
 }
 
 /**
@@ -587,7 +538,7 @@ function showLateSignInView() {
  * Initializes the Bathroom Pass application elements and fetches initial data.
  * This is the page-specific initialization called by common.js.
  */
-function initializePageSpecificApp() {
+async function initializePageSpecificApp() {
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
 
@@ -604,22 +555,22 @@ function initializePageSpecificApp() {
     courseDropdown.setAttribute("disabled", "disabled");
 
     const nameDropdownsToInit = [
-        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
-        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
-        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION }
     ];
-    nameDropdownsToInit.forEach(dd => {
-        populateDropdown(dd.id, [], dd.defaultText, dd.defaultText); 
-        document.getElementById(dd.id).setAttribute("disabled", "disabled");
+    nameDropdownsToInit.forEach(ddConfig => {
+        populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultValue); 
+        document.getElementById(ddConfig.id).setAttribute("disabled", "disabled");
     });
     
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
 
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
-    emojiDropdown.classList.add('hidden'); 
-    emojiDropdown.setAttribute("disabled", "disabled"); 
-
+    emojiDropdown.classList.add('hidden'); // Ensure hidden initially
+    emojiDropdown.setAttribute("disabled", "disabled"); // Disable emoji dropdown initially
+    
     signOutButton.style.display = "none";
     signInButton.style.display = "none"; 
     signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; 
@@ -627,14 +578,27 @@ function initializePageSpecificApp() {
     if (appState.currentUser.email && appState.currentUser.idToken) {
         fetchAllStudentData().then(() => {
             populateCourseDropdownFromData(); 
+        }).catch(error => {
+            console.error("Failed to initialize Bathroom Pass with data:", error);
+            // Error handling already in fetchAllStudentData, just ensure UI reflects disabled state
+            populateDropdown('courseDropdown', [], "Error loading classes", "");
+            courseDropdown.setAttribute("disabled", "disabled");
+            nameDropdownsToInit.forEach(dd => {
+                populateDropdown(dd.id, [], "Error loading names", "");
+                document.getElementById(dd.id).setAttribute("disabled", "disabled");
+            });
+            populateDropdown('emojiDropdown', [], "Error loading emojis", "");
+            emojiDropdown.setAttribute("disabled", "disabled");
         });
     } else {
-        console.warn("User email or ID token not available. Cannot fetch data.");
+        console.warn("User email or ID token not available. Cannot fetch data for Bathroom Pass.");
         const noAuthMessage = "Sign in to load data";
         populateDropdown('courseDropdown', [], noAuthMessage, "");
-        nameDropdownsToInit.forEach(dd => populateDropdown(dd.id, [], noAuthMessage, ""));
+        nameDropdownsToInit.forEach(ddConfig => {
+            populateDropdown(ddConfig.id, [], noAuthMessage, "");
+            document.getElementById(ddConfig.id).setAttribute("disabled", "disabled");
+        });
         populateDropdown('emojiDropdown', [], noAuthMessage, "");
-        emojiDropdown.classList.add('hidden');
         emojiDropdown.setAttribute("disabled", "disabled");
     }
     
@@ -672,16 +636,15 @@ function resetPageSpecificAppState() {
     emojiRight.textContent = "";
     
     const dropdownsToReset = [
-        { id: 'courseDropdown', defaultText: DEFAULT_CLASS_OPTION },
-        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
-        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
-        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+        { id: 'courseDropdown', defaultText: DEFAULT_CLASS_OPTION, defaultValue: "" },
+        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION },
+        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION, defaultValue: DEFAULT_NAME_OPTION }
     ];
     dropdownsToReset.forEach(ddConfig => {
         const ddElement = document.getElementById(ddConfig.id);
-        populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultText);
+        populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultValue);
         ddElement.setAttribute("disabled", "disabled");
-        ddElement.value = ddConfig.defaultText; 
     });
 
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
@@ -699,16 +662,18 @@ function resetPageSpecificAppState() {
 // --- Event Listeners specific to Bathroom Pass page ---
 courseDropdown.addEventListener("change", handleCourseSelectionChange);
 nameDropdown.addEventListener("change", handleNameSelectionChange);
-emojiDropdown.addEventListener("change", () => {
-    // No direct action needed here, emoji selected value is read on sign out
-    // But good to have this event listener if future functionality is needed
-});
+// No specific listener needed for emojiDropdown change, value is read on sign out
 signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
-signInButton.addEventListener("click", handleMainFormSubmit); // Submit button
-lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit);
+mainForm.addEventListener("submit", handleMainFormSubmit); // Main sign-in form submission
+lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit); // Corrected: Renamed from handleLateSignInFormFormSubmit
 lateNameDropdown.addEventListener('change', handleLateNameSelectionChange);
-nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility)
+nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility);
 addToQueueButton.addEventListener('click', handleAddToQueueClick);
 removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
 queueViewBtn.addEventListener('click', showQueueView);
 lateSignInViewBtn.addEventListener('click', showLateSignInView);
+
+
+// Call initGoogleSignIn only after the DOM for this specific page is loaded.
+// This is done here rather than common.js to ensure page-specific DOM is ready.
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
