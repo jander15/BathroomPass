@@ -193,43 +193,25 @@ async function sendAuthenticatedRequest(payload) {
 /**
  * Fetches all student data for the current teacher from the backend.
  * This is a common utility for both Bathroom Pass and Teacher Dashboard.
- * trims whitespace from each name, and stores the cleaned list in the application state.
- *
- * @throws {Error} Throws an error if the network request fails or the server returns data
- * in an unexpected format, which will be caught by the calling function.
  */
 async function fetchAllStudentData() {
     try {
-        // Send the request to get all data.
-        const data = await sendAuthenticatedRequest({ action: 'ACTION_GET_ALL_DATA' });
-
-        // Check if the received data is a valid array.
-        if (data && Array.isArray(data)) {
-            // Process the array to clean the data.
-            // This uses .map() to create a new array called 'cleanedData'.
-            // For each 'item' in the original 'data' array:
-            // 1. It checks if the item is a string.
-            // 2. If it is, it calls .trim() to remove leading/trailing whitespace.
-            // 3. If it's not a string (e.g., null, undefined, number), it leaves the item as is.
-            // This is safer than assuming every item is a string.
+        const data = await sendAuthenticatedRequest({ action: ACTION_GET_ALL_DATA });
+        if (data && Array.isArray(data)) { // Apps Script returns raw array for getAllData
             const cleanedData = data.map(item => (typeof item === 'string' ? item.trim() : item));
 
-            // Assign the new, cleaned array to the application state.
             appState.data.allNamesFromSheet = cleanedData;
-
         } else {
-            // Handle cases where the data is not in the expected array format.
             console.error('Error: fetchAllStudentData received non-array data:', data);
             appState.data.allNamesFromSheet = [];
             showErrorAlert("Failed to load student data. Server returned unexpected format. Please check Apps Script logs.");
             throw new Error("Invalid data format from server.");
         }
     } catch (error) {
-        // Handle network or authorization errors.
         console.error('Error fetching all student data:', error);
-        appState.data.allNamesFromSheet = []; // Ensure state is cleared on error.
+        appState.data.allNamesFromSheet = [];
         showErrorAlert("Failed to load student data. Network or authorization issue. Please check connection, ensure app is authorized, and refresh.");
-        throw error; // Re-throw to allow calling code to handle the failure.
+        throw error; // Re-throw to propagate error to page-specific init
     }
 }
 
