@@ -27,7 +27,6 @@ const attendanceReportTableBody = document.getElementById('attendanceReportTable
 // New Edit/Delete Modal Elements
 const editModal = document.getElementById('editModal');
 const editStudentName = document.getElementById('editStudentName');
-const editType = document.getElementById('editType');
 const editDurationDiv = document.getElementById('editDurationDiv');
 const editMinutes = document.getElementById('editMinutes');
 const editSeconds = document.getElementById('editSeconds');
@@ -365,8 +364,7 @@ dashboardContent.addEventListener('click', (event) => {
             // This ensures the correct option is selected even if the log name is clean
             editStudentName.value = record.Name; 
             
-            editType.value = record.Type || 'bathroom';
-            editDurationDiv.classList.toggle('hidden', editType.value === 'late');
+            editDurationDiv.classList.toggle('hidden', record.Type === 'late');
 
             if (record.Type === 'bathroom' && typeof record.Seconds === 'number') {
                 editMinutes.value = Math.floor(record.Seconds / 60);
@@ -382,18 +380,19 @@ dashboardContent.addEventListener('click', (event) => {
     }
 });
 
-editType.addEventListener('change', () => {
-    editDurationDiv.classList.toggle('hidden', editType.value === 'late');
-});
-
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
-    // **THE FIX**: The value of the dropdown is the full name, which is what we want to save
+    const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
+    if (!record) {
+        console.error("Could not find record to save.");
+        editModal.classList.add('hidden');
+        return;
+    }
+
     const newName = editStudentName.value;
-    
-    const newType = editType.value;
+    const newType = record.Type; // Preserve the original type
     
     let newSeconds;
     if (newType === 'late') {

@@ -5,18 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard - School Pass System</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Google Identity Services (GSI) library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
-    <!-- Sign-in Page -->
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">Teacher Dashboard - School Pass System</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to access the dashboard.</p>
@@ -24,9 +19,7 @@
         <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
     </div>
 
-    <!-- Main App Content -->
     <div id="appContent" class="hidden flex flex-col items-center p-4 min-h-screen w-full">
-        <!-- Profile Menu -->
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500 transition-all duration-200">
             <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
@@ -44,7 +37,6 @@
         <div id="dashboardContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl space-y-4">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Student Reports</h2>
         
-            <!-- Tabs -->
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     <button id="signOutReportTab" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">
@@ -56,7 +48,6 @@
                 </nav>
             </div>
         
-            <!-- Sign Out Report Content -->
             <div id="signOutReportContent">
                 <div class="flex justify-end mt-2">
                      <button id="reloadDataBtn" class="px-4 py-2 text-sm bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 focus:outline-none transition-colors duration-200">
@@ -121,7 +112,6 @@
                 </div>
             </div>
         
-            <!-- Attendance Report Content -->
             <div id="attendanceReportContent" class="hidden mt-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div>
@@ -150,7 +140,6 @@
         </div>
     </div>
     
-    <!-- Edit/Delete Modal -->
     <div id="editModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
         <div class="flex items-center justify-center min-h-screen">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
@@ -161,13 +150,6 @@
                         <div>
                             <label for="editStudentName" class="block text-sm font-medium text-gray-700">Student Name</label>
                             <select id="editStudentName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></select>
-                        </div>
-                        <div>
-                            <label for="editType" class="block text-sm font-medium text-gray-700">Type</label>
-                            <select id="editType" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-                                <option value="bathroom">Bathroom</option>
-                                <option value="late">Late Sign In</option>
-                            </select>
                         </div>
                         <div id="editDurationDiv">
                             <label class="block text-sm font-medium text-gray-700">Duration</label>
@@ -191,7 +173,6 @@
     </div>
 
 
-    <!-- External JavaScript Files -->
     <script src="js/common.js"></script>
     <script src="js/teacher_dashboard.js"></script>
 </body>
