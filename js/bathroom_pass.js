@@ -2,11 +2,12 @@
 
 // --- DOM Element Caching (Elements specific to the Bathroom Pass page) ---
 // These elements are expected to be present in index.html
-const studentOutHeader = document.getElementById('studentOutHeader'); // Already in common, but needed for page-specific styling/content
-const emojiLeft = document.getElementById('emojiLeft'); // Already in common, but needed for page-specific content
-const studentOutNameSpan = document.getElementById('studentOutName'); // Already in common, but needed for page-specific content
-const headerStatusSpan = document.getElementById('headerStatus'); // Already in common, but needed for page-specific content
-const emojiRight = document.getElementById('emojiRight'); // Already in common, but needed for page-specific content
+// Note: Global common elements like studentOutHeader, emojiLeft, etc., are cached in common.js
+const studentOutHeader = document.getElementById('studentOutHeader'); 
+const emojiLeft = document.getElementById('emojiLeft'); 
+const studentOutNameSpan = document.getElementById('studentOutName'); 
+const headerStatusSpan = document.getElementById('headerStatus'); 
+const emojiRight = document.getElementById('emojiRight'); 
 
 const mainForm = document.getElementById('form');
 const passLabel = document.getElementById('passLabel'); 
@@ -32,7 +33,7 @@ const lateNameDropdown = document.getElementById('lateNameDropdown');
 const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
 
 
-// --- Bathroom Pass Page Specific Logic ---
+// --- Bathroom Pass Page Specific Functions (All function declarations first) ---
 
 /**
  * Updates the timer display and applies tardy styling if needed.
@@ -92,7 +93,7 @@ function startPassTimerAndTransitionUI() {
         updateQueueDisplay(); 
         showQueueView();      
         
-        nameQueueDropdown.value = ""; 
+        nameQueueDropdown.value = ""; // Select placeholder
         nameQueueDropdown.removeAttribute('disabled'); 
         toggleAddToQueueButtonVisibility();
     }
@@ -577,7 +578,9 @@ async function initializePageSpecificApp() {
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         fetchAllStudentData().then(() => {
-            populateCourseDropdownFromData(); 
+            populateCourseDropdownFromData(); // This function is in common.js
+            populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+            courseDropdown.removeAttribute("disabled");
         }).catch(error => {
             console.error("Failed to initialize Bathroom Pass with data:", error);
             // Error handling already in fetchAllStudentData, just ensure UI reflects disabled state
@@ -659,21 +662,16 @@ function resetPageSpecificAppState() {
 }
 
 
-// --- Event Listeners specific to Bathroom Pass page ---
+// --- Event Listeners specific to Bathroom Pass page (All function calls go here, after functions are defined) ---
 courseDropdown.addEventListener("change", handleCourseSelectionChange);
 nameDropdown.addEventListener("change", handleNameSelectionChange);
 // No specific listener needed for emojiDropdown change, value is read on sign out
 signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
-mainForm.addEventListener("submit", handleMainFormSubmit); // Main sign-in form submission
-lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit); // Corrected: Renamed from handleLateSignInFormFormSubmit
+mainForm.addEventListener("submit", handleMainFormSubmit); 
+lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit);
 lateNameDropdown.addEventListener('change', handleLateNameSelectionChange);
 nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility);
 addToQueueButton.addEventListener('click', handleAddToQueueClick);
 removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
 queueViewBtn.addEventListener('click', showQueueView);
 lateSignInViewBtn.addEventListener('click', showLateSignInView);
-
-
-// Call initGoogleSignIn only after the DOM for this specific page is loaded.
-// This is done here rather than common.js to ensure page-specific DOM is ready.
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
