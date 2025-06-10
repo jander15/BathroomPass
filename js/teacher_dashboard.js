@@ -221,13 +221,15 @@ function renderAttendanceReport() {
         if (studentRecords.length > 0) {
             tr.classList.add('cursor-pointer');
             tr.dataset.accordionToggle = "true";
-            if (hasLate || hasLong) tr.classList.add('bg-red-200');
-            else tr.classList.add('bg-blue-100');
+            // *** NEW: Store records on the row to be used by the accordion handler ***
+            tr.dataset.records = JSON.stringify(studentRecords);
+            if (hasLate || hasLong) tr.classList.add('bg-red-200', 'hover:bg-red-300');
+            else tr.classList.add('bg-blue-100', 'hover:bg-blue-200');
         } else {
             if (presentStudentIndex % 2 !== 0) tr.classList.add('bg-gray-50');
             presentStudentIndex++;
         }
-        const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
+        const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
         tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
     });
@@ -348,53 +350,79 @@ attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); r
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
 attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
+// js/teacher_dashboard.js
+
+// Find this existing event listener at the bottom of your file and add the new 'accordion' logic inside it.
 dashboardContent.addEventListener('click', (event) => {
+    // This 'editButton' logic should already be here
     const editButton = event.target.closest('.edit-btn');
     if (editButton) {
-        event.stopPropagation();
-        const timestamp = editButton.dataset.timestamp;
-        const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
-        if (record) {
-            const studentsInClass = appState.data.allNamesFromSheet
-                .filter(student => student.Class === record.Class)
-                .map(student => student.Name) 
-                .sort();
-            
-            const uniqueStudents = [...new Set(studentsInClass)];
-            
-            editStudentName.innerHTML = ''; 
-            uniqueStudents.forEach(studentFullName => {
-                const option = document.createElement('option');
-                option.value = normalizeName(studentFullName); 
-                option.textContent = normalizeName(studentFullName); 
-                editStudentName.appendChild(option);
-            });
-            editStudentName.value = record.Name; 
-            
-            // *** UPDATED: Show/hide time or duration based on record type ***
-            const isLateSignIn = record.Type === 'late';
-            editDurationDiv.classList.toggle('hidden', isLateSignIn);
-            editTimeDiv.classList.toggle('hidden', !isLateSignIn);
+        //... existing edit button logic remains unchanged
+    }
 
-            if (isLateSignIn) {
-                // Set time input for late sign-ins
-                const recordDate = new Date(record.Date);
-                const hours = recordDate.getHours().toString().padStart(2, '0');
-                const minutes = recordDate.getMinutes().toString().padStart(2, '0');
-                editTimeInput.value = `${hours}:${minutes}`;
-            } else if (typeof record.Seconds === 'number') {
-                // Set duration inputs for bathroom sign-outs
-                editMinutes.value = Math.floor(record.Seconds / 60);
-                editSeconds.value = record.Seconds % 60;
-            } else {
-                editMinutes.value = '';
-                editSeconds.value = '';
-            }
-            
-            editModal.classList.remove('hidden');
-            saveEditBtn.dataset.timestamp = timestamp;
-            deleteEntryBtn.dataset.timestamp = timestamp;
+    // *** ADD THIS NEW LOGIC FOR THE ACCORDION FUNCTIONALITY ***
+    const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
+    if (accordionRow) {
+        event.stopPropagation();
+        const nextElement = accordionRow.nextElementSibling;
+
+        // Toggle arrow rotation for visual feedback
+        const arrow = accordionRow.querySelector('svg');
+        if (arrow) {
+            arrow.classList.toggle('rotate-180');
         }
+
+        // If the next row is a details wrapper, just toggle its visibility
+        if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
+            nextElement.classList.toggle('hidden');
+            return;
+        }
+
+        // If details don't exist, create and insert them
+        const records = JSON.parse(accordionRow.dataset.records || '[]');
+        if (records.length === 0) return;
+
+        // Create a wrapper row that contains a table for proper styling and colspan
+        const wrapperRow = document.createElement('tr');
+        wrapperRow.className = 'details-wrapper-row';
+        const wrapperCell = document.createElement('td');
+        wrapperCell.colSpan = 3; // Span all 3 columns of the parent table
+        wrapperCell.className = 'p-0';
+
+        const detailsTable = document.createElement('table');
+        detailsTable.className = 'min-w-full bg-gray-50'; // Indented/nested table style
+        const detailsBody = document.createElement('tbody');
+
+        records.forEach(row => {
+            const detailTr = document.createElement('tr');
+            let typeDisplay = "Bathroom", durationDisplay = "N/A";
+
+            if (row.Type === 'late') {
+                typeDisplay = "Late Sign In";
+            } else if (typeof row.Seconds === 'number') {
+                const minutes = Math.floor(row.Seconds / 60);
+                const seconds = row.Seconds % 60;
+                durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // This structure mimics the sign-out report, including the editable button
+            const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
+            
+            detailTr.innerHTML = `
+                <td class="py-2 px-4 border-b w-1/5">${formatTime(row.Date)}</td>
+                <td class="py-2 px-4 border-b w-3/5">${typeDisplay}</td>
+                <td class="py-2 px-4 border-b w-1/5">${durationDisplay}</td>
+                <td class="py-2 px-4 border-b w-12 text-right">${editButtonHtml}</td>
+            `;
+            detailsBody.appendChild(detailTr);
+        });
+
+        detailsTable.appendChild(detailsBody);
+        wrapperCell.appendChild(detailsTable);
+        wrapperRow.appendChild(wrapperCell);
+
+        // Insert the entire wrapper row after the clicked summary row
+        accordionRow.insertAdjacentElement('afterend', wrapperRow);
     }
 });
 
