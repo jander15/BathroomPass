@@ -90,7 +90,7 @@ function startPassTimerAndTransitionUI() {
         
         updateQueueDisplay(); 
         
-        nameQueueDropdown.value = "";
+        nameQueueDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
         nameQueueDropdown.removeAttribute('disabled'); 
         toggleAddToQueueButtonVisibility();
     }
@@ -144,7 +144,7 @@ function preparePassForNextInQueue(nextPerson) {
  * Sets the pass system to the "PASS IS AVAILABLE" state.
  */
 function setPassToAvailableState() {
-    nameDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
+    nameDropdown.value = DEFAULT_NAME_OPTION;
     nameDropdown.removeAttribute("disabled");
     signOutButton.style.display = "none"; 
     updateQueueMessage('The queue is empty. No one is currently signed out.');
@@ -158,7 +158,7 @@ function setPassToAvailableState() {
     emojiDropdown.value = NO_EMOJI_OPTION; 
     
     nameQueueDropdown.setAttribute("disabled", "disabled"); 
-    nameQueueDropdown.value = DEFAULT_NAME_OPTION; // <-- FIX: Set to default placeholder
+    nameQueueDropdown.value = DEFAULT_NAME_OPTION;
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
 }
@@ -427,7 +427,6 @@ function handleCourseSelectionChange(){
         nameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
-        emojiDropdown.classList.remove('hidden'); // <-- FIX: Show emoji dropdown
         
         populateDropdown('nameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
         populateDropdown('nameQueue', [], LOADING_OPTION, LOADING_OPTION); 
@@ -458,7 +457,6 @@ function handleCourseSelectionChange(){
             ddElement.value = DEFAULT_NAME_OPTION; 
         });
 
-        emojiDropdown.classList.add('hidden'); // <-- FIX: Hide emoji dropdown
         emojiDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.value = NO_EMOJI_OPTION; 
         signOutButton.style.display = "none"; 
@@ -478,7 +476,7 @@ function handleNameSelectionChange(){
 
     if (isDefaultSelected || isTimerRunning || isCurrentStudentSelected) {
         signOutButton.style.display = "none";
-        emojiDropdown.setAttribute("disabled", "disabled"); // Just disable, don't hide
+        emojiDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.value = NO_EMOJI_OPTION; 
         if (isDefaultSelected || isCurrentStudentSelected) {
             emojiLeft.textContent = "";
@@ -486,7 +484,7 @@ function handleNameSelectionChange(){
         }
     } else { 
         signOutButton.style.display = "block";
-        emojiDropdown.removeAttribute("disabled"); // Enable, don't show
+        emojiDropdown.removeAttribute("disabled");
     }
     signInButton.style.display = isTimerRunning ? "block" : "none";
 }
@@ -559,7 +557,6 @@ async function initializePageSpecificApp() {
     removeFromQueueButton.classList.add('hidden');
 
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
-    emojiDropdown.classList.add('hidden');
     emojiDropdown.setAttribute("disabled", "disabled");
     
     signOutButton.style.display = "none";
@@ -619,7 +616,6 @@ function resetPageSpecificAppState() {
     });
 
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
-    emojiDropdown.classList.add('hidden'); 
     emojiDropdown.setAttribute("disabled", "disabled"); 
 
     addToQueueButton.classList.add('hidden');
