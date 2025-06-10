@@ -1,544 +1,714 @@
-// js/teacher_dashboard.js
+// js/bathroom_pass.js
 
-// --- DOM Element Caching (Elements specific to the Teacher Dashboard page) ---
-const dashboardClassDropdown = document.getElementById('dashboardClassDropdown');
-const dateFilterType = document.getElementById('dateFilterType');
-const specificDateInputDiv = document.getElementById('specificDateInput');
-const reportDateInput = document.getElementById('reportDate');
-const dateRangeInputsDiv = document.getElementById('dateRangeInputs');
-const startDateInput = document.getElementById('startDate');
-const endDateInput = document.getElementById('endDate');
-const filterLongDurationsCheckbox = document.getElementById('filterLongDurations');
-const generateReportBtn = document.getElementById('generateReportBtn');
-const reportOutputDiv = document.getElementById('reportOutput');
-const reportMessageP = document.getElementById('reportMessage');
-const reportTable = document.getElementById('reportTable');
-const reportTableBody = document.getElementById('reportTableBody');
-const signOutReportTab = document.getElementById('signOutReportTab');
-const attendanceReportTab = document.getElementById('attendanceReportTab');
-const signOutReportContent = document.getElementById('signOutReportContent');
-const attendanceReportContent = document.getElementById('attendanceReportContent');
-const attendanceDateInput = document.getElementById('attendanceDate');
-const generateAttendanceReportBtn = document.getElementById('generateAttendanceReportBtn');
-const attendanceReportOutputDiv = document.getElementById('attendanceReportOutput');
-const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
-const attendanceReportTable = document.getElementById('attendanceReportTable');
-const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-const detailsModal = document.getElementById('detailsModal');
-const modalStudentName = document.getElementById('modalStudentName');
-const modalDetailsContent = document.getElementById('modalDetailsContent');
-const closeModalBtn = document.getElementById('closeModalBtn');
+// --- DOM Element Caching (Elements specific to the Bathroom Pass page) ---
+const mainForm = document.getElementById('form');
+const passLabel = document.getElementById('passLabel'); // Assuming this is on the bathroom pass page
+const courseDropdown = document.getElementById('courseDropdown');
+const nameDropdown = document.getElementById('nameDropdown');
+const emojiDropdown = document.getElementById('emojiDropdown');
+const signOutButton = document.getElementById('signOutButton');
+const signInButton = document.getElementById('signInButton');
+const minutesSpan = document.getElementById('minutes');
+const secondsSpan = document.getElementById('seconds');
+const queueViewBtn = document.getElementById('queueViewBtn');
+const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
+const queueArea = document.getElementById('queueArea');
+const nameQueueDropdown = document.getElementById('nameQueue');
+const addToQueueButton = document.getElementById('add-to-queue');
+const messageArea = document.getElementById('message-area'); // Assuming this is on the bathroom pass page
+const messageText = document.getElementById('message-text'); // Assuming this is on the bathroom pass page
+const queueList = document.getElementById('queue-list');
+const removeFromQueueButton = document.getElementById('remove-from-queue');
+const lateSignInView = document.getElementById('lateSignInView');
+const lateSignInForm = document.getElementById('lateSignInForm');
+const lateNameDropdown = document.getElementById('lateNameDropdown');
+const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
 
 
-// --- Dashboard Page Specific Functions (All function declarations first) ---
+// --- Bathroom Pass Page Specific Logic ---
 
 /**
- * Toggles the visibility of date input fields based on the selected filter type.
+ * Updates the timer display and applies tardy styling if needed.
  */
-function toggleDateInputs() {
-    const selectedFilter = dateFilterType.value;
-    specificDateInputDiv.classList.add('hidden');
-    dateRangeInputsDiv.classList.add('hidden');
-
-    if (selectedFilter === 'specificDate') {
-        specificDateInputDiv.classList.remove('hidden');
-    } else if (selectedFilter === 'dateRange') {
-        dateRangeInputsDiv.classList.remove('hidden');
+function updateTimerDisplay() {
+    appState.timer.seconds++;
+    if (appState.timer.seconds >= 60) {
+        appState.timer.minutes++;
+        appState.timer.seconds = 0;
     }
+    if (appState.timer.minutes >= TARDY_THRESHOLD_MINUTES && !appState.timer.isTardy) {
+        mainForm.style.backgroundColor = FORM_COLOR_TARDY;
+        studentOutHeader.style.backgroundColor = FORM_COLOR_TARDY;
+        appState.timer.isTardy = true;
+    }
+    minutesSpan.textContent = appState.timer.minutes;
+    secondsSpan.textContent = appState.timer.seconds < 10 ? "0" + appState.timer.seconds : appState.timer.seconds;
 }
 
 /**
- * Generates today's date in 'YYYY-MM-DD' format.
- * @returns {string} Current date string.
+ * Starts the bathroom pass timer and transitions UI for a signed-out student.
  */
-function getTodayDateString() {
-    const today = new Date();
-    return today.toISOString().split('T')[0]; // Formats to YYYY-MM-DD
-}
+function startPassTimerAndTransitionUI() {
+    if (!appState.timer.intervalId) {
+        appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
+        appState.timer.isTardy = false; 
 
-/**
- * Formats a Date object to MM/DD/YYYY.
- * @param {Date|string} dateInput - The Date object or date string.
- * @returns {string} Formatted date string.
- */
-function formatDate(dateInput) {
-    if (!dateInput) return '';
-    const d = new Date(dateInput);
-    // Ensure padding for month and day
-    return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
-}
+        signOutButton.style.display = "none";
+        signInButton.style.display = "block";
+        signInButton.disabled = false; // Ensure it's enabled when shown
+        signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
 
-/**
- * Formats a Date object to HH:MM:SS.
- * @param {Date|string} dateInput - The Date object or date string.
- * @returns {string} Formatted time string.
- */
-function formatTime(dateInput) {
-    if (!dateInput) return '';
-    const d = new Date(dateInput);
-    // Ensure padding for hours, minutes, and seconds
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-}
+        nameDropdown.setAttribute("disabled", "disabled");
+        courseDropdown.setAttribute("disabled", "disabled");
+        emojiDropdown.setAttribute("disabled", "disabled");
+        mainForm.style.backgroundColor = FORM_COLOR_OUT;
 
-/**
- * Applies the duration filter (show only > 5 minutes) to the report table rows.
- * This is done client-side after the report is fetched.
- */
-function applyDurationFilter() {
-    const showLongDurationsOnly = filterLongDurationsCheckbox.checked;
-    const thresholdSeconds = TARDY_THRESHOLD_MINUTES * 60; // 5 minutes in seconds
+        const fullString = nameDropdown.value;
+        const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1).trim() : fullString.trim();
+        
+        studentOutNameSpan.textContent = nameOnly;
+        headerStatusSpan.textContent = STATUS_IS_OUT;
+        studentOutHeader.style.backgroundColor = FORM_COLOR_OUT;
 
-    Array.from(reportTableBody.rows).forEach(row => {
-        const typeCell = row.cells[3]; // 'Type' column
-        const durationCell = row.cells[4]; // 'Duration (s)' column
-
-        let isLongDuration = false;
-        let isSignOut = typeCell.textContent === "Sign Out";
-
-        if (isSignOut && durationCell.textContent !== "N/A") {
-            // Convert MM:SS to seconds or read raw seconds
-            let totalSeconds = 0;
-            if (durationCell.textContent.includes(':')) {
-                const parts = durationCell.textContent.split(':');
-                totalSeconds = parseInt(parts[0] || '0') * 60 + parseInt(parts[1] || '0');
-            } else {
-                totalSeconds = parseFloat(durationCell.textContent || '0'); // Assuming it's already a number
-            }
-            isLongDuration = totalSeconds > thresholdSeconds;
-        }
-
-        // Apply red background highlighting
-        if (isSignOut && isLongDuration) {
-            row.classList.add('bg-red-200'); // Apply highlight for long durations
+        const selectedEmoji = emojiDropdown.value;
+        if (selectedEmoji !== NO_EMOJI_OPTION && selectedEmoji !== "") {
+            emojiLeft.textContent = selectedEmoji;
+            emojiRight.textContent = selectedEmoji;
         } else {
-            row.classList.remove('bg-red-200'); // Remove highlight otherwise
+            emojiLeft.textContent = "";
+            emojiRight.textContent = "";
         }
 
-        // Hide/show based on filter checkbox
-        if (showLongDurationsOnly) {
-            if (isSignOut && isLongDuration) {
-                row.classList.remove('hidden'); // Show if it's a long sign-out
-            } else {
-                row.classList.add('hidden'); // Hide if it's not
-            }
-        } else {
-            row.classList.remove('hidden'); // Show all rows if filter is off
-        }
-    });
+        appState.passHolder = fullString;
+        
+        updateQueueDisplay(); 
+        showQueueView();      
+        
+        nameQueueDropdown.value = ""; 
+        nameQueueDropdown.removeAttribute('disabled'); 
+        toggleAddToQueueButtonVisibility();
+    }
 }
 
+/**
+ * Resets the main pass UI elements to their default state after a sign-in.
+ */
+function resetMainPassUI() {
+    appState.timer.intervalId = null; 
+    appState.timer.seconds = 0;
+    appState.timer.minutes = 0;
+    appState.timer.isTardy = false;
+    minutesSpan.textContent = appState.timer.minutes;
+    secondsSpan.textContent = "00";
+    
+    signInButton.style.display = "none";
+    signInButton.disabled = false;
+    signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
+
+    courseDropdown.removeAttribute("disabled");
+    emojiDropdown.removeAttribute("disabled");
+    mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
+}
 
 /**
- * Generates and displays the report based on selected class and date filter.
+ * Prepares the main pass UI for the next student in the queue.
+ * @param {string} nextPerson - The name of the next student.
  */
-async function generateReport() {
-    reportMessageP.textContent = "Generating report...";
-    reportTable.classList.add('hidden');
-    reportTableBody.innerHTML = '';
-    showErrorAlert(''); // Clear previous errors
-    showSuccessAlert(''); // Clear previous successes
+function preparePassForNextInQueue(nextPerson) {
+    nameDropdown.value = nextPerson;
+    nameDropdown.setAttribute("disabled", "disabled"); 
+    updateQueueMessage(`${nextPerson} can now sign out.`); 
+    
+    studentOutNameSpan.textContent = nextPerson;
+    headerStatusSpan.textContent = STATUS_IS_NEXT;
+    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE; 
+    
+    emojiLeft.textContent = ""; 
+    emojiRight.textContent = ""; 
+    emojiDropdown.value = ""; 
+    emojiDropdown.setAttribute("disabled", "disabled"); 
 
-    const selectedClass = dashboardClassDropdown.value;
-    const filterType = dateFilterType.value;
-    let startDate = null;
-    let endDate = null;
+    nameQueueDropdown.removeAttribute('disabled'); 
 
-    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
-        showErrorAlert("Please select a class to generate the report.");
-        reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-        return;
-    }
+    showQueueView(); 
+    handleNameSelectionChange(); 
+}
 
-    if (filterType === 'today') {
-        const today = getTodayDateString();
-        startDate = today;
-        endDate = today;
-    } else if (filterType === 'specificDate') {
-        startDate = reportDateInput.value;
-        endDate = reportDateInput.value;
-        if (!startDate) {
-            showErrorAlert("Please select a specific date.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
-    } else if (filterType === 'dateRange') {
-        startDate = startDateInput.value;
-        endDate = endDateInput.value;
-        if (!startDate || !endDate) {
-            showErrorAlert("Please select both start and end dates for the range.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
-        if (new Date(startDate) > new Date(endDate)) {
-            showErrorAlert("Start date cannot be after end date.");
-            reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-            return;
-        }
-    }
+/**
+ * Sets the pass system to the "PASS IS AVAILABLE" state.
+ */
+function setPassToAvailableState() {
+    nameDropdown.value = ""; 
+    nameDropdown.removeAttribute("disabled");
+    signOutButton.style.display = "none"; 
+    updateQueueMessage('The queue is empty. No one is currently signed out.');
+    
+    studentOutNameSpan.textContent = ''; 
+    headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+    
+    emojiLeft.textContent = ""; 
+    emojiRight.textContent = ""; 
+    emojiDropdown.value = ""; 
+    emojiDropdown.setAttribute("disabled", "disabled"); 
 
-    generateReportBtn.disabled = true;
-    generateReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    generateReportBtn.textContent = "Loading Report...";
+    nameQueueDropdown.setAttribute("disabled", "disabled"); 
+    nameQueueDropdown.value = ""; 
+    addToQueueButton.classList.add('hidden');
+    removeFromQueueButton.classList.add('hidden');
+    
+    showLateSignInView(); 
+}
+
+/**
+ * Handles the main Bathroom Pass sign-in form submission.
+ * @param {Event} event - The form submission event.
+ */
+async function handleMainFormSubmit(event) {
+    event.preventDefault();
+    
+    signInButton.disabled = true;
+    signInButton.classList.add('opacity-50', 'cursor-not-allowed');
+    signInButton.textContent = "Processing...";
+    
+    clearInterval(appState.timer.intervalId); 
+
+    const nameOnly = appState.passHolder.includes("(") ? appState.passHolder.substring(0, appState.passHolder.indexOf("(")-1).trim() : appState.passHolder.trim();
+    const classValue = courseDropdown.value;
+    const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
+
+    const payload = {
+        action: ACTION_LOG_SIGN_IN,
+        Seconds: timeOutSeconds, 
+        Name: nameOnly, 
+        Class: classValue, 
+        TeacherEmail: appState.currentUser.email,
+        idToken: appState.currentUser.idToken
+    };
 
     try {
-        const payload = {
-            action: ACTION_GET_REPORT_DATA,
-            class: selectedClass,
-            startDate: startDate,
-            endDate: endDate,
-            userEmail: appState.currentUser.email
-        };
+        const data = await sendAuthenticatedRequest(payload); // Using common sendAuthenticatedRequest
 
-        const data = await sendAuthenticatedRequest(payload);
+        if (data.result === 'success') {
+            const signedInStudentName = appState.passHolder; 
+            resetMainPassUI(); 
+            showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
+            appState.passHolder = null; 
 
-        if (data.result === 'success' && Array.isArray(data.report)) {
-            appState.data.currentReportData = data.report;
-
-            if (appState.data.currentReportData.length === 0) {
-                reportMessageP.textContent = `No sign-out data found for ${selectedClass} within the selected date range.`;
-                reportTable.classList.add('hidden');
+            if (appState.queue.length > 0) {
+                const nextPerson = appState.queue.shift();
+                preparePassForNextInQueue(nextPerson);
             } else {
-                reportMessageP.classList.add('hidden');
-                reportTable.classList.remove('hidden');
-                reportTableBody.innerHTML = ''; 
-
-                appState.data.currentReportData.forEach(row => {
-                    const tr = document.createElement('tr');
-                    let type = "Sign Out";
-                    let durationDisplay = row.Seconds;
-
-                    if (row.Seconds === "Late Sign In") {
-                        type = "Late Sign In";
-                        durationDisplay = "N/A";
-                    } else if (typeof row.Seconds === 'number') {
-                         const totalSeconds = row.Seconds;
-                         const minutes = Math.floor(totalSeconds / 60);
-                         const seconds = totalSeconds % 60;
-                         durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                    }
-
-                    tr.innerHTML = `
-                        <td class="py-2 px-4 border-b">${formatDate(row.Date)}</td>
-                        <td class="py-2 px-4 border-b">${formatTime(row.Date)}</td>
-                        <td class="py-2 px-4 border-b">${row.Name || 'N/A'}</td>
-                        <td class="py-2 px-4 border-b">${type}</td>
-                        <td class="py-2 px-4 border-b">${durationDisplay}</td>
-                    `;
-                    reportTableBody.appendChild(tr);
-                });
-                
-                applyDurationFilter();
+                setPassToAvailableState();
             }
+            updateQueueDisplay(); 
+            toggleAddToQueueButtonVisibility();
         } else {
-            showErrorAlert(`Error generating report: ${data.error || 'Unknown error'}`);
-            reportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
+            showErrorAlert(`Error signing in: ${data.error || 'Unknown error'}`);
+            signInButton.style.display = "block"; 
+            signInButton.disabled = false;
+            signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
+            if (appState.passHolder) { 
+                appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
+            }
         }
     } catch (error) {
-        console.error('Error fetching report data:', error);
-        showErrorAlert("Failed to generate report. Network or authentication issue. Please ensure you are signed in.");
-        reportMessageP.textContent = "Failed to generate report. Please try again or check console for details.";
-    } finally {
-        generateReportBtn.disabled = false;
-        generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        generateReportBtn.textContent = "Generate Report";
+        console.error('Error submitting main sign in:', error);
+        showErrorAlert("Failed to submit sign-in. Network or auth issue. Please check connection and try again.");
+        signInButton.style.display = "block"; 
+        signInButton.disabled = false;
+        signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
+        if (appState.passHolder) { 
+            appState.timer.intervalId = setInterval(updateTimerDisplay, 1000); 
+        }
     }
 }
 
 /**
- * Switches between the Sign Out and Attendance report tabs.
- * @param {string} tab - The tab to switch to ('signOut' or 'attendance').
+ * Handles the Late Sign In form submission.
+ * @param {Event} event - The form submission event.
  */
-function switchTab(tab) {
-    if (tab === 'attendance') {
-        signOutReportContent.classList.add('hidden');
-        attendanceReportContent.classList.remove('hidden');
-        signOutReportTab.classList.remove('border-indigo-500', 'text-indigo-600');
-        signOutReportTab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-        attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-        attendanceReportTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-    } else { // 'signOut'
-        signOutReportContent.classList.remove('hidden');
-        attendanceReportContent.classList.add('hidden');
-        attendanceReportTab.classList.remove('border-indigo-500', 'text-indigo-600');
-        attendanceReportTab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-        signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-        signOutReportTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-    }
-}
+async function handleLateSignInFormSubmit(event) {
+    event.preventDefault();
+    const selectedLateName = lateNameDropdown.value;
 
-/**
- * Generates and displays the attendance report.
- */
-async function generateAttendanceReport() {
-    attendanceReportMessageP.textContent = "Generating attendance report...";
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportTableBody.innerHTML = '';
-    showErrorAlert('');
-    showSuccessAlert('');
-
-    const selectedClass = dashboardClassDropdown.value;
-    const selectedDate = attendanceDateInput.value;
-
-    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION) {
-        showErrorAlert("Please select a class to generate the report.");
-        attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
-        return;
-    }
-    if (!selectedDate) {
-        showErrorAlert("Please select a date.");
-        attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
+    if (selectedLateName === "" || selectedLateName === DEFAULT_NAME_OPTION ) { 
+        showErrorAlert(`Please select a valid name to sign in late.`);
         return;
     }
 
-    generateAttendanceReportBtn.disabled = true;
-    generateAttendanceReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Loading...";
+    const originalButtonText = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
+    lateSignInSubmitBtn.disabled = true;
+    lateSignInSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    lateSignInSubmitBtn.textContent = "Processing...";
+
+    const nameOnly = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1).trim() : selectedLateName.trim();
+    const classValue = courseDropdown.value;
+
+    const payload = {
+        action: ACTION_LOG_LATE_SIGN_IN,
+        Seconds: 'Late Sign In', Name: nameOnly, Class: classValue, TeacherEmail: appState.currentUser.email, idToken: appState.currentUser.idToken
+    };
 
     try {
-        // 1. Fetch sign-out data for the selected day
-        const payload = {
-            action: ACTION_GET_REPORT_DATA,
-            class: selectedClass,
-            startDate: selectedDate,
-            endDate: selectedDate,
-            userEmail: appState.currentUser.email
-        };
-        const reportData = await sendAuthenticatedRequest(payload);
-
-        if (reportData.result !== 'success' || !Array.isArray(reportData.report)) {
-            throw new Error(reportData.error || 'Failed to fetch report data.');
+        const data = await sendAuthenticatedRequest(payload); // Using common sendAuthenticatedRequest
+        if (data.result === 'success') {
+            showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
+            lateNameDropdown.value = ""; 
+            lateSignInSubmitBtn.classList.add("hidden");
+        } else {
+            showErrorAlert(`Error signing in late: ${data.error || 'Unknown error'}`);
         }
+    } catch (error) {
+        console.error('Error submitting late sign in:', error);
+        showErrorAlert("Failed to submit late sign-in. Network or auth issue.");
+    } finally {
+        lateSignInSubmitBtn.disabled = false;
+        lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        lateSignInSubmitBtn.textContent = originalButtonText;
+    }
+}
 
-        // 2. Get all students for the class
-        const allStudentsInClass = appState.data.allNamesFromSheet
-            .filter(student => student.Class === selectedClass)
-            .map(student => student.Name)
-            .sort();
+/**
+ * Extracts a number from a name string (e.g., for sorting queue).
+ * @param {string} name - The name string.
+ * @returns {number} The extracted number or Infinity if none.
+ */
+function getNumberFromName(name) {
+    const match = name.match(/\((\d+)\)$/);
+    return match ? parseInt(match[1]) : Infinity;
+}
 
-        if (allStudentsInClass.length === 0) {
-            attendanceReportMessageP.textContent = `No students found for class ${selectedClass}.`;
-            return;
+/**
+ * Updates the queue message display.
+ * @param {string} message - The message to display.
+ */
+function updateQueueMessage(message) {
+    messageText.textContent = message;
+    messageText.classList.remove('hidden'); 
+}
+
+/**
+ * Updates the visual display of the queue.
+ */
+function updateQueueDisplay() {
+    queueList.innerHTML = ''; 
+    appState.selectedQueueName = null; 
+    removeFromQueueButton.classList.add('hidden'); 
+
+    if (appState.queue.length === 0) {
+        queueList.style.display = 'none'; 
+        if (!appState.passHolder) { 
+           updateQueueMessage('The queue is currently empty. Add your name!');
+        } else { 
+           updateQueueMessage('No one else is in queue. Select your name below to add.');
         }
-
-        attendanceReportMessageP.classList.add('hidden');
-        attendanceReportTable.classList.remove('hidden');
-        attendanceReportTableBody.innerHTML = '';
-
-        // 3. Process and display
-        allStudentsInClass.forEach(studentName => {
-            const studentRecords = reportData.report.filter(record => record.Name === studentName);
-            const tr = document.createElement('tr');
-            tr.dataset.studentName = studentName;
-
-            let hasLateSignIn = false;
-            let signOutCount = 0;
-            let durations = [];
-            let hasLongSignOut = false;
-
-            if (studentRecords.length > 0) {
-                tr.classList.add('cursor-pointer', 'hover:bg-gray-200');
-                tr.dataset.signOuts = JSON.stringify(studentRecords);
-                tr.addEventListener('click', () => showStudentDetails(tr.dataset.studentName, tr.dataset.signOuts));
-                
-                studentRecords.forEach(record => {
-                    if (record.Seconds === "Late Sign In") {
-                        hasLateSignIn = true;
-                    } else if (typeof record.Seconds === 'number') {
-                        signOutCount++;
-                        const totalSeconds = record.Seconds;
-                        const minutes = Math.floor(totalSeconds / 60);
-                        const seconds = totalSeconds % 60;
-                        durations.push(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-                        
-                        if (totalSeconds > (TARDY_THRESHOLD_MINUTES * 60)) {
-                            hasLongSignOut = true;
-                        }
-                    }
+    } else {
+        queueList.style.display = 'block'; 
+        updateQueueMessage('Select a name to remove, or add another.');
+        appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        appState.queue.forEach((person) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = person; 
+            listItem.addEventListener('click', () => {
+                Array.from(queueList.children).forEach(item => {
+                    item.classList.remove('bg-yellow-200-selected');
                 });
+                appState.selectedQueueName = person;
+                listItem.classList.add('bg-yellow-200-selected');
+                removeFromQueueButton.classList.remove('hidden');
+            });
+            queueList.appendChild(listItem);
+        });
+    }
+    toggleAddToQueueButtonVisibility(); 
+}
+
+/**
+ * Toggles the visibility of the "Add to Queue" button.
+ */
+function toggleAddToQueueButtonVisibility() {
+    const isNameSelectedInQueueDropdown = nameQueueDropdown.value !== "" && nameQueueDropdown.value !== DEFAULT_NAME_OPTION;
+    const isQueueDropdownEnabled = !nameQueueDropdown.disabled; 
+    
+    if (isNameSelectedInQueueDropdown && isQueueDropdownEnabled) {
+        addToQueueButton.classList.remove('hidden');
+    } else {
+        addToQueueButton.classList.add('hidden');
+    }
+}
+
+/**
+ * Handles adding a student to the queue.
+ */
+function handleAddToQueueClick() {
+    const name = nameQueueDropdown.value.trim();
+
+    if (name === "" || name === DEFAULT_NAME_OPTION) {
+        updateQueueMessage('Please select your name to add to the queue.');
+    } else if (appState.queue.includes(name)) {
+        updateQueueMessage(`${name} is already in the queue.`);
+    } else if (appState.passHolder && name === appState.passHolder) {
+        updateQueueMessage(`${name} is currently signed out and cannot be added to the queue.`);
+    } else {
+        appState.queue.push(name);
+        updateQueueMessage(`${name} has been added to the queue.`);
+        updateQueueDisplay();
+        nameQueueDropdown.value = ""; 
+        toggleAddToQueueButtonVisibility(); 
+
+        if (!appState.passHolder && appState.queue.length === 1) { 
+            showQueueView();
+        }
+    }
+}
+
+/**
+ * Handles removing a student from the queue.
+ */
+function handleRemoveFromQueueClick() {
+    if (appState.queue.length === 0) {
+        updateQueueMessage('The queue is already empty.');
+    } else if (!appState.selectedQueueName) {
+        updateQueueMessage('Please select a name from the list to remove.');
+    } else {
+        const index = appState.queue.indexOf(appState.selectedQueueName);
+        if (index > -1) {
+            const removedName = appState.selectedQueueName;
+            appState.queue.splice(index, 1);
+            updateQueueMessage(`Removed ${removedName} from the queue.`);
+            updateQueueDisplay(); 
+        } else {
+            updateQueueMessage('Error: Name not found in queue.'); 
+        }
+        if (appState.queue.length === 0 && !appState.passHolder) {
+            showLateSignInView(); 
+        }
+    }
+}
+
+/**
+ * Fetches all student data for the current teacher from the backend.
+ */
+async function fetchAllStudentData() {
+    try {
+        const data = await sendAuthenticatedRequest({ action: ACTION_GET_ALL_DATA });
+        if (Array.isArray(data)) {
+            appState.data.allNamesFromSheet = data;
+        } else {
+            console.error('Error: fetchAllStudentData received non-array data:', data);
+            appState.data.allNamesFromSheet = [];
+            showErrorAlert("Failed to load student data. Server returned unexpected format. Please check Apps Script logs.");
+            populateDropdown('courseDropdown', [], "Data Error", "");
+        }
+    } catch (error) {
+        console.error('Error fetching all student data:', error);
+        appState.data.allNamesFromSheet = [];
+        showErrorAlert("Failed to load student data. Network or authorization issue. Please check connection, ensure app is authorized, and refresh.");
+        populateDropdown('courseDropdown', [], "Network Error", "");
+    }
+}
+
+/**
+ * Populates the course dropdown using the fetched student data.
+ */
+function populateCourseDropdownFromData() {
+    if (appState.data.allNamesFromSheet.length > 0) {
+        const uniqueClassNames = new Set();
+        appState.data.allNamesFromSheet.forEach(item => {
+            if (item && item.Class) {
+                uniqueClassNames.add(item.Class);
             }
+        });
+        appState.data.courses = Array.from(uniqueClassNames).sort(); 
+        populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+        courseDropdown.removeAttribute("disabled");
+    } else {
+        populateDropdown('courseDropdown', [], "No classes found", "");
+    }
+}
 
-            tr.innerHTML = `
-                <td class="py-2 px-4 border-b">${studentName}</td>
-                <td class="py-2 px-4 border-b">${hasLateSignIn ? 'Yes' : 'No'}</td>
-                <td class="py-2 px-4 border-b">${signOutCount}</td>
-                <td class="py-2 px-4 border-b">${durations.join(', ') || 'N/A'}</td>
-            `;
-
-            if (hasLongSignOut) {
-                tr.classList.add('bg-red-200');
+/**
+ * Populates name-related dropdowns based on the selected course.
+ * @param {string} selectedCourseName - The name of the selected class.
+ */
+function populateNameDropdownsForCourse(selectedCourseName) {
+    const namesForCourseSet = new Set();
+    
+    if (selectedCourseName && selectedCourseName !== DEFAULT_CLASS_OPTION && selectedCourseName !== "") {
+        appState.data.allNamesFromSheet.forEach(item => {
+            if (item && item.Class === selectedCourseName && item.Name) {
+                namesForCourseSet.add(item.Name);
             }
+        });
+    }
+    
+    const sortedNames = Array.from(namesForCourseSet).sort((a, b) => {
+        if (a === DEFAULT_NAME_OPTION) return -1; 
+        if (b === DEFAULT_NAME_OPTION) return 1;
+        return a.localeCompare(b);
+    });
+    
+    populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
+    populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
+    populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
+}
 
-            attendanceReportTableBody.appendChild(tr);
+/**
+ * Handles changes in the class dropdown.
+ */
+function handleCourseSelectionChange(){
+    const selectedCourse = courseDropdown.value;
+    signOutButton.style.display = "none";
+
+    if (selectedCourse && selectedCourse !== DEFAULT_CLASS_OPTION && selectedCourse !== "") {
+        nameDropdown.removeAttribute("disabled");
+        nameQueueDropdown.removeAttribute("disabled");
+        lateNameDropdown.removeAttribute("disabled");
+        
+        // Show loading state for name dropdowns
+        populateDropdown('nameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
+        populateDropdown('nameQueue', [], LOADING_OPTION, LOADING_OPTION); 
+        populateDropdown('lateNameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
+
+        populateNameDropdownsForCourse(selectedCourse); 
+
+        // Reset values to default after population
+        nameDropdown.value = DEFAULT_NAME_OPTION; 
+        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
+        lateNameDropdown.value = DEFAULT_NAME_OPTION; 
+        
+        // Handle queue dropdown state based on current pass holder
+        if (!appState.passHolder && appState.queue.length === 0) { 
+            nameQueueDropdown.setAttribute("disabled", "disabled");
+            nameQueueDropdown.value = ""; 
+        } else { 
+            nameQueueDropdown.removeAttribute("disabled");
+        }
+
+        emojiDropdown.setAttribute("disabled", "disabled"); 
+        emojiDropdown.value = NO_EMOJI_OPTION; 
+
+    } else { 
+        const nameDropdownsToDisable = [
+            { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
+            { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
+            { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+        ];
+        nameDropdownsToDisable.forEach(ddConfig => {
+            const ddElement = document.getElementById(ddConfig.id);
+            populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultText); 
+            ddElement.setAttribute("disabled", "disabled");
+            ddElement.value = ddConfig.defaultText; 
         });
 
-    } catch (error) {
-        console.error('Error generating attendance report:', error);
-        showErrorAlert(`Failed to generate attendance report: ${error.message}`);
-        attendanceReportMessageP.textContent = "Failed to generate report. Please try again.";
-        attendanceReportMessageP.classList.remove('hidden');
-    } finally {
-        generateAttendanceReportBtn.disabled = false;
-        generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        generateAttendanceReportBtn.textContent = "Generate Attendance Report";
+        emojiDropdown.setAttribute("disabled", "disabled");
+        emojiDropdown.value = NO_EMOJI_OPTION; 
+        signOutButton.style.display = "none"; 
+    }
+    toggleAddToQueueButtonVisibility();
+    handleLateNameSelectionChange(); 
+    handleNameSelectionChange(); 
+}
+
+/**
+ * Handles changes in the name dropdown to toggle sign-out button and emoji dropdown.
+ */
+function handleNameSelectionChange(){
+    const isDefaultSelected = nameDropdown.value === "" || nameDropdown.value === DEFAULT_NAME_OPTION;
+    const isTimerRunning = appState.timer.intervalId !== null;
+    const isCurrentStudentSelected = nameDropdown.value === appState.passHolder;
+
+    if (isDefaultSelected || isTimerRunning || isCurrentStudentSelected) {
+        signOutButton.style.display = "none";
+        emojiDropdown.classList.add('hidden'); 
+        emojiDropdown.setAttribute("disabled", "disabled");
+        emojiDropdown.value = NO_EMOJI_OPTION; 
+        if (isDefaultSelected || isCurrentStudentSelected) { // Clear emojis only if name is default or current
+            emojiLeft.textContent = "";
+            emojiRight.textContent = "";
+        }
+    } else { 
+        signOutButton.style.display = "block";
+        emojiDropdown.classList.remove('hidden'); 
+        emojiDropdown.removeAttribute("disabled");
+    }
+    // Only show sign in button if timer is running (student is out)
+    signInButton.style.display = isTimerRunning ? "block" : "none";
+}
+
+/**
+ * Handles changes in the late name dropdown to toggle late sign-in button.
+ */
+function handleLateNameSelectionChange(){
+    if (lateNameDropdown.value === "" || lateNameDropdown.value === DEFAULT_NAME_OPTION ) {
+        lateSignInSubmitBtn.classList.add("hidden");
+    } else {
+        lateSignInSubmitBtn.classList.remove("hidden");
+        lateSignInSubmitBtn.disabled = false;
+        lateSignInSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        lateSignInSubmitBtn.textContent = LATE_SIGN_IN_BUTTON_DEFAULT_TEXT;
     }
 }
 
-
 /**
- * Shows the modal with a student's sign-out details.
- * @param {string} studentName - The name of the student.
- * @param {string} signOutsJSON - The sign-out data as a JSON string.
+ * Displays the queue view and updates button styles.
  */
-function showStudentDetails(studentName, signOutsJSON) {
-    const signOuts = JSON.parse(signOutsJSON);
-    modalStudentName.textContent = `For: ${studentName}`;
+function showQueueView() {
+    queueArea.classList.remove('hidden');
+    lateSignInView.classList.add('hidden');
+    appState.ui.currentRightView = 'queue';
 
-    let detailsHtml = '<ul class="list-disc list-inside">';
-    signOuts.forEach(record => {
-        if (record.Seconds === "Late Sign In") {
-            detailsHtml += `<li>Late Sign In at ${formatTime(record.Date)}</li>`;
-        } else {
-            const totalSeconds = record.Seconds;
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            const durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            detailsHtml += `<li>Signed out at ${formatTime(record.Date)} for a duration of ${durationDisplay}</li>`;
-        }
-    });
-    detailsHtml += '</ul>';
-
-    modalDetailsContent.innerHTML = detailsHtml;
-    detailsModal.classList.remove('hidden');
+    queueViewBtn.classList.add('bg-purple-400', 'text-white');
+    queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
+    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
+    lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
 }
 
-
 /**
- * Hides the student details modal.
+ * Displays the late sign-in view and updates button styles.
  */
-function hideStudentDetails() {
-    detailsModal.classList.add('hidden');
+function showLateSignInView() {
+    queueArea.classList.add('hidden');
+    lateSignInView.classList.remove('hidden');
+    appState.ui.currentRightView = 'lateSignIn';
+
+    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
+    lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
+    queueViewBtn.classList.add('bg-purple-400', 'text-white');
+    queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
 }
 
-
 /**
- * Initializes the Teacher Dashboard application elements and fetches initial data.
+ * Initializes the Bathroom Pass application elements and fetches initial data.
  * This is the page-specific initialization called by common.js.
  */
-async function initializePageSpecificApp() {
+function initializePageSpecificApp() {
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
 
-    populateDropdown('dashboardClassDropdown', [], LOADING_OPTION, "");
-    dashboardClassDropdown.setAttribute("disabled", "disabled");
+    studentOutNameSpan.textContent = '';
+    headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+    emojiLeft.textContent = "";
+    emojiRight.textContent = "";
 
-    // Set up Sign Out report
-    dateFilterType.value = 'today';
-    toggleDateInputs();
-    reportDateInput.value = getTodayDateString(); 
-    startDateInput.value = getTodayDateString();
-    endDateInput.value = getTodayDateString();
-    filterLongDurationsCheckbox.checked = false; 
-    generateReportBtn.disabled = false;
-    generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateReportBtn.textContent = "Generate Report";
-    reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-    reportTable.classList.add('hidden');
-    reportTableBody.innerHTML = '';
+    updateQueueDisplay(); 
+    toggleAddToQueueButtonVisibility(); 
+
+    populateDropdown('courseDropdown', [], LOADING_OPTION, "");
+    courseDropdown.setAttribute("disabled", "disabled");
+
+    const nameDropdownsToInit = [
+        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
+        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
+        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+    ];
+    nameDropdownsToInit.forEach(dd => {
+        populateDropdown(dd.id, [], dd.defaultText, dd.defaultText); 
+        document.getElementById(dd.id).setAttribute("disabled", "disabled");
+    });
     
-    // Set up Attendance report
-    attendanceDateInput.value = getTodayDateString();
-    generateAttendanceReportBtn.disabled = false;
-    generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Generate Attendance Report";
-    attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportTableBody.innerHTML = '';
+    addToQueueButton.classList.add('hidden');
+    removeFromQueueButton.classList.add('hidden');
+
+    populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
+    emojiDropdown.classList.add('hidden'); 
+    emojiDropdown.setAttribute("disabled", "disabled"); 
+
+    signOutButton.style.display = "none";
+    signInButton.style.display = "none"; 
+    signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; 
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
-        try {
-            await fetchAllStudentData(); 
-            populateCourseDropdownFromData();
-            populateDropdown('dashboardClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-            dashboardClassDropdown.removeAttribute("disabled");
-        } catch (error) {
-            console.error("Failed to initialize dashboard with data:", error);
-            populateDropdown('dashboardClassDropdown', [], "Error loading classes", "");
-            dashboardClassDropdown.setAttribute("disabled", "disabled");
-        }
+        fetchAllStudentData().then(() => {
+            populateCourseDropdownFromData(); 
+        });
     } else {
-        console.warn("User not authenticated for dashboard. Cannot fetch data.");
-        populateDropdown('dashboardClassDropdown', [], "Sign in to load classes", "");
-        dashboardClassDropdown.setAttribute("disabled", "disabled");
+        console.warn("User email or ID token not available. Cannot fetch data.");
+        const noAuthMessage = "Sign in to load data";
+        populateDropdown('courseDropdown', [], noAuthMessage, "");
+        nameDropdownsToInit.forEach(dd => populateDropdown(dd.id, [], noAuthMessage, ""));
+        populateDropdown('emojiDropdown', [], noAuthMessage, "");
+        emojiDropdown.classList.add('hidden');
+        emojiDropdown.setAttribute("disabled", "disabled");
     }
     
-    // Set the initial tab view
-    switchTab('signOut');
+    showLateSignInView(); 
 }
 
 /**
- * Resets all Teacher Dashboard page specific UI and state.
+ * Resets all Bathroom Pass page specific UI and state.
  * This is the page-specific reset called by common.js on sign-out.
  */
 function resetPageSpecificAppState() {
-    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], currentReportData: [] }; 
+    if (appState.timer.intervalId) {
+        clearInterval(appState.timer.intervalId);
+    }
+    appState.timer = { seconds: 0, minutes: 0, intervalId: null, isTardy: false };
+    appState.passHolder = null;
+    appState.queue = [];
+    appState.selectedQueueName = null;
+    appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] };
 
-    populateDropdown('dashboardClassDropdown', [], DEFAULT_CLASS_OPTION, "");
-    dashboardClassDropdown.setAttribute("disabled", "disabled");
-
-    // Reset Sign Out report
-    dateFilterType.value = 'today';
-    toggleDateInputs();
-    reportDateInput.value = '';
-    startDateInput.value = '';
-    endDateInput.value = '';
-    filterLongDurationsCheckbox.checked = false; 
-    reportTableBody.innerHTML = '';
-    reportTable.classList.add('hidden');
-    reportMessageP.textContent = "Select a class and date filter, then click 'Generate Report'.";
-    generateReportBtn.disabled = false;
-    generateReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateReportBtn.textContent = "Generate Report";
-
-    // Reset Attendance report
-    attendanceDateInput.value = '';
-    attendanceReportTableBody.innerHTML = '';
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
-    generateAttendanceReportBtn.disabled = false;
-    generateAttendanceReportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    generateAttendanceReportBtn.textContent = "Generate Attendance Report";
+    minutesSpan.textContent = "0";
+    secondsSpan.textContent = "00";
     
-    switchTab('signOut');
+    signInButton.style.display = "none";
+    signInButton.disabled = false;
+    signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
+
+    signOutButton.style.display = "none";
+    mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
+    studentOutNameSpan.textContent = '';
+    headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+    emojiLeft.textContent = "";
+    emojiRight.textContent = "";
+    
+    const dropdownsToReset = [
+        { id: 'courseDropdown', defaultText: DEFAULT_CLASS_OPTION },
+        { id: 'nameDropdown', defaultText: DEFAULT_NAME_OPTION },
+        { id: 'nameQueue', defaultText: DEFAULT_NAME_OPTION },
+        { id: 'lateNameDropdown', defaultText: DEFAULT_NAME_OPTION }
+    ];
+    dropdownsToReset.forEach(ddConfig => {
+        const ddElement = document.getElementById(ddConfig.id);
+        populateDropdown(ddConfig.id, [], ddConfig.defaultText, ddConfig.defaultText);
+        ddElement.setAttribute("disabled", "disabled");
+        ddElement.value = ddConfig.defaultText; 
+    });
+
+    populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
+    emojiDropdown.classList.add('hidden'); 
+    emojiDropdown.setAttribute("disabled", "disabled"); 
+
+    addToQueueButton.classList.add('hidden');
+    removeFromQueueButton.classList.add('hidden');
+
+    showLateSignInView(); 
+    updateQueueDisplay(); 
 }
 
-// --- Event Listeners specific to Teacher Dashboard page (All function calls go here, after functions are defined) ---
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
-dateFilterType.addEventListener('change', toggleDateInputs);
-generateReportBtn.addEventListener('click', generateReport);
-filterLongDurationsCheckbox.addEventListener('change', applyDurationFilter);
 
-// Tab listeners
-signOutReportTab.addEventListener('click', () => switchTab('signOut'));
-attendanceReportTab.addEventListener('click', () => switchTab('attendance'));
-
-// Attendance Report listener
-generateAttendanceReportBtn.addEventListener('click', generateAttendanceReport);
-
-// Clear reports when class changes
-dashboardClassDropdown.addEventListener('change', () => {
-    reportTable.classList.add('hidden');
-    reportMessageP.textContent = "Class changed. Click 'Generate Report' to see new data.";
-    reportMessageP.classList.remove('hidden');
-    
-    attendanceReportTable.classList.add('hidden');
-    attendanceReportMessageP.textContent = "Class changed. Click 'Generate Attendance Report' to see new data.";
-    attendanceReportMessageP.classList.remove('hidden');
+// --- Event Listeners specific to Bathroom Pass page ---
+courseDropdown.addEventListener("change", handleCourseSelectionChange);
+nameDropdown.addEventListener("change", handleNameSelectionChange);
+emojiDropdown.addEventListener("change", () => {
+    // No direct action needed here, emoji selected value is read on sign out
+    // But good to have this event listener if future functionality is needed
 });
-
-// Modal listeners
-closeModalBtn.addEventListener('click', hideStudentDetails);
-detailsModal.addEventListener('click', (event) => {
-    if (event.target === detailsModal) {
-        hideStudentDetails();
-    }
-});
+signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
+signInButton.addEventListener("click", handleMainFormSubmit); // Submit button
+lateSignInForm.addEventListener('submit', handleLateSignInFormSubmit);
+lateNameDropdown.addEventListener('change', handleLateNameSelectionChange);
+nameQueueDropdown.addEventListener('change', toggleAddToQueueButtonVisibility)
+addToQueueButton.addEventListener('click', handleAddToQueueClick);
+removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
+queueViewBtn.addEventListener('click', showQueueView);
+lateSignInViewBtn.addEventListener('click', showLateSignInView);
