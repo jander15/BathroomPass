@@ -200,7 +200,7 @@ async function fetchAllStudentData() {
         if (data && Array.isArray(data)) { // Apps Script returns raw array for getAllData
             const cleanedData = data.map(item => (typeof item === 'string' ? item.trim() : item));
 
-            appState.data.allNamesFromSheet = cleanedData;
+            appState.data.allNamesFromSheet = data;
         } else {
             console.error('Error: fetchAllStudentData received non-array data:', data);
             appState.data.allNamesFromSheet = [];
