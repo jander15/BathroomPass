@@ -74,8 +74,10 @@ function toggleDateInputs() {
 }
 
 function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
+// js/teacher_dashboard.js
+
 function formatDate(d) { return d ? new Date(d).toLocaleDateString() : ''; }
-function formatTime(d) { return d ? new Date(d).toLocaleTimeString() : ''; }
+function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''; }
 
 // --- Report Generation & UI Functions ---
 
