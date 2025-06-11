@@ -33,7 +33,9 @@ const appState = {
     queue: [], // Array of names in the queue
     selectedQueueName: null, // The name selected in the queue for removal
     data: { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }, // All fetched data
-    ui: { currentRightView: 'lateSignIn' } // Tracks which right-side panel is active
+    ui: { currentRightView: 'lateSignIn', 
+          currentDashboardTab: 'signOut' // <-- ADD THIS LINE
+    } // Tracks which right-side panel is active
 };
 
 

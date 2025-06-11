@@ -263,6 +263,9 @@ function toggleTrendsDateInputs() {
 }
 
 function switchTab(tab) {
+    // *** UPDATED: Store the currently active tab in the global state ***
+    appState.ui.currentDashboardTab = tab;
+
     const isSignOut = tab === 'signOut';
     const isAttendance = tab === 'attendance';
     const isTrends = tab === 'classTrends';
@@ -281,6 +284,53 @@ function switchTab(tab) {
     if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
     else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
     else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
+}
+
+
+async function handleDeleteEntry(timestamp) {
+    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+    try {
+        const response = await sendAuthenticatedRequest(payload);
+        if (response.result === 'success') {
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
+            if (entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Deleted = true;
+            }
+            
+            // *** UPDATED: Call the correct render function based on the active tab ***
+            const activeTab = appState.ui.currentDashboardTab;
+            if (activeTab === 'signOut') renderSignOutReport();
+            else if (activeTab === 'attendance') renderAttendanceReport();
+            else if (activeTab === 'classTrends') renderClassTrendsReport();
+
+        } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
+    } catch (error) { console.error('Error deleting entry:', error); }
+}
+
+
+async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
+    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+    try {
+        const response = await sendAuthenticatedRequest(payload);
+        if (response.result === 'success') {
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
+            if(entryIndex > -1) {
+                appState.data.allSignOuts[entryIndex].Name = newName;
+                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
+                appState.data.allSignOuts[entryIndex].Type = newType;
+                if (newTimestamp) {
+                    appState.data.allSignOuts[entryIndex].Date = newTimestamp;
+                }
+            }
+            
+            // *** UPDATED: Call the correct render function based on the active tab ***
+            const activeTab = appState.ui.currentDashboardTab;
+            if (activeTab === 'signOut') renderSignOutReport();
+            else if (activeTab === 'attendance') renderAttendanceReport();
+            else if (activeTab === 'classTrends') renderClassTrendsReport();
+
+        } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
+    } catch (error) { console.error('Error editing entry:', error); }
 }
 
 function renderAttendanceReport() {
@@ -355,41 +405,6 @@ function renderAttendanceReport() {
         tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
         attendanceReportTableBody.appendChild(tr);
     });
-}
-
-async function handleDeleteEntry(timestamp) {
-    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
-    try {
-        const response = await sendAuthenticatedRequest(payload);
-        if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Deleted = true;
-            }
-            renderSignOutReport();
-        } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
-    } catch (error) { console.error('Error deleting entry:', error); }
-}
-
-// *** UPDATED: Function signature and payload changed to handle newTimestamp ***
-async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
-    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
-    try {
-        const response = await sendAuthenticatedRequest(payload);
-        if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
-            if(entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Name = newName;
-                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
-                appState.data.allSignOuts[entryIndex].Type = newType;
-                // *** NEW: Update the date locally if it was changed ***
-                if (newTimestamp) {
-                    appState.data.allSignOuts[entryIndex].Date = newTimestamp;
-                }
-            }
-            renderSignOutReport();
-        } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
-    } catch (error) { console.error('Error editing entry:', error); }
 }
 
 async function fetchAllSignOutData() {
