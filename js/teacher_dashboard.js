@@ -175,12 +175,37 @@ function renderSignOutReport() {
 }
 
 // *** NEW: Function to render the Class Trends report ***
-function renderClassTrendsReport() {
-    // Define thresholds for special cell coloring. These can be adjusted.
-    const HIGH_ENTRY_THRESHOLD = 5; // More than 5 entries in a period.
-    const HIGH_LATE_THRESHOLD = 3;  // 3 or more late arrivals.
-    const HIGH_LONG_THRESHOLD = 2;  // 2 or more long-duration trips.
 
+function renderClassTrendsReport() {
+    // --- Thresholds and Color Definitions ---
+
+    // Note: 'veryHigh' thresholds are set slightly above 'high' to handle ">" logic easily.
+    constTHRESHOLDS = {
+        totalEntries: { moderate: 2, high: 3, veryHigh: 4 },          // per week
+        totalTime:    { moderate: 10, high: 20, veryHigh: 30 },        // minutes per week
+        avgDuration:  { moderate: 5, high: 6.5, veryHigh: 8 },         // minutes (absolute)
+        numLate:      { moderate: 1, high: 2, veryHigh: 2.01 },         // per week
+        numLong:      { moderate: 1, high: 2, veryHigh: 2.01 }          // per week
+    };
+
+    constCOLORS = {
+        totalEntries: { moderate: 'bg-gray-200', high: 'bg-gray-300 font-bold', veryHigh: 'bg-gray-400 font-bold' },
+        totalTime:    { moderate: 'bg-red-200', high: 'bg-red-400 text-white font-bold', veryHigh: 'bg-red-600 text-white font-bold' },
+        avgDuration:  { moderate: 'bg-purple-200', high: 'bg-purple-400 text-white font-bold', veryHigh: 'bg-purple-600 text-white font-bold' },
+        numLate:      { moderate: 'bg-yellow-200', high: 'bg-yellow-400 font-bold', veryHigh: 'bg-yellow-500 text-white font-bold' },
+        numLong:      { moderate: 'bg-orange-200', high: 'bg-orange-400 font-bold', veryHigh: 'bg-orange-500 text-white font-bold' }
+    };
+
+    // Helper function to get the correct CSS class based on value and thresholds
+    const getIndicatorClass = (value, thresholds, colors) => {
+        if (value >= thresholds.veryHigh) return colors.veryHigh;
+        if (value >= thresholds.high) return colors.high;
+        if (value >= thresholds.moderate) return colors.moderate;
+        return '';
+    };
+
+    // --- Main Function Logic ---
+    
     if (!appState.data.allSignOuts) {
         trendsReportMessage.textContent = "Data is loading or failed to load.";
         trendsReportMessage.classList.remove('hidden');
@@ -201,83 +226,89 @@ function renderClassTrendsReport() {
     // 1. Determine Date Range
     const filterType = trendsDateFilterType.value;
     let startDate, endDate;
-    if (filterType !== 'all_time') {
-        if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
-        else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
-        else if (filterType === 'dateRange') {
-            if (trendsStartDate.value && trendsEndDate.value) {
-                startDate = new Date(trendsStartDate.value + 'T00:00:00');
-                endDate = new Date(trendsEndDate.value + 'T23:59:59');
-            }
+    let isAllTime = false;
+    if (filterType === 'all_time') {
+        isAllTime = true;
+    } else if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
+    else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
+    else if (filterType === 'dateRange') {
+        if (trendsStartDate.value && trendsEndDate.value) {
+            startDate = new Date(trendsStartDate.value + 'T00:00:00');
+            endDate = new Date(trendsEndDate.value + 'T23:59:59');
         }
     }
-
-    // 2. Filter data by class and date
-    let filteredData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
-    if (startDate && endDate) {
-        filteredData = filteredData.filter(r => {
-            const recordDate = new Date(r.Date);
-            return recordDate >= startDate && recordDate <= endDate;
-        });
-    }
-
-    // 3. Get class roster and process each student
+    
     const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
 
     allStudentsInClass.forEach(studentFullName => {
         const normalizedStudentName = normalizeName(studentFullName);
-        const studentRecords = filteredData.filter(r => normalizeName(r.Name) === normalizedStudentName);
+        
+        // 2. Filter records for the current student
+        let studentRecords = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass && normalizeName(r.Name) === normalizedStudentName);
+        if (startDate && endDate) {
+            studentRecords = studentRecords.filter(r => {
+                const recordDate = new Date(r.Date);
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+        }
         
         if (studentRecords.length === 0) return;
 
-        // 4. Calculate metrics for the student
+        // 3. Calculate number of weeks for rate-based metrics
+        let weeksInPeriod = 1;
+        if (isAllTime) {
+            if (studentRecords.length > 1) {
+                const firstDate = new Date(studentRecords[studentRecords.length - 1].Date);
+                const lastDate = new Date(studentRecords[0].Date);
+                const diffDays = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
+                weeksInPeriod = Math.max(1, diffDays) / 7; // Use at least 1 day, convert to weeks
+            }
+        } else if (startDate && endDate) {
+            const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+            weeksInPeriod = Math.max(1, diffDays) / 7;
+        }
+
+        // 4. Calculate metrics
         const lateCount = studentRecords.filter(r => r.Type === 'late').length;
         const bathroomSignouts = studentRecords.filter(r => r.Type === 'bathroom' && typeof r.Seconds === 'number');
-        const totalSeconds = bathroomSignouts.reduce((acc, r) => acc + r.Seconds, 0);
+        const totalSecondsOut = bathroomSignouts.reduce((acc, r) => acc + r.Seconds, 0);
         const longCount = bathroomSignouts.filter(r => r.Seconds > TARDY_THRESHOLD_MINUTES * 60).length;
-        const avgSeconds = bathroomSignouts.length > 0 ? totalSeconds / bathroomSignouts.length : 0;
+        const avgDuration = bathroomSignouts.length > 0 ? (totalSecondsOut / 60) / bathroomSignouts.length : 0; // in minutes
         
-        // 5. Create and append the summary row
+        // 5. Calculate weekly rates
+        const totalEntriesRate = studentRecords.length / weeksInPeriod;
+        const totalTimeRate = (totalSecondsOut / 60) / weeksInPeriod; // in minutes per week
+        const numLateRate = lateCount / weeksInPeriod;
+        const numLongRate = longCount / weeksInPeriod;
+        
+        // 6. Create and append the summary row
         const tr = document.createElement('tr');
         tr.className = 'border-t';
         tr.classList.add('cursor-pointer');
         tr.dataset.accordionToggle = "true";
         tr.dataset.records = JSON.stringify(studentRecords);
 
-        // Primary row coloring (Red > Yellow > Default)
+        // Primary row coloring
         if (longCount > 0) tr.classList.add('bg-red-200', 'hover:bg-red-300');
         else if (lateCount > 0) tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
         else tr.classList.add('hover:bg-gray-100');
         
-        // *** NEW: Sophisticated Cell Indicator Logic ***
-        let entriesCellClass = 'text-center';
-        if (studentRecords.length > HIGH_ENTRY_THRESHOLD) {
-            entriesCellClass += ' bg-gray-300 font-bold rounded-md';
-        }
-
-        let lateCellClass = 'text-center';
-        if (lateCount >= HIGH_LATE_THRESHOLD) {
-            lateCellClass += ' bg-yellow-400 font-bold rounded-md';
-        } else if (lateCount > 0) {
-            lateCellClass += ' bg-yellow-300 rounded-md';
-        }
-
-        let longCellClass = 'text-center';
-        if (longCount >= HIGH_LONG_THRESHOLD) {
-            longCellClass += ' bg-red-500 text-white font-bold rounded-md';
-        } else if (longCount > 0) {
-            longCellClass += ' bg-red-400 text-white rounded-md';
-        }
+        // Get indicator classes for each cell
+        const entriesCellClass = getIndicatorClass(totalEntriesRate, THRESHOLDS.totalEntries, COLORS.totalEntries);
+        const timeCellClass = getIndicatorClass(totalTimeRate, THRESHOLDS.totalTime, COLORS.totalTime);
+        const avgCellClass = getIndicatorClass(avgDuration, THRESHOLDS.avgDuration, COLORS.avgDuration);
+        const lateCellClass = getIndicatorClass(numLateRate, THRESHOLDS.numLate, COLORS.numLate);
+        const longCellClass = getIndicatorClass(numLongRate, THRESHOLDS.numLong, COLORS.numLong);
 
         const arrowSvg = `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
         
         tr.innerHTML = `
             <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}${arrowSvg}</td>
-            <td class="py-2 px-3 border-b"><div class="${entriesCellClass} py-1">${studentRecords.length}</div></td>
-            <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(totalSeconds)}</td>
-            <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(avgSeconds)}</td>
-            <td class="py-2 px-3 border-b"><div class="${lateCellClass} py-1">${lateCount}</div></td>
-            <td class="py-2 px-3 border-b"><div class="${longCellClass} py-1">${longCount}</div></td>
+            <td class="py-2 px-3 border-b"><div class="py-1 text-center rounded-md ${entriesCellClass}">${studentRecords.length}</div></td>
+            <td class="py-2 px-3 border-b"><div class="py-1 text-center rounded-md ${timeCellClass}">${formatSecondsToMMSS(totalSecondsOut)}</div></td>
+            <td class="py-2 px-3 border-b"><div class="py-1 text-center rounded-md ${avgCellClass}">${formatSecondsToMMSS(avgDuration * 60)}</div></td>
+            <td class="py-2 px-3 border-b"><div class="py-1 text-center rounded-md ${lateCellClass}">${lateCount}</div></td>
+            <td class="py-2 px-3 border-b"><div class="py-1 text-center rounded-md ${longCellClass}">${longCount}</div></td>
         `;
         trendsReportTableBody.appendChild(tr);
     });
