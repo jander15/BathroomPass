@@ -181,19 +181,19 @@ function renderClassTrendsReport() {
     // These constants define the thresholds and color schemes for the cell indicators.
     // 'veryHigh' is set slightly above 'high' for ranges like ">2".
     const THRESHOLDS = {
-        totalEntries: { moderate: 2, high: 3, veryHigh: 4 },      // per week
-        totalTime:    { moderate: 10, high: 20, veryHigh: 30 },   // minutes per week
-        avgDuration:  { moderate: 5, high: 6.5, veryHigh: 8 },    // minutes (absolute)
-        numLate:      { moderate: 1, high: 2, veryHigh: 2.01 },    // per week
-        numLong:      { moderate: 1, high: 2, veryHigh: 2.01 }     // per week
+        totalEntries: { moderate: 1, high: 2, veryHigh: 3 },      // per week
+        totalTime:    { moderate: 5, high: 10, veryHigh: 15 },   // minutes per week
+        avgDuration:  { moderate: 2, high: 4, veryHigh: 6 },    // minutes (absolute)
+        numLate:      { moderate: 1, high: 1.5, veryHigh: 2 },    // per week
+        numLong:      { moderate: 1, high: 1.5, veryHigh: 2 }     // per week
     };
 
     const COLORS = {
-        totalEntries: { moderate: 'bg-gray-200', high: 'bg-gray-300 font-bold', veryHigh: 'bg-gray-400 font-bold' },
-        totalTime:    { moderate: 'bg-purple-200', high: 'bg-purple-400 text-white font-bold', veryHigh: 'bg-purple-600 text-white font-bold' },
-        avgDuration:  { moderate: 'bg-orange-200', high: 'bg-orange-400 font-bold', veryHigh: 'bg-orange-500 text-white font-bold' },
-        numLate:      { moderate: 'bg-yellow-200', high: 'bg-yellow-400 font-bold', veryHigh: 'bg-yellow-500 text-white font-bold' },
-        numLong:      { moderate: 'bg-red-200', high: 'bg-red-400 text-white font-bold', veryHigh: 'bg-red-600 text-white font-bold' }
+        totalEntries: { moderate: 'bg-red-200', high: 'bg-red-400', veryHigh: 'bg-red-600' },
+        totalTime:    { moderate: 'bg-red-200', high: 'bg-red-400', veryHigh: 'bg-red-600' },
+        avgDuration:  { moderate: 'bg-red-200', high: 'bg-red-400', veryHigh: 'bg-red-600' },
+        numLate:      { moderate: 'bg-red-200', high: 'bg-red-400', veryHigh: 'bg-red-600' },
+        numLong:      { moderate: 'bg-red-200', high: 'bg-red-400', veryHigh: 'bg-red-600' }
     };
 
     // Helper function to get the correct CSS class based on the calculated metric and its corresponding thresholds.
