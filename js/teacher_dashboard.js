@@ -176,6 +176,11 @@ function renderSignOutReport() {
 
 // *** NEW: Function to render the Class Trends report ***
 function renderClassTrendsReport() {
+    // Define thresholds for special cell coloring. These can be adjusted.
+    const HIGH_ENTRY_THRESHOLD = 5; // More than 5 entries in a period.
+    const HIGH_LATE_THRESHOLD = 3;  // 3 or more late arrivals.
+    const HIGH_LONG_THRESHOLD = 2;  // 2 or more long-duration trips.
+
     if (!appState.data.allSignOuts) {
         trendsReportMessage.textContent = "Data is loading or failed to load.";
         trendsReportMessage.classList.remove('hidden');
@@ -223,7 +228,7 @@ function renderClassTrendsReport() {
         const normalizedStudentName = normalizeName(studentFullName);
         const studentRecords = filteredData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         
-        if (studentRecords.length === 0) return; // Skip students with no entries in the period
+        if (studentRecords.length === 0) return;
 
         // 4. Calculate metrics for the student
         const lateCount = studentRecords.filter(r => r.Type === 'late').length;
@@ -239,19 +244,40 @@ function renderClassTrendsReport() {
         tr.dataset.accordionToggle = "true";
         tr.dataset.records = JSON.stringify(studentRecords);
 
+        // Primary row coloring (Red > Yellow > Default)
         if (longCount > 0) tr.classList.add('bg-red-200', 'hover:bg-red-300');
         else if (lateCount > 0) tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
         else tr.classList.add('hover:bg-gray-100');
+        
+        // *** NEW: Sophisticated Cell Indicator Logic ***
+        let entriesCellClass = 'text-center';
+        if (studentRecords.length > HIGH_ENTRY_THRESHOLD) {
+            entriesCellClass += ' bg-gray-300 font-bold rounded-md';
+        }
+
+        let lateCellClass = 'text-center';
+        if (lateCount >= HIGH_LATE_THRESHOLD) {
+            lateCellClass += ' bg-yellow-400 font-bold rounded-md';
+        } else if (lateCount > 0) {
+            lateCellClass += ' bg-yellow-300 rounded-md';
+        }
+
+        let longCellClass = 'text-center';
+        if (longCount >= HIGH_LONG_THRESHOLD) {
+            longCellClass += ' bg-red-500 text-white font-bold rounded-md';
+        } else if (longCount > 0) {
+            longCellClass += ' bg-red-400 text-white rounded-md';
+        }
 
         const arrowSvg = `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
         
         tr.innerHTML = `
             <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}${arrowSvg}</td>
-            <td class="py-2 px-3 border-b text-center">${studentRecords.length}</td>
+            <td class="py-2 px-3 border-b"><div class="${entriesCellClass} py-1">${studentRecords.length}</div></td>
             <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(totalSeconds)}</td>
             <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(avgSeconds)}</td>
-            <td class="py-2 px-3 border-b text-center">${lateCount}</td>
-            <td class="py-2 px-3 border-b text-center">${longCount}</td>
+            <td class="py-2 px-3 border-b"><div class="${lateCellClass} py-1">${lateCount}</div></td>
+            <td class="py-2 px-3 border-b"><div class="${longCellClass} py-1">${longCount}</div></td>
         `;
         trendsReportTableBody.appendChild(tr);
     });
