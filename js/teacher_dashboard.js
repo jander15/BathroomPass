@@ -221,10 +221,16 @@ function renderAttendanceReport() {
         if (studentRecords.length > 0) {
             tr.classList.add('cursor-pointer');
             tr.dataset.accordionToggle = "true";
-            // *** NEW: Store records on the row to be used by the accordion handler ***
             tr.dataset.records = JSON.stringify(studentRecords);
-            if (hasLate || hasLong) tr.classList.add('bg-red-200', 'hover:bg-red-300');
-            else tr.classList.add('bg-blue-100', 'hover:bg-blue-200');
+
+            // *** UPDATED: New red/yellow/blue coloring logic for parent rows ***
+            if (hasLong) {
+                tr.classList.add('bg-red-200', 'hover:bg-red-300');
+            } else if (hasLate) {
+                tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
+            } else {
+                tr.classList.add('bg-blue-100', 'hover:bg-blue-200');
+            }
         } else {
             if (presentStudentIndex % 2 !== 0) tr.classList.add('bg-gray-50');
             presentStudentIndex++;
@@ -352,10 +358,8 @@ attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
 
 dashboardContent.addEventListener('click', (event) => {
-    // Check for an edit button click first.
     const editButton = event.target.closest('.edit-btn');
 
-    // UPDATED: Use an if...else if structure to prevent clicks from triggering both actions.
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
@@ -399,7 +403,6 @@ dashboardContent.addEventListener('click', (event) => {
             deleteEntryBtn.dataset.timestamp = timestamp;
         }
     } else if (event.target.closest('[data-accordion-toggle="true"]')) {
-        // Handle accordion logic only if an edit button wasn't clicked.
         const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
         event.stopPropagation();
         const nextElement = accordionRow.nextElementSibling;
@@ -426,7 +429,6 @@ dashboardContent.addEventListener('click', (event) => {
         const detailsTable = document.createElement('table');
         detailsTable.className = 'min-w-full';
 
-        // *** NEW: Create and append the table header ***
         const detailsHead = document.createElement('thead');
         detailsHead.innerHTML = `
             <tr class="bg-gray-200 text-sm">
@@ -446,17 +448,21 @@ dashboardContent.addEventListener('click', (event) => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
 
+            // *** NEW: Add coloring logic for each child row ***
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
+                detailTr.classList.add('bg-yellow-100');
             } else if (typeof row.Seconds === 'number') {
                 const minutes = Math.floor(row.Seconds / 60);
                 const seconds = row.Seconds % 60;
                 durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                if (row.Seconds > TARDY_THRESHOLD_MINUTES * 60) {
+                    detailTr.classList.add('bg-red-100');
+                }
             }
 
             const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
             
-            // *** UPDATED: Row now includes all 7 columns for consistency ***
             detailTr.innerHTML = `
                 <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td>
                 <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
