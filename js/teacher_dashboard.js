@@ -37,6 +37,18 @@ const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 const dashboardContent = document.getElementById('dashboardContent');
+// *** NEW: Add caches for Class Trends report elements ***
+const classTrendsTab = document.getElementById('classTrendsTab');
+const classTrendsContent = document.getElementById('classTrendsContent');
+const trendsClassDropdown = document.getElementById('trendsClassDropdown');
+const trendsDateFilterType = document.getElementById('trendsDateFilterType');
+const trendsDateRangeInputs = document.getElementById('trendsDateRangeInputs');
+const trendsStartDate = document.getElementById('trendsStartDate');
+const trendsEndDate = document.getElementById('trendsEndDate');
+const trendsReportMessage = document.getElementById('trendsReportMessage');
+const trendsReportTable = document.getElementById('trendsReportTable');
+const trendsReportTableBody = document.getElementById('trendsReportTableBody');
+
 
 // --- Helper & Formatting Functions ---
 
@@ -77,6 +89,15 @@ function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
 
 function formatDate(d) { return d ? new Date(d).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }) : ''; }
 function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; }
+
+function formatSecondsToMMSS(totalSeconds) {
+    if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+
 // --- Report Generation & UI Functions ---
 
 function renderSignOutReport() {
@@ -153,18 +174,113 @@ function renderSignOutReport() {
     }
 }
 
+// *** NEW: Function to render the Class Trends report ***
+function renderClassTrendsReport() {
+    if (!appState.data.allSignOuts) {
+        trendsReportMessage.textContent = "Data is loading or failed to load.";
+        trendsReportMessage.classList.remove('hidden');
+        return;
+    }
+    const selectedClass = trendsClassDropdown.value;
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) {
+        trendsReportMessage.textContent = "Please select a class to view trends.";
+        trendsReportMessage.classList.remove('hidden');
+        trendsReportTable.classList.add('hidden');
+        return;
+    }
+
+    trendsReportMessage.classList.add('hidden');
+    trendsReportTable.classList.remove('hidden');
+    trendsReportTableBody.innerHTML = '';
+
+    // 1. Determine Date Range
+    const filterType = trendsDateFilterType.value;
+    let startDate, endDate;
+    if (filterType !== 'all_time') {
+        if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start + 'T00:00:00'); endDate = new Date(r.end + 'T23:59:59'); }
+        else if (filterType === 'dateRange') {
+            if (trendsStartDate.value && trendsEndDate.value) {
+                startDate = new Date(trendsStartDate.value + 'T00:00:00');
+                endDate = new Date(trendsEndDate.value + 'T23:59:59');
+            }
+        }
+    }
+
+    // 2. Filter data by class and date
+    let filteredData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
+    if (startDate && endDate) {
+        filteredData = filteredData.filter(r => {
+            const recordDate = new Date(r.Date);
+            return recordDate >= startDate && recordDate <= endDate;
+        });
+    }
+
+    // 3. Get class roster and process each student
+    const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
+
+    allStudentsInClass.forEach(studentFullName => {
+        const normalizedStudentName = normalizeName(studentFullName);
+        const studentRecords = filteredData.filter(r => normalizeName(r.Name) === normalizedStudentName);
+        
+        if (studentRecords.length === 0) return; // Skip students with no entries in the period
+
+        // 4. Calculate metrics for the student
+        const lateCount = studentRecords.filter(r => r.Type === 'late').length;
+        const bathroomSignouts = studentRecords.filter(r => r.Type === 'bathroom' && typeof r.Seconds === 'number');
+        const totalSeconds = bathroomSignouts.reduce((acc, r) => acc + r.Seconds, 0);
+        const longCount = bathroomSignouts.filter(r => r.Seconds > TARDY_THRESHOLD_MINUTES * 60).length;
+        const avgSeconds = bathroomSignouts.length > 0 ? totalSeconds / bathroomSignouts.length : 0;
+        
+        // 5. Create and append the summary row
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.classList.add('cursor-pointer');
+        tr.dataset.accordionToggle = "true";
+        tr.dataset.records = JSON.stringify(studentRecords);
+
+        if (longCount > 0) tr.classList.add('bg-red-200', 'hover:bg-red-300');
+        else if (lateCount > 0) tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
+        else tr.classList.add('hover:bg-gray-100');
+
+        const arrowSvg = `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+        
+        tr.innerHTML = `
+            <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}${arrowSvg}</td>
+            <td class="py-2 px-3 border-b text-center">${studentRecords.length}</td>
+            <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(totalSeconds)}</td>
+            <td class="py-2 px-3 border-b text-center">${formatSecondsToMMSS(avgSeconds)}</td>
+            <td class="py-2 px-3 border-b text-center">${lateCount}</td>
+            <td class="py-2 px-3 border-b text-center">${longCount}</td>
+        `;
+        trendsReportTableBody.appendChild(tr);
+    });
+}
+
+// *** NEW: Helper to toggle date range inputs for the trends report ***
+function toggleTrendsDateInputs() {
+    trendsDateRangeInputs.classList.toggle('hidden', trendsDateFilterType.value !== 'dateRange');
+}
+
 function switchTab(tab) {
+    const isSignOut = tab === 'signOut';
     const isAttendance = tab === 'attendance';
-    signOutReportContent.classList.toggle('hidden', isAttendance);
+    const isTrends = tab === 'classTrends';
+
+    // Toggle Content Panes
+    signOutReportContent.classList.toggle('hidden', !isSignOut);
     attendanceReportContent.classList.toggle('hidden', !isAttendance);
-    signOutReportTab.classList.toggle('border-indigo-500', !isAttendance);
-    signOutReportTab.classList.toggle('text-indigo-600', !isAttendance);
-    signOutReportTab.classList.toggle('border-transparent', isAttendance);
-    signOutReportTab.classList.toggle('text-gray-500', isAttendance);
-    attendanceReportTab.classList.toggle('border-indigo-500', isAttendance);
-    attendanceReportTab.classList.toggle('text-indigo-600', isAttendance);
-    attendanceReportTab.classList.toggle('border-transparent', !isAttendance);
-    attendanceReportTab.classList.toggle('text-gray-500', !isAttendance);
+    classTrendsContent.classList.toggle('hidden', !isTrends);
+
+    // Toggle Tab Styles
+    [signOutReportTab, attendanceReportTab, classTrendsTab].forEach(t => {
+        t.classList.remove('border-indigo-500', 'text-indigo-600');
+        t.classList.add('border-transparent', 'text-gray-500');
+    });
+
+    if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
 }
 
 function renderAttendanceReport() {
@@ -300,9 +416,10 @@ async function fetchAllSignOutData() {
 }
 
 async function initializePageSpecificApp() {
-    [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
+    [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown, trendsClassDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
+
     dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
@@ -315,6 +432,10 @@ async function initializePageSpecificApp() {
             await populateCourseDropdownFromData();
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
+
+            populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+            trendsClassDropdown.removeAttribute("disabled");
+
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             attendanceClassDropdown.removeAttribute("disabled");
             await fetchAllSignOutData();
@@ -322,6 +443,10 @@ async function initializePageSpecificApp() {
             console.error("Failed to initialize dashboard with data:", error);
             [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
         }
+        // Set default for new report
+        trendsDateFilterType.value = 'this_week';
+        toggleTrendsDateInputs();
+        switchTab('signOut'); // Default to first tab
     } else {
         console.warn("User not authenticated.");
         [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
@@ -563,3 +688,12 @@ signOutClassDropdown.addEventListener('change', () => {
     }
     renderSignOutReport();
 });
+
+// *** NEW: Event listeners for the Class Trends tab ***
+classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
+trendsClassDropdown.addEventListener('change', renderClassTrendsReport);
+trendsDateFilterType.addEventListener('change', () => {
+    toggleTrendsDateInputs();
+    renderClassTrendsReport();
+});
+[trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
