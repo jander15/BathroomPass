@@ -541,6 +541,7 @@ attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); r
 classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
 // Main Content Listener for Accordions and Edit Buttons
+// Main Content Listener for Accordions and Edit Buttons
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
     if (editButton) {
@@ -611,6 +612,7 @@ dashboardContent.addEventListener('click', (event) => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
             
+            // ** FIX: This block now correctly references the main COLORS constant **
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 if (typeof row.Seconds === 'number') {
@@ -622,10 +624,12 @@ dashboardContent.addEventListener('click', (event) => {
                 }
             } else if (typeof row.Seconds === 'number') {
                 if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                    typeDisplay = "Long Sign Out";
                     if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.long.veryHigh);
                     else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.long.high);
                     else detailTr.classList.add(COLORS.long.moderate);
                 } else {
+                    typeDisplay = "Normal Sign Out";
                     detailTr.classList.add(COLORS.normal);
                 }
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
