@@ -540,8 +540,7 @@ signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderS
 attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
 classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
-// Main Content Listener for Accordions and Edit Buttons
-// Main Content Listener for Accordions and Edit Buttons
+
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
     if (editButton) {
@@ -594,6 +593,10 @@ dashboardContent.addEventListener('click', (event) => {
 
         const wrapperRow = document.createElement('tr');
         wrapperRow.className = 'details-wrapper-row';
+
+        // ** THE FIX: Moved this line up so 'wrapperCell' is defined before it's used. **
+        const wrapperCell = document.createElement('td');
+        
         wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
         const detailsTable = document.createElement('table');
@@ -612,7 +615,6 @@ dashboardContent.addEventListener('click', (event) => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
             
-            // ** FIX: This block now correctly references the main COLORS constant **
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 if (typeof row.Seconds === 'number') {
