@@ -189,7 +189,7 @@ function renderClassTrendsReport() {
         late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
         long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
     };
-
+    
     const getSeverity = (record) => {
         if (record.Type === 'late') return 5;
         if (typeof record.Seconds !== 'number') return 0;
@@ -225,12 +225,9 @@ function renderClassTrendsReport() {
     trendsReportTable.classList.remove('hidden');
     trendsReportTableBody.innerHTML = '';
 
-    // 1. Determine Date Range from filters
     const filterType = trendsDateFilterType.value;
     let startDate, endDate;
-    let isAllTime = (filterType === 'all_time');
-    
-    if (!isAllTime) {
+    if (filterType !== 'all_time') {
         if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
         else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
         else if (filterType === 'dateRange' && trendsStartDate.value && trendsEndDate.value) {
@@ -239,17 +236,12 @@ function renderClassTrendsReport() {
         }
     }
     
-    // 2. Filter all data for the selected class and period
     let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
     if (startDate && endDate) {
-        endDate.setHours(23, 59, 59); // Ensure end date is inclusive
-        classPeriodData = classPeriodData.filter(r => {
-            const recordDate = new Date(r.Date);
-            return recordDate >= startDate && recordDate <= endDate;
-        });
+        endDate.setHours(23, 59, 59);
+        classPeriodData = classPeriodData.filter(r => new Date(r.Date) >= startDate && new Date(r.Date) <= endDate);
     }
 
-    // 3. Pre-calculate the maximum total time for scaling the bars
     const allStudentsInClass = appState.data.allNamesFromSheet
         .filter(s => s.Class === selectedClass)
         .map(s => normalizeName(s.Name));
@@ -263,7 +255,6 @@ function renderClassTrendsReport() {
 
     const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
 
-    // 4. Process and render each student
     allStudentsInClass.sort().forEach(normalizedStudentName => {
         let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
@@ -272,25 +263,38 @@ function renderClassTrendsReport() {
 
         const lateCount = studentRecords.filter(r => r.Type === 'late').length;
         const longCount = studentRecords.filter(r => r.Type === 'bathroom' && r.Seconds > DURATION_THRESHOLDS.moderate).length;
-        const totalSecondsOut = studentTotals[normalizedStudentName];
+        const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
 
         let barSegmentsHtml = '';
         const recordsWithDuration = studentRecords.filter(r => typeof r.Seconds === 'number' && r.Seconds > 0);
 
         recordsWithDuration.forEach(record => {
+            // *** FIX: This block contains the restored color logic ***
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
-            if (record.Type === 'late') { /* ... future proofing ... */ }
-            else if (record.Seconds > DURATION_THRESHOLDS.moderate) { /* ... long duration coloring ... */ }
-            const segmentWidthPercent = (record.Seconds / totalSecondsOut) * 100;
-            const tooltipText = `${typeText}: ${formatSecondsToMMSS(record.Seconds)} on ${formatDate(record.Date)}`;
+            const durationInSeconds = record.Seconds;
+
+            if (record.Type === 'late') {
+                typeText = "Late";
+                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
+                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
+                else colorClass = COLORS.late.moderate;
+            } else if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
+                typeText = "Long Sign Out";
+                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
+                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
+                else colorClass = COLORS.long.moderate;
+            }
+            
+            const segmentWidthPercent = (durationInSeconds / totalSecondsOut) * 100;
+            const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
             barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
         });
         
         const tr = document.createElement('tr');
-        tr.className = 'border-t cursor-pointer'; // ** FIX: Re-added cursor-pointer **
-        tr.dataset.accordionToggle = "true";     // ** FIX: Re-added data attribute **
-        tr.dataset.records = JSON.stringify(studentRecords); // ** FIX: Re-added data attribute **
+        tr.className = 'border-t cursor-pointer';
+        tr.dataset.accordionToggle = "true";
+        tr.dataset.records = JSON.stringify(studentRecords);
 
         const totalBarWidthPercent = (totalSecondsOut / maxTotalSeconds) * 100;
 
