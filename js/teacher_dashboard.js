@@ -118,7 +118,98 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString([], { month: 
 function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; }
 
 
+// --- NEW: Sorting Logic ---
+function updateSortIndicators() {
+    const { column, direction } = appState.sortState.signOut;
+    document.querySelectorAll('#reportTable th[data-column]').forEach(th => {
+        const indicator = th.querySelector('.sort-indicator');
+        if (th.dataset.column === column) {
+            indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+        } else {
+            indicator.textContent = '';
+        }
+    });
+}
+
+function sortSignOutData(data) {
+    const { column, direction } = appState.sortState.signOut;
+    const multiplier = direction === 'asc' ? 1 : -1;
+
+    data.sort((a, b) => {
+        let valA, valB;
+
+        switch (column) {
+            case 'Date':
+            case 'Time':
+                valA = new Date(a.Date);
+                valB = new Date(b.Date);
+                break;
+            case 'Name':
+                valA = normalizeName(a.Name);
+                valB = normalizeName(b.Name);
+                return valA.localeCompare(valB) * multiplier;
+            case 'Class':
+                valA = a.Class || '';
+                valB = b.Class || '';
+                return valA.localeCompare(valB) * multiplier;
+            case 'Type':
+                valA = a.Type || '';
+                valB = b.Type || '';
+                return valA.localeCompare(valB) * multiplier;
+            case 'Duration':
+                valA = a.Type === 'late' ? -1 : (a.Seconds || 0); // Put 'late' entries first when sorting by duration
+                valB = b.Type === 'late' ? -1 : (b.Seconds || 0);
+                break;
+            default:
+                return 0;
+        }
+        
+        if (valA < valB) return -1 * multiplier;
+        if (valA > valB) return 1 * multiplier;
+        return 0;
+    });
+    return data;
+}
+
+
+
+
+
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+reloadDataBtn.addEventListener('click', fetchAllSignOutData);
+
 // --- Report Generation & UI Functions ---
+
+function renderSignOutReport() {
+    if (!appState.data.allSignOuts) {
+        // ... (existing code) ...
+        return;
+    }
+    reportMessageP.classList.add('hidden');
+
+    // ... (existing filtering logic remains the same) ...
+    let filteredData = appState.data.allSignOuts.filter(r => !r.Deleted);
+    // ...
+
+    // ** NEW: Sort the data before rendering **
+    filteredData = sortSignOutData(filteredData);
+    
+    reportTableBody.innerHTML = '';
+    if (filteredData.length === 0) {
+        // ... (existing code) ...
+    } else {
+        reportTable.classList.remove('hidden');
+        // REMOVED: filteredData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+        filteredData.forEach(row => {
+            // ... (existing row generation logic remains the same) ...
+        });
+    }
+    
+    // ** NEW: Update the sort indicators in the header **
+    updateSortIndicators();
+}
+
 
 function renderSignOutReport() {
     if (!appState.data.allSignOuts) {
@@ -532,6 +623,27 @@ reloadDataBtn.addEventListener('click', fetchAllSignOutData);
     if(el) el.addEventListener('change', renderSignOutReport);
 });
 dateFilterType.addEventListener('change', toggleDateInputs);
+
+
+reportTable.querySelector('thead').addEventListener('click', (event) => {
+    const header = event.target.closest('th[data-column]');
+    if (!header) return;
+
+    const newColumn = header.dataset.column;
+    const currentSort = appState.sortState.signOut;
+
+    if (currentSort.column === newColumn) {
+        // Reverse direction
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // Change column, default to descending for dates/durations, ascending for text
+        currentSort.column = newColumn;
+        currentSort.direction = ['Date', 'Time', 'Duration'].includes(newColumn) ? 'desc' : 'asc';
+    }
+
+    renderSignOutReport();
+});
+
 
 // Listeners for Attendance Report
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);

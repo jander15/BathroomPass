@@ -34,8 +34,11 @@ const appState = {
     selectedQueueName: null, // The name selected in the queue for removal
     data: { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }, // All fetched data
     ui: { currentRightView: 'lateSignIn', 
-          currentDashboardTab: 'signOut' // <-- ADD THIS LINE
-    } // Tracks which right-side panel is active
+          currentDashboardTab: 'signOut' 
+    }, // Tracks which right-side panel is active
+    sortState: {
+        signOut: { column: 'Date', direction: 'desc' }
+    }
 };
 
 
