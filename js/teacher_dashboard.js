@@ -177,8 +177,7 @@ function renderSignOutReport() {
 // *** NEW: Function to render the Class Trends report ***
 
 function renderClassTrendsReport() {
-    // --- Thresholds and Color Definitions for Bar Segments ---
-    // Durations are in seconds for easy comparison with record.Seconds
+    // --- Thresholds, Colors, and Severity Definitions ---
     const DURATION_THRESHOLDS = {
         moderate: 300,   // 5 minutes
         high: 450,       // 7.5 minutes
@@ -188,7 +187,27 @@ function renderClassTrendsReport() {
     const COLORS = {
         normal: 'bg-gray-400',
         late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
-        long:   { moderate: 'bg-red-300', high: 'bg-red-500 text-white', veryHigh: 'bg-red-700 text-white' }
+        long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
+    };
+    
+    // Helper function to assign a severity score for sorting purposes
+    const getSeverity = (record) => {
+        if (record.Type !== 'bathroom' || typeof record.Seconds !== 'number') return 0;
+        if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 4;
+        if (record.Seconds >= DURATION_THRESHOLDS.high) return 3;
+        if (record.Seconds >= DURATION_THRESHOLDS.moderate) return 2;
+        return 1;
+    };
+
+    // Helper to format total seconds into a more readable "Xh Ym" format
+    const formatSecondsToHHMM = (totalSeconds) => {
+        if (isNaN(totalSeconds) || totalSeconds <= 0) return "0m";
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        let result = '';
+        if (hours > 0) result += `${hours}h `;
+        if (minutes > 0 || hours === 0) result += `${minutes}m`;
+        return result.trim();
     };
 
     // --- Main Function Logic ---
@@ -200,7 +219,7 @@ function renderClassTrendsReport() {
     trendsReportTable.classList.remove('hidden');
     trendsReportTableBody.innerHTML = '';
 
-    // 1. Determine Date Range from filters
+    // 1. Determine Date Range
     const filterType = trendsDateFilterType.value;
     let startDate, endDate;
     if (filterType !== 'all_time') {
@@ -211,78 +230,66 @@ function renderClassTrendsReport() {
             endDate = new Date(trendsEndDate.value);
         }
     }
-    
-    // 2. Filter all data for the selected class and period
+
+    // 2. Filter data for the selected class and period
     let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
     if (startDate && endDate) {
-        endDate.setHours(23, 59, 59); // Ensure end date is inclusive
-        classPeriodData = classPeriodData.filter(r => {
-            const recordDate = new Date(r.Date);
-            return recordDate >= startDate && recordDate <= endDate;
-        });
+        endDate.setHours(23, 59, 59);
+        classPeriodData = classPeriodData.filter(r => new Date(r.Date) >= startDate && new Date(r.Date) <= endDate);
     }
 
-    // 3. Pre-calculate the maximum total time for scaling the bars
+    // 3. Pre-calculate the maximum total time for scaling all bars consistently
     const studentTotals = {};
     const allStudentsInClass = appState.data.allNamesFromSheet
         .filter(s => s.Class === selectedClass)
         .map(s => normalizeName(s.Name));
     
     allStudentsInClass.forEach(name => {
-        const totalSeconds = classPeriodData
+        studentTotals[name] = classPeriodData
             .filter(r => normalizeName(r.Name) === name && r.Type === 'bathroom' && typeof r.Seconds === 'number')
             .reduce((acc, r) => acc + r.Seconds, 0);
-        studentTotals[name] = totalSeconds;
     });
-
-    const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300); // Use a 5-min minimum for the scale
+    
+    const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
 
     // 4. Process and render each student
     allStudentsInClass.sort().forEach(normalizedStudentName => {
-        const studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
+        let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
-        
-        // Sort records chronologically to build the bar in order
-        studentRecords.sort((a,b) => new Date(a.Date) - new Date(b.Date));
 
-        // 5. Calculate final metrics
+        // 5. Sort records by severity for rendering the bar chart
+        studentRecords.sort((a, b) => getSeverity(b) - getSeverity(a));
+
         const lateCount = studentRecords.filter(r => r.Type === 'late').length;
         const longCount = studentRecords.filter(r => r.Type === 'bathroom' && r.Seconds > DURATION_THRESHOLDS.moderate).length;
         const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
 
-        // 6. Build the HTML for the stacked bar chart
+        // 6. Build the HTML for the stacked bar chart segments
         let barSegmentsHtml = '';
         studentRecords.forEach(record => {
-            if (typeof record.Seconds !== 'number') return; // Skip entries without duration
+            if (record.Type !== 'bathroom' || typeof record.Seconds !== 'number' || record.Seconds === 0) return;
 
             const durationInSeconds = record.Seconds;
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
 
-            if (record.Type === 'late') { // Future-proofing for late sign-ins with duration
-                typeText = "Late";
-                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.moderate) colorClass = COLORS.late.moderate;
-            } else if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
+            // Determine color shade based on duration
+            if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
                 typeText = "Long Sign Out";
                 if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
                 else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
                 else colorClass = COLORS.long.moderate;
             }
             
-            const segmentWidthPercent = (durationInSeconds / maxTotalSeconds) * 100;
+            const segmentWidthPercent = (durationInSeconds / totalSecondsOut) * 100;
             const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
             
-            barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%;" title="${tooltipText}"></div>`;
+            barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
         });
 
         // 7. Create and append the final row
         const tr = document.createElement('tr');
         tr.className = 'border-t';
-        
-        // Use a simpler hover effect now that the bar is the primary visual
-        if (longCount > 0 || lateCount > 0) tr.classList.add('hover:bg-gray-100');
 
         tr.innerHTML = `
             <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}</td>
@@ -290,8 +297,15 @@ function renderClassTrendsReport() {
             <td class="py-2 px-3 border-b text-center">${lateCount}</td>
             <td class="py-2 px-3 border-b text-center">${longCount}</td>
             <td class="py-2 px-3 border-b align-middle">
-                <div class="w-full h-5 bg-gray-200 border border-gray-400 flex" title="Total Time Out: ${formatSecondsToMMSS(totalSecondsOut)}">
-                    ${barSegmentsHtml}
+                <div class="flex items-center w-full">
+                    <div class="flex-grow h-5 bg-white">
+                        <div class="flex h-full" style="width: ${(totalSecondsOut / maxTotalSeconds) * 100}%;">
+                            ${barSegmentsHtml}
+                        </div>
+                    </div>
+                    <div class="w-20 text-right pl-2 font-semibold text-gray-700 text-sm">
+                        ${formatSecondsToHHMM(totalSecondsOut)}
+                    </div>
                 </div>
             </td>
         `;
