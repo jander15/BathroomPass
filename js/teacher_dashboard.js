@@ -139,31 +139,21 @@ function sortSignOutData(data) {
 
     data.sort((a, b) => {
         let valA, valB;
+
         switch (column) {
-            case 'Date':
-            case 'Time':
+            case 'Date': // Note: The 'Time' column is sorted by this same case
                 valA = new Date(a.Date);
                 valB = new Date(b.Date);
                 break;
-            case 'Name':
-                valA = normalizeName(a.Name || '');
-                valB = normalizeName(b.Name || '');
-                return valA.localeCompare(valB) * multiplier;
-            case 'Class':
-                valA = a.Class || '';
-                valB = b.Class || '';
-                return valA.localeCompare(valB) * multiplier;
-            case 'Type':
-                valA = a.Type || '';
-                valB = b.Type || '';
-                return valA.localeCompare(valB) * multiplier;
             case 'Duration':
-                valA = (a.Type === 'late' && typeof a.Seconds !== 'number') ? -1 : (a.Seconds || 0);
-                valB = (b.Type === 'late' && typeof b.Seconds !== 'number') ? -1 : (b.Seconds || 0);
+                // Treat entries without a duration (like old 'late' entries) as having 0 duration for sorting
+                valA = a.Seconds || 0;
+                valB = b.Seconds || 0;
                 break;
             default:
-                return 0;
+                return 0; // Don't sort if the column is not recognized
         }
+        
         if (valA < valB) return -1 * multiplier;
         if (valA > valB) return 1 * multiplier;
         return 0;
