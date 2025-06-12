@@ -37,7 +37,8 @@ const appState = {
           currentDashboardTab: 'signOut' 
     }, // Tracks which right-side panel is active
     sortState: {
-        signOut: { column: 'Date', direction: 'desc' }
+        signOut: { column: 'Date', direction: 'desc' },
+        classTrends: { column: 'TimeOut', direction: 'desc' }
     }
 };
 
