@@ -189,90 +189,108 @@ function renderClassTrendsReport() {
         late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
         long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
     };
-    
-    // Helper to assign a severity score for sorting segments: Late > Very High > High > Moderate > Normal
+
     const getSeverity = (record) => {
+        if (record.Type === 'late') return 5;
         if (typeof record.Seconds !== 'number') return 0;
-        if (record.Type === 'late') return 5; // Highest priority
         if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 4;
         if (record.Seconds >= DURATION_THRESHOLDS.high) return 3;
         if (record.Seconds >= DURATION_THRESHOLDS.moderate) return 2;
         return 1;
     };
 
-    const formatSecondsToHHMM = (totalSeconds) => { /* ... (this helper function remains unchanged) ... */ };
+    const formatSecondsToHHMM = (totalSeconds) => {
+        if (isNaN(totalSeconds) || totalSeconds <= 0) return "0m";
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        let result = '';
+        if (hours > 0) result += `${hours}h `;
+        if (minutes > 0 || hours === 0) result += `${minutes}m`;
+        return result.trim();
+    };
+    
+    const formatSecondsToMMSS = (totalSeconds) => {
+        if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
 
     // --- Main Function Logic ---
-    if (!appState.data.allSignOuts) { /* ... error handling ... */ return; }
+    if (!appState.data.allSignOuts) { trendsReportMessage.textContent = "Data is loading..."; return; }
     const selectedClass = trendsClassDropdown.value;
-    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { /* ... message handling ... */ return; }
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { trendsReportMessage.textContent = "Please select a class."; trendsReportTable.classList.add('hidden'); return; }
 
     trendsReportMessage.classList.add('hidden');
     trendsReportTable.classList.remove('hidden');
     trendsReportTableBody.innerHTML = '';
 
+    // 1. Determine Date Range from filters
     const filterType = trendsDateFilterType.value;
-    // ... (date range logic remains unchanged) ...
-
-    let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
-    // ... (filtering logic remains unchanged) ...
-
-    const studentTotals = {};
-    const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
+    let startDate, endDate;
+    let isAllTime = (filterType === 'all_time');
     
+    if (!isAllTime) {
+        if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
+        else if (filterType === 'dateRange' && trendsStartDate.value && trendsEndDate.value) {
+            startDate = new Date(trendsStartDate.value);
+            endDate = new Date(trendsEndDate.value);
+        }
+    }
+    
+    // 2. Filter all data for the selected class and period
+    let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
+    if (startDate && endDate) {
+        endDate.setHours(23, 59, 59); // Ensure end date is inclusive
+        classPeriodData = classPeriodData.filter(r => {
+            const recordDate = new Date(r.Date);
+            return recordDate >= startDate && recordDate <= endDate;
+        });
+    }
+
+    // 3. Pre-calculate the maximum total time for scaling the bars
+    const allStudentsInClass = appState.data.allNamesFromSheet
+        .filter(s => s.Class === selectedClass)
+        .map(s => normalizeName(s.Name));
+    
+    const studentTotals = {};
     allStudentsInClass.forEach(name => {
         studentTotals[name] = classPeriodData
             .filter(r => normalizeName(r.Name) === name && typeof r.Seconds === 'number')
             .reduce((acc, r) => acc + r.Seconds, 0);
     });
-    
+
     const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
 
+    // 4. Process and render each student
     allStudentsInClass.sort().forEach(normalizedStudentName => {
         let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
 
-        // 5. Sort records by severity for rendering the bar chart segments in the desired order.
         studentRecords.sort((a, b) => getSeverity(b) - getSeverity(a));
 
         const lateCount = studentRecords.filter(r => r.Type === 'late').length;
         const longCount = studentRecords.filter(r => r.Type === 'bathroom' && r.Seconds > DURATION_THRESHOLDS.moderate).length;
-        const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
+        const totalSecondsOut = studentTotals[normalizedStudentName];
 
         let barSegmentsHtml = '';
-        studentRecords.forEach(record => {
-            if (typeof record.Seconds !== 'number' || record.Seconds === 0) return;
+        const recordsWithDuration = studentRecords.filter(r => typeof r.Seconds === 'number' && r.Seconds > 0);
 
-            const durationInSeconds = record.Seconds;
+        recordsWithDuration.forEach(record => {
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
-
-            if (record.Type === 'late') {
-                typeText = "Late";
-                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
-                else colorClass = COLORS.late.moderate; // Any late duration will be at least moderate yellow
-            } else if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
-                typeText = "Long Sign Out";
-                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
-                else colorClass = COLORS.long.moderate;
-            }
-            
-            const segmentWidthPercent = (durationInSeconds / totalSecondsOut) * 100;
-            const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
-            
-            // Add a border to each segment to create the black separator lines
+            if (record.Type === 'late') { /* ... future proofing ... */ }
+            else if (record.Seconds > DURATION_THRESHOLDS.moderate) { /* ... long duration coloring ... */ }
+            const segmentWidthPercent = (record.Seconds / totalSecondsOut) * 100;
+            const tooltipText = `${typeText}: ${formatSecondsToMMSS(record.Seconds)} on ${formatDate(record.Date)}`;
             barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
         });
-
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
         
-        // ** REINSTATE ACCORDION ** Add attributes to make the row clickable
-        tr.classList.add('cursor-pointer');
-        tr.dataset.accordionToggle = "true";
-        tr.dataset.records = JSON.stringify(studentRecords);
+        const tr = document.createElement('tr');
+        tr.className = 'border-t cursor-pointer'; // ** FIX: Re-added cursor-pointer **
+        tr.dataset.accordionToggle = "true";     // ** FIX: Re-added data attribute **
+        tr.dataset.records = JSON.stringify(studentRecords); // ** FIX: Re-added data attribute **
 
         const totalBarWidthPercent = (totalSecondsOut / maxTotalSeconds) * 100;
 
@@ -284,10 +302,8 @@ function renderClassTrendsReport() {
             <td class="py-2 px-3 border-b align-middle">
                 <div class="flex items-center w-full">
                     <div class="flex-grow h-5 bg-white">
-                        <div class="flex h-full" style="width: ${totalBarWidthPercent}%;">
-                           <div class="flex w-full h-full border border-black">
-                             ${barSegmentsHtml}
-                           </div>
+                        <div class="flex h-full border border-black" style="width: ${totalBarWidthPercent}%;">
+                           ${barSegmentsHtml}
                         </div>
                     </div>
                     <div class="w-20 text-right pl-2 font-semibold text-gray-700 text-sm">
