@@ -55,15 +55,9 @@ const DURATION_THRESHOLDS = {
 };
 
 const COLORS = {
-    normal: 'bg-blue-200', // ** UPDATED COLOR **
+    normal: 'bg-blue-200',
     late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
     long:   { moderate: 'bg-red-200', high: 'bg-red-300', veryHigh: 'bg-red-500' }
-};
-
-const ROW_COLORS = {
-    normal: 'bg-blue-100',
-    late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
-    long:   { moderate: 'bg-red-100', high: 'bg-red-200', veryHigh: 'bg-red-300' }
 };
 
 function formatSecondsToMMSS(totalSeconds) {
@@ -181,15 +175,33 @@ function renderSignOutReport() {
         filteredData.forEach(row => {
             const tr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
+            
+            // ** UPDATED: Unified coloring and duration logic **
+            if (typeof row.Seconds === 'number') {
+                durationDisplay = formatSecondsToMMSS(row.Seconds);
+            }
+
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
-                tr.classList.add('bg-yellow-200');
+                if (typeof row.Seconds === 'number') {
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.late.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) tr.classList.add(COLORS.late.high);
+                    else tr.classList.add(COLORS.late.moderate);
+                } else {
+                     tr.classList.add(COLORS.late.moderate);
+                }
             } else if (typeof row.Seconds === 'number') {
-                durationDisplay = formatSecondsToMMSS(row.Seconds);
-                if (row.Seconds > TARDY_THRESHOLD_MINUTES * 60) {
-                    tr.classList.add('bg-red-200');
+                if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                    typeDisplay = "Long Sign Out";
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.long.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) tr.classList.add(COLORS.long.high);
+                    else tr.classList.add(COLORS.long.moderate);
+                } else {
+                    typeDisplay = "Normal Sign Out";
+                    tr.classList.add(COLORS.normal);
                 }
             }
+
             const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
             tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
@@ -334,14 +346,12 @@ function renderClassTrendsReport() {
         let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
 
-        // ** UPDATED: New sorting logic with secondary sort by duration **
         studentRecords.sort((a, b) => {
             const severityA = getSeverity(a);
             const severityB = getSeverity(b);
             if (severityA !== severityB) {
-                return severityB - severityA; // Primary sort: by severity
+                return severityB - severityA;
             }
-            // Secondary sort: by duration (descending) if severities are equal
             return (b.Seconds || 0) - (a.Seconds || 0);
         });
 
@@ -540,7 +550,7 @@ signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderS
 attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
 classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
-
+// Main Content Listener for Accordions and Edit Buttons
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
     if (editButton) {
@@ -593,10 +603,7 @@ dashboardContent.addEventListener('click', (event) => {
 
         const wrapperRow = document.createElement('tr');
         wrapperRow.className = 'details-wrapper-row';
-
-        // ** THE FIX: Moved this line up so 'wrapperCell' is defined before it's used. **
         const wrapperCell = document.createElement('td');
-        
         wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
         const detailsTable = document.createElement('table');
@@ -615,6 +622,10 @@ dashboardContent.addEventListener('click', (event) => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
             
+            if (typeof row.Seconds === 'number') {
+                durationDisplay = formatSecondsToMMSS(row.Seconds);
+            }
+
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 if (typeof row.Seconds === 'number') {
@@ -634,7 +645,6 @@ dashboardContent.addEventListener('click', (event) => {
                     typeDisplay = "Normal Sign Out";
                     detailTr.classList.add(COLORS.normal);
                 }
-                durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
 
             const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
