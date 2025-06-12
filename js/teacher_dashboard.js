@@ -54,16 +54,11 @@ const DURATION_THRESHOLDS = {
     veryHigh: 600    // 10 minutes
 };
 
+// ** FINAL COLOR PALETTE **
 const COLORS = {
-    normal: 'bg-blue-400', // Changed from gray to blue
-    late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
-    long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
-};
-
-const ROW_COLORS = {
-    normal: 'bg-blue-100', // Lighter blue for accordion rows
+    normal: 'bg-sky-200',
     late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
-    long:   { moderate: 'bg-red-100', high: 'bg-red-200', veryHigh: 'bg-red-300' }
+    long:   { moderate: 'bg-red-200', high: 'bg-red-300', veryHigh: 'bg-red-500' }
 };
 
 function formatSecondsToMMSS(totalSeconds) {
@@ -344,19 +339,21 @@ function renderClassTrendsReport() {
         recordsWithDuration.forEach(record => {
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
+            const durationInSeconds = record.Seconds;
+
             if (record.Type === 'late') {
                 typeText = "Late";
-                if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
-                else if (record.Seconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
+                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
+                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
                 else colorClass = COLORS.late.moderate;
-            } else if (record.Seconds > DURATION_THRESHOLDS.moderate) {
+            } else if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
                 typeText = "Long Sign Out";
-                if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
-                else if (record.Seconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
+                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
+                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
                 else colorClass = COLORS.long.moderate;
             }
-            const segmentWidthPercent = (totalSecondsOut > 0) ? (record.Seconds / totalSecondsOut) * 100 : 0;
-            const tooltipText = `${typeText}: ${formatSecondsToMMSS(record.Seconds)} on ${formatDate(record.Date)}`;
+            const segmentWidthPercent = (totalSecondsOut > 0) ? (durationInSeconds / totalSecondsOut) * 100 : 0;
+            const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
             barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
         });
         
@@ -582,7 +579,7 @@ dashboardContent.addEventListener('click', (event) => {
         if (records.length === 0) return;
 
         const wrapperRow = document.createElement('tr');
-        wrapperRow.className = 'details-wrapper-row'; // Removed bg-gray-50 for cleaner look
+        wrapperRow.className = 'details-wrapper-row';
         const wrapperCell = document.createElement('td');
         wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
@@ -606,19 +603,19 @@ dashboardContent.addEventListener('click', (event) => {
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 if (typeof row.Seconds === 'number') {
-                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(ROW_COLORS.late.veryHigh);
-                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(ROW_COLORS.late.high);
-                    else detailTr.classList.add(ROW_COLORS.late.moderate);
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.late.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.late.high);
+                    else detailTr.classList.add(COLORS.late.moderate);
                 } else {
-                     detailTr.classList.add(ROW_COLORS.late.moderate);
+                     detailTr.classList.add(COLORS.late.moderate);
                 }
             } else if (typeof row.Seconds === 'number') {
                 if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(ROW_COLORS.long.veryHigh);
-                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(ROW_COLORS.long.high);
-                    else detailTr.classList.add(ROW_COLORS.long.moderate);
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.long.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.long.high);
+                    else detailTr.classList.add(COLORS.long.moderate);
                 } else {
-                    detailTr.classList.add(ROW_COLORS.normal);
+                    detailTr.classList.add(COLORS.normal);
                 }
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
