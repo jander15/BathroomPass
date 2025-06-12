@@ -126,11 +126,11 @@ function updateSortIndicators() {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             const column = th.dataset.column;
-            indicator.textContent = ' ↕';
-            // ** FIX: Changed inactive arrow color to black **
-            indicator.style.color = '#1f2937'; // Default to black
+            indicator.textContent = '▲'; // Always show an up arrow on inactive sortable columns
+            indicator.style.color = '#d1d5db'; // Inactive color: light gray
             if (signOutState.column === column) {
-                indicator.textContent = signOutState.direction === 'asc' ? ' ▲' : ' ▼';
+                indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
+                indicator.style.color = '#1f2937'; // Active color: black
             }
         }
     });
@@ -430,7 +430,15 @@ function renderClassTrendsReport() {
     const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
 
     sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
-        studentRecords.sort((a, b) => getSeverity(b) - getSeverity(a));
+        studentRecords.sort((a, b) => {
+            const severityA = getSeverity(a);
+            const severityB = getSeverity(b);
+            if (severityA !== severityB) {
+                return severityB - severityA;
+            }
+            return (b.Seconds || 0) - (a.Seconds || 0);
+        });
+
         const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
         
         let barSegmentsHtml = '';
@@ -617,7 +625,31 @@ async function initializePageSpecificApp() {
             const timestamp = editButton.dataset.timestamp;
             const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
             if (record) {
-                // ... logic to open and populate the edit modal ...
+                const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
+                const uniqueStudents = [...new Set(studentsInClass)];
+                editStudentName.innerHTML = '';
+                uniqueStudents.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = normalizeName(name);
+                    option.textContent = normalizeName(name);
+                    editStudentName.appendChild(option);
+                });
+                editStudentName.value = record.Name;
+                const isLateSignIn = record.Type === 'late';
+                editDurationDiv.classList.toggle('hidden', isLateSignIn);
+                editTimeDiv.classList.toggle('hidden', !isLateSignIn);
+                if (isLateSignIn) {
+                    const d = new Date(record.Date);
+                    editTimeInput.value = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                } else if (typeof record.Seconds === 'number') {
+                    editMinutes.value = Math.floor(record.Seconds / 60);
+                    editSeconds.value = record.Seconds % 60;
+                } else {
+                    editMinutes.value = ''; editSeconds.value = '';
+                }
+                editModal.classList.remove('hidden');
+                saveEditBtn.dataset.timestamp = timestamp;
+                deleteEntryBtn.dataset.timestamp = timestamp;
             }
         } else if (event.target.closest('[data-accordion-toggle="true"]')) {
             const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
@@ -698,10 +730,67 @@ async function initializePageSpecificApp() {
     });
 
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-    deleteEntryBtn.addEventListener('click', () => { /* ... */ });
-    saveEditBtn.addEventListener('click', () => { /* ... */ });
-    signOutClassDropdown.addEventListener('change', () => { /* ... */ });
-    
+    deleteEntryBtn.addEventListener('click', () => {
+        const timestamp = deleteEntryBtn.dataset.timestamp;
+        if (timestamp && confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
+            handleDeleteEntry(timestamp);
+        }
+        editModal.classList.add('hidden');
+    });
+    saveEditBtn.addEventListener('click', () => {
+        const timestamp = saveEditBtn.dataset.timestamp;
+        const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
+        if (!record) { editModal.classList.add('hidden'); return; }
+
+        const newName = editStudentName.value;
+        const newType = record.Type;
+        let newSeconds, newTimestamp = null;
+
+        if (newType === 'late') {
+            newSeconds = 'Late Sign In';
+            const newTime = editTimeInput.value;
+            if (newTime) {
+                const originalDate = new Date(record.Date);
+                const [hours, minutes] = newTime.split(':');
+                originalDate.setHours(parseInt(hours, 10));
+                originalDate.setMinutes(parseInt(minutes, 10));
+                originalDate.setSeconds(0);
+                newTimestamp = originalDate.toISOString();
+            }
+        } else {
+            newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
+        }
+        if (timestamp && newName) handleEditEntry(timestamp, newName, newSeconds, newType, newTimestamp);
+        editModal.classList.add('hidden');
+    });
+
+    signOutClassDropdown.addEventListener('change', () => {
+        const selectedClass = signOutClassDropdown.value;
+        if (selectedClass && selectedClass !== "All Classes") {
+            const studentsInClass = appState.data.allNamesFromSheet
+                .filter(student => student.Class === selectedClass)
+                .map(student => student.Name).sort();
+            const uniqueStudents = [...new Set(studentsInClass)];
+            studentFilterDropdown.innerHTML = '';
+            const allStudentsOption = document.createElement('option');
+            allStudentsOption.value = "All Students";
+            allStudentsOption.textContent = "All Students";
+            studentFilterDropdown.appendChild(allStudentsOption);
+            uniqueStudents.forEach(studentFullName => {
+                const option = document.createElement('option');
+                const cleanName = normalizeName(studentFullName);
+                option.value = cleanName; 
+                option.textContent = cleanName;
+                studentFilterDropdown.appendChild(option);
+            });
+            studentFilterDropdown.removeAttribute('disabled');
+            studentFilterDiv.classList.remove('hidden');
+        } else {
+            studentFilterDiv.classList.add('hidden');
+        }
+        renderSignOutReport();
+    });
+
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
