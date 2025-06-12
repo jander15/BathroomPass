@@ -255,6 +255,7 @@ function renderClassTrendsReport() {
 
     const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
 
+    let studentRowIndex = 0; // Counter for zebra striping
     allStudentsInClass.sort().forEach(normalizedStudentName => {
         let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
@@ -269,40 +270,46 @@ function renderClassTrendsReport() {
         const recordsWithDuration = studentRecords.filter(r => typeof r.Seconds === 'number' && r.Seconds > 0);
 
         recordsWithDuration.forEach(record => {
-            // *** FIX: This block contains the restored color logic ***
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
-            const durationInSeconds = record.Seconds;
-
             if (record.Type === 'late') {
                 typeText = "Late";
-                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
+                if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
+                else if (record.Seconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.late.high;
                 else colorClass = COLORS.late.moderate;
-            } else if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
+            } else if (record.Seconds > DURATION_THRESHOLDS.moderate) {
                 typeText = "Long Sign Out";
-                if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
-                else if (durationInSeconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
+                if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.long.veryHigh;
+                else if (record.Seconds >= DURATION_THRESHOLDS.high) colorClass = COLORS.long.high;
                 else colorClass = COLORS.long.moderate;
             }
-            
-            const segmentWidthPercent = (durationInSeconds / totalSecondsOut) * 100;
-            const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
+            const segmentWidthPercent = (totalSecondsOut > 0) ? (record.Seconds / totalSecondsOut) * 100 : 0;
+            const tooltipText = `${typeText}: ${formatSecondsToMMSS(record.Seconds)} on ${formatDate(record.Date)}`;
             barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
         });
         
         const tr = document.createElement('tr');
-        tr.className = 'border-t cursor-pointer';
+        tr.className = 'border-t';
+        tr.classList.add('cursor-pointer');
         tr.dataset.accordionToggle = "true";
         tr.dataset.records = JSON.stringify(studentRecords);
 
+        // Apply row coloring: Red > Yellow > Zebra Stripes
+        if (longCount > 0) {
+            tr.classList.add('bg-red-200', 'hover:bg-red-300');
+        } else if (lateCount > 0) {
+            tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
+        } else {
+            if (studentRowIndex % 2 !== 0) tr.classList.add('bg-gray-50');
+            tr.classList.add('hover:bg-gray-200');
+        }
+
         const totalBarWidthPercent = (totalSecondsOut / maxTotalSeconds) * 100;
+        const arrowSvg = `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
 
         tr.innerHTML = `
-            <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}</td>
+            <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}${arrowSvg}</td>
             <td class="py-2 px-3 border-b text-center">${studentRecords.length}</td>
-            <td class="py-2 px-3 border-b text-center">${lateCount}</td>
-            <td class="py-2 px-3 border-b text-center">${longCount}</td>
             <td class="py-2 px-3 border-b align-middle">
                 <div class="flex items-center w-full">
                     <div class="flex-grow h-5 bg-white">
@@ -317,6 +324,7 @@ function renderClassTrendsReport() {
             </td>
         `;
         trendsReportTableBody.appendChild(tr);
+        studentRowIndex++; // Increment for next stripe
     });
 }
 
