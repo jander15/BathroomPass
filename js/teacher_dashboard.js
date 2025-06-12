@@ -18,28 +18,14 @@ const reportTable = document.getElementById('reportTable');
 const reportTableBody = document.getElementById('reportTableBody');
 const signOutReportTab = document.getElementById('signOutReportTab');
 const attendanceReportTab = document.getElementById('attendanceReportTab');
+const classTrendsTab = document.getElementById('classTrendsTab');
 const signOutReportContent = document.getElementById('signOutReportContent');
 const attendanceReportContent = document.getElementById('attendanceReportContent');
+const classTrendsContent = document.getElementById('classTrendsContent');
 const attendanceDateInput = document.getElementById('attendanceDate');
 const attendanceReportMessageP = document.getElementById('attendanceReportMessage');
 const attendanceReportTable = document.getElementById('attendanceReportTable');
 const attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
-// New Edit/Delete Modal Elements
-const editModal = document.getElementById('editModal');
-const editStudentName = document.getElementById('editStudentName');
-const editDurationDiv = document.getElementById('editDurationDiv');
-const editMinutes = document.getElementById('editMinutes');
-const editSeconds = document.getElementById('editSeconds');
-// *** NEW: Add new elements for time editing ***
-const editTimeDiv = document.getElementById('editTimeDiv');
-const editTimeInput = document.getElementById('editTimeInput');
-const saveEditBtn = document.getElementById('saveEditBtn');
-const cancelEditBtn = document.getElementById('cancelEditBtn');
-const deleteEntryBtn = document.getElementById('deleteEntryBtn');
-const dashboardContent = document.getElementById('dashboardContent');
-// *** NEW: Add caches for Class Trends report elements ***
-const classTrendsTab = document.getElementById('classTrendsTab');
-const classTrendsContent = document.getElementById('classTrendsContent');
 const trendsClassDropdown = document.getElementById('trendsClassDropdown');
 const trendsDateFilterType = document.getElementById('trendsDateFilterType');
 const trendsDateRangeInputs = document.getElementById('trendsDateRangeInputs');
@@ -48,9 +34,42 @@ const trendsEndDate = document.getElementById('trendsEndDate');
 const trendsReportMessage = document.getElementById('trendsReportMessage');
 const trendsReportTable = document.getElementById('trendsReportTable');
 const trendsReportTableBody = document.getElementById('trendsReportTableBody');
+const editModal = document.getElementById('editModal');
+const editStudentName = document.getElementById('editStudentName');
+const editDurationDiv = document.getElementById('editDurationDiv');
+const editMinutes = document.getElementById('editMinutes');
+const editSeconds = document.getElementById('editSeconds');
+const editTimeDiv = document.getElementById('editTimeDiv');
+const editTimeInput = document.getElementById('editTimeInput');
+const saveEditBtn = document.getElementById('saveEditBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const deleteEntryBtn = document.getElementById('deleteEntryBtn');
+const dashboardContent = document.getElementById('dashboardContent');
 
 
 // --- Helper & Formatting Functions ---
+const DURATION_THRESHOLDS = {
+    moderate: 300,   // 5 minutes
+    high: 450,       // 7.5 minutes
+    veryHigh: 600    // 10 minutes
+};
+
+function formatSecondsToMMSS(totalSeconds) {
+    if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatSecondsToHHMM(totalSeconds) {
+    if (isNaN(totalSeconds) || totalSeconds <= 0) return "0m";
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    let result = '';
+    if (hours > 0) result += `${hours}h `;
+    if (minutes > 0 || hours === 0) result += `${minutes}m`;
+    return result.trim();
+}
 
 function normalizeName(name) {
     if (typeof name !== 'string') return '';
@@ -80,22 +99,17 @@ function getMonthRange() {
 }
 
 function toggleDateInputs() {
-    const filter = dateFilterType.value;
-    specificDateInputDiv.classList.toggle('hidden', filter !== 'specificDate');
-    dateRangeInputsDiv.classList.toggle('hidden', filter !== 'dateRange');
+    specificDateInputDiv.classList.toggle('hidden', dateFilterType.value !== 'specificDate');
+    dateRangeInputsDiv.classList.toggle('hidden', dateFilterType.value !== 'dateRange');
+}
+
+function toggleTrendsDateInputs() {
+    trendsDateRangeInputs.classList.toggle('hidden', trendsDateFilterType.value !== 'dateRange');
 }
 
 function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
-
 function formatDate(d) { return d ? new Date(d).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }) : ''; }
 function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; }
-
-function formatSecondsToMMSS(totalSeconds) {
-    if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
 
 
 // --- Report Generation & UI Functions ---
@@ -159,9 +173,7 @@ function renderSignOutReport() {
                 typeDisplay = "Late Sign In";
                 tr.classList.add('bg-yellow-200');
             } else if (typeof row.Seconds === 'number') {
-                const minutes = Math.floor(row.Seconds / 60);
-                const seconds = row.Seconds % 60;
-                durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                durationDisplay = formatSecondsToMMSS(row.Seconds);
                 if (row.Seconds > TARDY_THRESHOLD_MINUTES * 60) {
                     tr.classList.add('bg-red-200');
                 }
@@ -174,16 +186,91 @@ function renderSignOutReport() {
     }
 }
 
-// *** NEW: Function to render the Class Trends report ***
+function switchTab(tab) {
+    appState.ui.currentDashboardTab = tab;
+    const isSignOut = tab === 'signOut';
+    const isAttendance = tab === 'attendance';
+    const isTrends = tab === 'classTrends';
+
+    signOutReportContent.classList.toggle('hidden', !isSignOut);
+    attendanceReportContent.classList.toggle('hidden', !isAttendance);
+    classTrendsContent.classList.toggle('hidden', !isTrends);
+
+    [signOutReportTab, attendanceReportTab, classTrendsTab].forEach(t => {
+        t.classList.remove('border-indigo-500', 'text-indigo-600');
+        t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+    });
+
+    if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
+}
+
+function renderAttendanceReport() {
+    if (!appState.data.allSignOuts) {
+        attendanceReportMessageP.textContent = "Initial data is still loading...";
+        attendanceReportMessageP.classList.remove('hidden');
+        return;
+    }
+    const selectedClass = attendanceClassDropdown.value;
+    const selectedDate = attendanceDateInput.value;
+    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION || !selectedDate) {
+        attendanceReportMessageP.textContent = "Please select a class and a date.";
+        attendanceReportMessageP.classList.remove('hidden');
+        attendanceReportTable.classList.add('hidden');
+        return;
+    }
+    attendanceReportMessageP.classList.add('hidden');
+    attendanceReportTable.classList.remove('hidden');
+    attendanceReportTableBody.innerHTML = '';
+    
+    const start = new Date(selectedDate + 'T00:00:00');
+    const end = new Date(selectedDate + 'T23:59:59');
+    
+    const dailySignOuts = appState.data.allSignOuts.filter(record => {
+        const recordDate = new Date(record.Date);
+        return !record.Deleted && recordDate >= start && recordDate <= end && record.Class === selectedClass;
+    });
+
+    const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
+    
+    allStudentsInClass.forEach(studentFullName => {
+        const normalizedStudentName = normalizeName(studentFullName);
+        const studentRecords = dailySignOuts.filter(r => normalizeName(r.Name) === normalizedStudentName);
+        let status = "Present", reason = "N/A", hasLong = false, hasLate = false;
+        if (studentRecords.length > 0) {
+            let longCount = 0, outCount = 0;
+            studentRecords.forEach(r => {
+                if (r.Type === "late") hasLate = true;
+                else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
+                    outCount++;
+                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) { hasLong = true; longCount++; }
+                }
+            });
+            let reasons = [];
+            if (hasLate) reasons.push("Late Sign In");
+            if (outCount > 0) reasons.push(`${outCount} Sign Out(s)`);
+            if (longCount > 0) reasons.push(`(${longCount} > 5 min)`);
+            reason = reasons.join(' ');
+            status = (hasLate || hasLong) ? "Needs Review" : "Activity Recorded";
+        }
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        if (studentRecords.length > 0) {
+            tr.classList.add('cursor-pointer');
+            tr.dataset.accordionToggle = "true";
+            tr.dataset.records = JSON.stringify(studentRecords);
+            if (hasLong) tr.classList.add('bg-red-200', 'hover:bg-red-300');
+            else if (hasLate) tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
+            else tr.classList.add('bg-blue-100', 'hover:bg-blue-200');
+        }
+        const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
+        tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
+        attendanceReportTableBody.appendChild(tr);
+    });
+}
 
 function renderClassTrendsReport() {
-    // --- Thresholds, Colors, and Severity Definitions ---
-    const DURATION_THRESHOLDS = {
-        moderate: 300,   // 5 minutes
-        high: 450,       // 7.5 minutes
-        veryHigh: 600    // 10 minutes
-    };
-
     const COLORS = {
         normal: 'bg-gray-400',
         late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
@@ -199,24 +286,6 @@ function renderClassTrendsReport() {
         return 1;
     };
 
-    const formatSecondsToHHMM = (totalSeconds) => {
-        if (isNaN(totalSeconds) || totalSeconds <= 0) return "0m";
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        let result = '';
-        if (hours > 0) result += `${hours}h `;
-        if (minutes > 0 || hours === 0) result += `${minutes}m`;
-        return result.trim();
-    };
-    
-    const formatSecondsToMMSS = (totalSeconds) => {
-        if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = Math.floor(totalSeconds % 60);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
-
-    // --- Main Function Logic ---
     if (!appState.data.allSignOuts) { trendsReportMessage.textContent = "Data is loading..."; return; }
     const selectedClass = trendsClassDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { trendsReportMessage.textContent = "Please select a class."; trendsReportTable.classList.add('hidden'); return; }
@@ -286,9 +355,7 @@ function renderClassTrendsReport() {
         });
         
         const tr = document.createElement('tr');
-        // ** FIX: Simplified row classes for a clean look with a border and hover effect **
-        tr.className = 'border-t hover:bg-gray-100';
-        tr.classList.add('cursor-pointer');
+        tr.className = 'border-t hover:bg-gray-100 cursor-pointer';
         tr.dataset.accordionToggle = "true";
         tr.dataset.records = JSON.stringify(studentRecords);
 
@@ -314,56 +381,9 @@ function renderClassTrendsReport() {
         trendsReportTableBody.appendChild(tr);
     });
 }
-// *** NEW: Helper to toggle date range inputs for the trends report ***
-function toggleTrendsDateInputs() {
-    trendsDateRangeInputs.classList.toggle('hidden', trendsDateFilterType.value !== 'dateRange');
-}
-
-function switchTab(tab) {
-    // *** UPDATED: Store the currently active tab in the global state ***
-    appState.ui.currentDashboardTab = tab;
-
-    const isSignOut = tab === 'signOut';
-    const isAttendance = tab === 'attendance';
-    const isTrends = tab === 'classTrends';
-
-    // Toggle Content Panes
-    signOutReportContent.classList.toggle('hidden', !isSignOut);
-    attendanceReportContent.classList.toggle('hidden', !isAttendance);
-    classTrendsContent.classList.toggle('hidden', !isTrends);
-
-    // Toggle Tab Styles
-    [signOutReportTab, attendanceReportTab, classTrendsTab].forEach(t => {
-        t.classList.remove('border-indigo-500', 'text-indigo-600');
-        t.classList.add('border-transparent', 'text-gray-500');
-    });
-
-    if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-    else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-    else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
-}
 
 
-async function handleDeleteEntry(timestamp) {
-    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
-    try {
-        const response = await sendAuthenticatedRequest(payload);
-        if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Deleted = true;
-            }
-            
-            // *** UPDATED: Call the correct render function based on the active tab ***
-            const activeTab = appState.ui.currentDashboardTab;
-            if (activeTab === 'signOut') renderSignOutReport();
-            else if (activeTab === 'attendance') renderAttendanceReport();
-            else if (activeTab === 'classTrends') renderClassTrendsReport();
-
-        } else { throw new Error(response.error || 'Failed to delete entry from server.'); }
-    } catch (error) { console.error('Error deleting entry:', error); }
-}
-
+// --- Data & State Management Functions ---
 
 async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
     const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
@@ -375,93 +395,30 @@ async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, 
                 appState.data.allSignOuts[entryIndex].Name = newName;
                 appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
                 appState.data.allSignOuts[entryIndex].Type = newType;
-                if (newTimestamp) {
-                    appState.data.allSignOuts[entryIndex].Date = newTimestamp;
-                }
+                if (newTimestamp) appState.data.allSignOuts[entryIndex].Date = newTimestamp;
             }
-            
-            // *** UPDATED: Call the correct render function based on the active tab ***
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
             else if (activeTab === 'classTrends') renderClassTrendsReport();
-
-        } else { throw new Error(response.error || 'Failed to edit entry on server.'); }
+        } else { throw new Error(response.error || 'Failed to edit entry.'); }
     } catch (error) { console.error('Error editing entry:', error); }
 }
 
-function renderAttendanceReport() {
-    if (!appState.data.allSignOuts) {
-        attendanceReportMessageP.textContent = "Initial data is still loading. Please wait a moment...";
-        attendanceReportMessageP.classList.remove('hidden');
-        return;
-    }
-    const selectedClass = attendanceClassDropdown.value;
-    const selectedDate = attendanceDateInput.value;
-    if (selectedClass === "" || selectedClass === DEFAULT_CLASS_OPTION || !selectedDate) {
-        attendanceReportMessageP.textContent = "Please select a class and a date.";
-        attendanceReportMessageP.classList.remove('hidden');
-        attendanceReportTable.classList.add('hidden');
-        return;
-    }
-    attendanceReportMessageP.classList.add('hidden');
-    attendanceReportTable.classList.remove('hidden');
-    attendanceReportTableBody.innerHTML = '';
-    
-    const start = new Date(selectedDate + 'T00:00:00');
-    const end = new Date(selectedDate + 'T23:59:59');
-    
-    const dailySignOuts = appState.data.allSignOuts.filter(record => {
-        const recordDate = new Date(record.Date);
-        return !record.Deleted && recordDate >= start && recordDate <= end && record.Class === selectedClass;
-    });
-
-    const allStudentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => s.Name).sort();
-    
-    let presentStudentIndex = 0;
-    allStudentsInClass.forEach(studentFullName => {
-        const normalizedStudentName = normalizeName(studentFullName);
-        const studentRecords = dailySignOuts.filter(r => normalizeName(r.Name) === normalizedStudentName);
-        let status = "Present", reason = "N/A", hasLong = false, hasLate = false;
-        if (studentRecords.length > 0) {
-            let longCount = 0, outCount = 0;
-            studentRecords.forEach(r => {
-                if (r.Type === "late") hasLate = true;
-                else if (r.Type === 'bathroom' && typeof r.Seconds === 'number') {
-                    outCount++;
-                    if (r.Seconds > TARDY_THRESHOLD_MINUTES * 60) { hasLong = true; longCount++; }
-                }
-            });
-            let reasons = [];
-            if (hasLate) reasons.push("Late Sign In");
-            if (outCount > 0) reasons.push(`${outCount} Sign Out(s)`);
-            if (longCount > 0) reasons.push(`(${longCount} > 5 min)`);
-            reason = reasons.join(' ');
-            status = (hasLate || hasLong) ? "Needs Review" : "Activity Recorded";
-        }
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
-        if (studentRecords.length > 0) {
-            tr.classList.add('cursor-pointer');
-            tr.dataset.accordionToggle = "true";
-            tr.dataset.records = JSON.stringify(studentRecords);
-
-            // *** UPDATED: New red/yellow/blue coloring logic for parent rows ***
-            if (hasLong) {
-                tr.classList.add('bg-red-200', 'hover:bg-red-300');
-            } else if (hasLate) {
-                tr.classList.add('bg-yellow-200', 'hover:bg-yellow-300');
-            } else {
-                tr.classList.add('bg-blue-100', 'hover:bg-blue-200');
-            }
-        } else {
-            if (presentStudentIndex % 2 !== 0) tr.classList.add('bg-gray-50');
-            presentStudentIndex++;
-        }
-        const arrowSvg = studentRecords.length > 0 ? `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>` : '';
-        tr.innerHTML = `<td class="py-3 px-4">${normalizeName(studentFullName)}${arrowSvg}</td><td class="py-3 px-4">${status}</td><td class="py-3 px-4">${reason}</td>`;
-        attendanceReportTableBody.appendChild(tr);
-    });
+async function handleDeleteEntry(timestamp) {
+    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+    try {
+        const response = await sendAuthenticatedRequest(payload);
+        if (response.result === 'success') {
+            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
+            if (entryIndex > -1) appState.data.allSignOuts[entryIndex].Deleted = true;
+            
+            const activeTab = appState.ui.currentDashboardTab;
+            if (activeTab === 'signOut') renderSignOutReport();
+            else if (activeTab === 'attendance') renderAttendanceReport();
+            else if (activeTab === 'classTrends') renderClassTrendsReport();
+        } else { throw new Error(response.error || 'Failed to delete entry.'); }
+    } catch (error) { console.error('Error deleting entry:', error); }
 }
 
 async function fetchAllSignOutData() {
@@ -477,6 +434,7 @@ async function fetchAllSignOutData() {
             appState.data.allSignOuts = data.report;
             renderSignOutReport();
             renderAttendanceReport();
+            renderClassTrendsReport();
         } else { throw new Error(data.error || "Failed to fetch all data."); }
     } catch (error) {
         console.error("Failed to fetch all sign out data:", error);
@@ -488,47 +446,43 @@ async function fetchAllSignOutData() {
 }
 
 async function initializePageSpecificApp() {
-    [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown, trendsClassDropdown].forEach(dd => {
+    [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
-
     dateFilterType.value = 'today';
     toggleDateInputs();
     reportDateInput.value = getTodayDateString(); 
     startDateInput.value = getTodayDateString();
     endDateInput.value = getTodayDateString();
     attendanceDateInput.value = getTodayDateString();
+    trendsDateFilterType.value = 'this_week';
+    toggleTrendsDateInputs();
+
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
             await fetchAllStudentData(); 
             await populateCourseDropdownFromData();
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
-
-            populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-            trendsClassDropdown.removeAttribute("disabled");
-
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             attendanceClassDropdown.removeAttribute("disabled");
+            populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+            trendsClassDropdown.removeAttribute("disabled");
             await fetchAllSignOutData();
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
-            [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
+            [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
         }
-        // Set default for new report
-        trendsDateFilterType.value = 'this_week';
-        toggleTrendsDateInputs();
-        switchTab('signOut'); // Default to first tab
     } else {
         console.warn("User not authenticated.");
-        [signOutClassDropdown, attendanceClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
+        [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
     }
     switchTab('signOut');
 }
 
 function resetPageSpecificAppState() {
     appState.data = { allNamesFromSheet: [], courses: [], allSignOuts: [] }; 
-    [signOutClassDropdown, attendanceClassDropdown, studentFilterDropdown].forEach(dd => {
+    [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown].forEach(dd => {
         if(dd) { populateDropdown(dd.id, [], DEFAULT_CLASS_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
     });
     studentFilterDiv.classList.add('hidden');
@@ -538,44 +492,80 @@ function resetPageSpecificAppState() {
     reportMessageP.textContent = "Select filters to view data.";
     attendanceReportTable.classList.add('hidden');
     attendanceReportMessageP.textContent = "Select a class and date to generate the attendance report.";
+    trendsReportTable.classList.add('hidden');
+    trendsReportMessage.textContent = "Select a class to view trends.";
     switchTab('signOut');
 }
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', initGoogleSignIn);
 reloadDataBtn.addEventListener('click', fetchAllSignOutData);
+
+// Listeners for Sign Out Report
 [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
     if(el) el.addEventListener('change', renderSignOutReport);
 });
 dateFilterType.addEventListener('change', toggleDateInputs);
-signOutReportTab.addEventListener('click', () => switchTab('signOut'));
-attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
+
+// Listeners for Attendance Report
 attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
 attendanceDateInput.addEventListener('change', renderAttendanceReport);
 
+// Listeners for Class Trends Report
+trendsClassDropdown.addEventListener('change', renderClassTrendsReport);
+trendsDateFilterType.addEventListener('change', () => {
+    toggleTrendsDateInputs();
+    renderClassTrendsReport();
+});
+[trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
 
+// Tab Listeners
+signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
+attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
+classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
+
+// Main Content Listener for Accordions and Edit Buttons
 dashboardContent.addEventListener('click', (event) => {
     const editButton = event.target.closest('.edit-btn');
-
     if (editButton) {
         event.stopPropagation();
         const timestamp = editButton.dataset.timestamp;
         const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
         if (record) {
-            // ... (existing edit modal logic remains unchanged) ...
+            const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
+            const uniqueStudents = [...new Set(studentsInClass)];
+            editStudentName.innerHTML = '';
+            uniqueStudents.forEach(name => {
+                const option = document.createElement('option');
+                option.value = normalizeName(name);
+                option.textContent = normalizeName(name);
+                editStudentName.appendChild(option);
+            });
+            editStudentName.value = record.Name;
+            const isLateSignIn = record.Type === 'late';
+            editDurationDiv.classList.toggle('hidden', isLateSignIn);
+            editTimeDiv.classList.toggle('hidden', !isLateSignIn);
+            if (isLateSignIn) {
+                const d = new Date(record.Date);
+                editTimeInput.value = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            } else if (typeof record.Seconds === 'number') {
+                editMinutes.value = Math.floor(record.Seconds / 60);
+                editSeconds.value = record.Seconds % 60;
+            } else {
+                editMinutes.value = ''; editSeconds.value = '';
+            }
+            editModal.classList.remove('hidden');
+            saveEditBtn.dataset.timestamp = timestamp;
+            deleteEntryBtn.dataset.timestamp = timestamp;
         }
     } else if (event.target.closest('[data-accordion-toggle="true"]')) {
         const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
         event.stopPropagation();
         const nextElement = accordionRow.nextElementSibling;
         
-        // ** FIX: Add/remove a class to highlight the expanded row **
         accordionRow.classList.toggle('bg-blue-50');
-
         const arrow = accordionRow.querySelector('svg');
-        if (arrow) {
-            arrow.classList.toggle('rotate-180');
-        }
+        if (arrow) arrow.classList.toggle('rotate-180');
 
         if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
             nextElement.classList.toggle('hidden');
@@ -588,55 +578,37 @@ dashboardContent.addEventListener('click', (event) => {
         const wrapperRow = document.createElement('tr');
         wrapperRow.className = 'details-wrapper-row bg-gray-50';
         const wrapperCell = document.createElement('td');
-        wrapperCell.colSpan = 3; // Adjusted to match new column count
+        wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
-
         const detailsTable = document.createElement('table');
         detailsTable.className = 'min-w-full';
-
         const detailsHead = document.createElement('thead');
         detailsHead.innerHTML = `
             <tr class="bg-gray-200 text-sm">
-                <th class="py-1 px-2 border-b text-left">Date</th>
-                <th class="py-1 px-2 border-b text-left">Time</th>
-                <th class="py-1 px-2 border-b text-left">Class</th>
-                <th class="py-1 px-2 border-b text-left">Name</th>
-                <th class="py-1 px-2 border-b text-left">Type</th>
-                <th class="py-1 px-2 border-b text-left">Duration</th>
+                <th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th>
+                <th class="py-1 px-2 border-b text-left">Class</th><th class="py-1 px-2 border-b text-left">Name</th>
+                <th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th>
                 <th class="py-1 px-2 border-b text-right w-12">Edit</th>
-            </tr>
-        `;
+            </tr>`;
         detailsTable.appendChild(detailsHead);
-
         const detailsBody = document.createElement('tbody');
         records.forEach(row => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
-
             if (row.Type === 'late') {
-                typeDisplay = "Late Sign In";
-                detailTr.classList.add('bg-yellow-100');
+                typeDisplay = "Late Sign In"; detailTr.classList.add('bg-yellow-100');
             } else if (typeof row.Seconds === 'number') {
-                if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                    detailTr.classList.add('bg-red-100');
-                }
+                if (row.Seconds > DURATION_THRESHOLDS.moderate) detailTr.classList.add('bg-red-100');
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
-
             const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-            
             detailTr.innerHTML = `
-                <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td>
-                <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
-                <td class="py-2 px-2 border-b">${getShortClassName(row.Class)}</td>
-                <td class="py-2 px-2 border-b">${normalizeName(row.Name)}</td>
-                <td class="py-2 px-2 border-b">${typeDisplay}</td>
-                <td class="py-2 px-2 border-b">${durationDisplay}</td>
-                <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>
-            `;
+                <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
+                <td class="py-2 px-2 border-b">${getShortClassName(row.Class)}</td><td class="py-2 px-2 border-b">${normalizeName(row.Name)}</td>
+                <td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td>
+                <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
             detailsBody.appendChild(detailTr);
         });
-
         detailsTable.appendChild(detailsBody);
         wrapperCell.appendChild(detailsTable);
         wrapperRow.appendChild(wrapperCell);
@@ -644,72 +616,55 @@ dashboardContent.addEventListener('click', (event) => {
     }
 });
 
+// Edit Modal Listeners
 cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-
-// *** UPDATED: Save logic now handles the new time input ***
+deleteEntryBtn.addEventListener('click', () => {
+    const timestamp = deleteEntryBtn.dataset.timestamp;
+    if (timestamp && confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
+        handleDeleteEntry(timestamp);
+    }
+    editModal.classList.add('hidden');
+});
 saveEditBtn.addEventListener('click', () => {
     const timestamp = saveEditBtn.dataset.timestamp;
     const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
-    if (!record) {
-        console.error("Could not find record to save.");
-        editModal.classList.add('hidden');
-        return;
-    }
+    if (!record) { editModal.classList.add('hidden'); return; }
 
     const newName = editStudentName.value;
     const newType = record.Type;
-    let newSeconds;
-    let newTimestamp = null; // Will only be set if time is changed
+    let newSeconds, newTimestamp = null;
 
     if (newType === 'late') {
         newSeconds = 'Late Sign In';
-        const newTime = editTimeInput.value; // e.g., "14:30"
+        const newTime = editTimeInput.value;
         if (newTime) {
             const originalDate = new Date(record.Date);
             const [hours, minutes] = newTime.split(':');
             originalDate.setHours(parseInt(hours, 10));
             originalDate.setMinutes(parseInt(minutes, 10));
-            originalDate.setSeconds(0); // Standardize seconds to 0 for time edits
+            originalDate.setSeconds(0);
             newTimestamp = originalDate.toISOString();
         }
     } else {
-        const minutes = parseInt(editMinutes.value) || 0;
-        const seconds = parseInt(editSeconds.value) || 0;
-        newSeconds = (minutes * 60) + seconds;
+        newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
     }
-
-    if (timestamp && newName) {
-        handleEditEntry(timestamp, newName, newSeconds, newType, newTimestamp);
-    }
+    if (timestamp && newName) handleEditEntry(timestamp, newName, newSeconds, newType, newTimestamp);
     editModal.classList.add('hidden');
 });
 
-deleteEntryBtn.addEventListener('click', () => {
-    const timestamp = deleteEntryBtn.dataset.timestamp;
-    if (timestamp) {
-        if (confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
-            handleDeleteEntry(timestamp);
-        }
-    }
-    editModal.classList.add('hidden');
-});
-
+// Student Filter Dropdown Listener for Sign Out Report
 signOutClassDropdown.addEventListener('change', () => {
     const selectedClass = signOutClassDropdown.value;
     if (selectedClass && selectedClass !== "All Classes") {
         const studentsInClass = appState.data.allNamesFromSheet
             .filter(student => student.Class === selectedClass)
-            .map(student => student.Name)
-            .sort();
-        
+            .map(student => student.Name).sort();
         const uniqueStudents = [...new Set(studentsInClass)];
-        
         studentFilterDropdown.innerHTML = '';
         const allStudentsOption = document.createElement('option');
         allStudentsOption.value = "All Students";
         allStudentsOption.textContent = "All Students";
         studentFilterDropdown.appendChild(allStudentsOption);
-
         uniqueStudents.forEach(studentFullName => {
             const option = document.createElement('option');
             const cleanName = normalizeName(studentFullName);
@@ -717,7 +672,6 @@ signOutClassDropdown.addEventListener('change', () => {
             option.textContent = cleanName;
             studentFilterDropdown.appendChild(option);
         });
-        
         studentFilterDropdown.removeAttribute('disabled');
         studentFilterDiv.classList.remove('hidden');
     } else {
@@ -725,12 +679,3 @@ signOutClassDropdown.addEventListener('change', () => {
     }
     renderSignOutReport();
 });
-
-// *** NEW: Event listeners for the Class Trends tab ***
-classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
-trendsClassDropdown.addEventListener('change', renderClassTrendsReport);
-trendsDateFilterType.addEventListener('change', () => {
-    toggleTrendsDateInputs();
-    renderClassTrendsReport();
-});
-[trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
