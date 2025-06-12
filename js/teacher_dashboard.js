@@ -56,8 +56,8 @@ const DURATION_THRESHOLDS = {
 
 // ** FINAL COLOR PALETTE **
 const COLORS = {
-    normal: 'bg-sky-200',
-    late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
+    normal: 'bg-blue-200',
+    late:   { moderate: 'bg-yellow-200', high: 'bg-yellow-300', veryHigh: 'bg-yellow-400' },
     long:   { moderate: 'bg-red-200', high: 'bg-red-300', veryHigh: 'bg-red-500' }
 };
 
