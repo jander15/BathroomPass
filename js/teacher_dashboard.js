@@ -126,11 +126,13 @@ function updateSortIndicators() {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             const column = th.dataset.column;
-            indicator.textContent = '▲'; // Always show an up arrow on inactive sortable columns
-            indicator.style.color = '#d1d5db'; // Inactive color: light gray
+            // ** FIX: Always show black triangles, with active one being solid and inactive being an outline/lighter **
             if (signOutState.column === column) {
                 indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
-                indicator.style.color = '#1f2937'; // Active color: black
+                indicator.style.color = '#111827'; // Active color: black
+            } else {
+                indicator.textContent = '▲'; // Show an inactive up arrow
+                indicator.style.color = '#9ca3af';   // Inactive color: medium gray
             }
         }
     });
@@ -140,10 +142,13 @@ function updateSortIndicators() {
     document.querySelectorAll('#trendsReportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
-            if (th.dataset.column === trendsState.column) {
+            // ** FIX: Logic to show indicators in the Trends report header **
+            if (trendsState.column === th.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
+                indicator.style.color = '#111827';
             } else {
-                indicator.textContent = '';
+                indicator.textContent = ' ▲';
+                indicator.style.color = '#d1d5db';
             }
         }
     });
@@ -376,7 +381,13 @@ function renderAttendanceReport() {
 
 function renderClassTrendsReport() {
     const getSeverity = (record) => {
-        if (record.Type === 'late') return 5;
+        // ** FIX: New severity scores to correctly sort LATE entries by duration **
+        if (record.Type === 'late') {
+            if (typeof record.Seconds !== 'number') return 5; // A late entry with no duration is still severe
+            if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 7;
+            if (record.Seconds >= DURATION_THRESHOLDS.high) return 6;
+            return 5;
+        }
         if (typeof record.Seconds !== 'number') return 0;
         if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 4;
         if (record.Seconds >= DURATION_THRESHOLDS.high) return 3;
@@ -384,9 +395,9 @@ function renderClassTrendsReport() {
         return 1;
     };
 
-    if (!appState.data.allSignOuts) { trendsReportMessage.textContent = "Data is loading..."; return; }
+    if (!appState.data.allSignOuts) { /* ... */ return; }
     const selectedClass = trendsClassDropdown.value;
-    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { trendsReportMessage.textContent = "Please select a class."; trendsReportTable.classList.add('hidden'); return; }
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { /* ... */ return; }
 
     trendsReportMessage.classList.add('hidden');
     trendsReportTable.classList.remove('hidden');
@@ -430,12 +441,14 @@ function renderClassTrendsReport() {
     const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
 
     sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
+        // ** FIX: Corrected sorting logic with secondary sort **
         studentRecords.sort((a, b) => {
             const severityA = getSeverity(a);
             const severityB = getSeverity(b);
             if (severityA !== severityB) {
-                return severityB - severityA;
+                return severityB - severityA; // Primary sort: by severity
             }
+            // Secondary sort: by duration (descending) if severities are equal
             return (b.Seconds || 0) - (a.Seconds || 0);
         });
 
@@ -492,6 +505,7 @@ function renderClassTrendsReport() {
     });
     updateSortIndicators();
 }
+
 
 
 // --- Data & State Management Functions ---

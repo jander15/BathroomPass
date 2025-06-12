@@ -50,3 +50,32 @@ iframe[name="iframe"] {
      line-height: 1.1;
      color: #030000; /* black */
 }
+
+/* Add these new rules for the bar segment hover effects */
+.bg-blue-200:hover {
+    background-color: #60a5fa; /* A darker shade of blue-200 */
+}
+
+.bg-yellow-100:hover {
+    background-color: #fde047; /* A darker shade of yellow-100 */
+}
+
+.bg-yellow-200:hover {
+    background-color: #facc15; /* A darker shade of yellow-200 */
+}
+
+.bg-yellow-300:hover {
+    background-color: #eab308; /* A darker shade of yellow-300 */
+}
+
+.bg-red-200:hover {
+    background-color: #fca5a5; /* A darker shade of red-200 */
+}
+
+.bg-red-300:hover {
+    background-color: #f87171; /* A darker shade of red-300 */
+}
+
+.bg-red-500:hover {
+    background-color: #ef4444; /* A darker shade of red-500 */
+}
