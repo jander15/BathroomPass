@@ -169,6 +169,7 @@
                 </div>
                 <div id="trendsReportOutput" class="mt-8 overflow-x-auto">
                     <p id="trendsReportMessage" class="text-center text-gray-600">Select a class to view trends.</p>
+                    <!-- Inside teacher_dashboard.html -->
                     <table id="trendsReportTable" class="min-w-full bg-white hidden">
                         <thead>
                             <tr class="bg-gray-100 text-sm">
@@ -176,7 +177,15 @@
                                 <th class="py-2 px-3 border-b text-center" title="Total Sign-Outs + Late Sign-Ins"># Entries</th>
                                 <th class="py-2 px-3 border-b text-center" title="Number of Late Sign-Ins"># Late</th>
                                 <th class="py-2 px-3 border-b text-center" title="Number of sign-outs longer than 5 minutes"># Long</th>
-                                <th class="py-2 px-3 border-b text-left w-1/2">Time Out Breakdown</th>
+                                <th class="py-2 px-3 border-b text-left w-1/2">
+                                    Time Out Breakdown
+                                    <div class="flex items-center space-x-2 text-xs font-normal text-gray-600 mt-1">
+                                        <span>Key:</span>
+                                        <div class="w-3 h-3 bg-red-700 rounded-sm"></div><span>Long</span>
+                                        <div class="w-3 h-3 bg-yellow-500 rounded-sm"></div><span>Late</span>
+                                        <div class="w-3 h-3 bg-gray-400 rounded-sm"></div><span>Normal</span>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="trendsReportTableBody"></tbody>
