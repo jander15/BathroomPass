@@ -54,11 +54,16 @@ const DURATION_THRESHOLDS = {
     veryHigh: 600    // 10 minutes
 };
 
-// ** FINAL COLOR PALETTE **
 const COLORS = {
-    normal: 'bg-blue-200',
-    late:   { moderate: 'bg-yellow-200', high: 'bg-yellow-300', veryHigh: 'bg-yellow-400' },
+    normal: 'bg-blue-200', // ** UPDATED COLOR **
+    late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
     long:   { moderate: 'bg-red-200', high: 'bg-red-300', veryHigh: 'bg-red-500' }
+};
+
+const ROW_COLORS = {
+    normal: 'bg-blue-100',
+    late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
+    long:   { moderate: 'bg-red-100', high: 'bg-red-200', veryHigh: 'bg-red-300' }
 };
 
 function formatSecondsToMMSS(totalSeconds) {
@@ -329,7 +334,16 @@ function renderClassTrendsReport() {
         let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
         if (studentRecords.length === 0) return;
 
-        studentRecords.sort((a, b) => getSeverity(b) - getSeverity(a));
+        // ** UPDATED: New sorting logic with secondary sort by duration **
+        studentRecords.sort((a, b) => {
+            const severityA = getSeverity(a);
+            const severityB = getSeverity(b);
+            if (severityA !== severityB) {
+                return severityB - severityA; // Primary sort: by severity
+            }
+            // Secondary sort: by duration (descending) if severities are equal
+            return (b.Seconds || 0) - (a.Seconds || 0);
+        });
 
         const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
 
@@ -340,7 +354,6 @@ function renderClassTrendsReport() {
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
             const durationInSeconds = record.Seconds;
-
             if (record.Type === 'late') {
                 typeText = "Late";
                 if (durationInSeconds >= DURATION_THRESHOLDS.veryHigh) colorClass = COLORS.late.veryHigh;
@@ -580,7 +593,6 @@ dashboardContent.addEventListener('click', (event) => {
 
         const wrapperRow = document.createElement('tr');
         wrapperRow.className = 'details-wrapper-row';
-        const wrapperCell = document.createElement('td');
         wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
         const detailsTable = document.createElement('table');
@@ -599,7 +611,6 @@ dashboardContent.addEventListener('click', (event) => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
             
-            // ** FIX: Apply 3-tier coloring to accordion rows **
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 if (typeof row.Seconds === 'number') {
