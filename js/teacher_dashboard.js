@@ -54,6 +54,18 @@ const DURATION_THRESHOLDS = {
     veryHigh: 600    // 10 minutes
 };
 
+const COLORS = {
+    normal: 'bg-blue-400', // Changed from gray to blue
+    late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
+    long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
+};
+
+const ROW_COLORS = {
+    normal: 'bg-blue-100', // Lighter blue for accordion rows
+    late:   { moderate: 'bg-yellow-100', high: 'bg-yellow-200', veryHigh: 'bg-yellow-300' },
+    long:   { moderate: 'bg-red-100', high: 'bg-red-200', veryHigh: 'bg-red-300' }
+};
+
 function formatSecondsToMMSS(totalSeconds) {
     if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
     const minutes = Math.floor(totalSeconds / 60);
@@ -271,12 +283,6 @@ function renderAttendanceReport() {
 }
 
 function renderClassTrendsReport() {
-    const COLORS = {
-        normal: 'bg-gray-400',
-        late:   { moderate: 'bg-yellow-300', high: 'bg-yellow-400', veryHigh: 'bg-yellow-500' },
-        long:   { moderate: 'bg-red-300', high: 'bg-red-500', veryHigh: 'bg-red-700' }
-    };
-    
     const getSeverity = (record) => {
         if (record.Type === 'late') return 5;
         if (typeof record.Seconds !== 'number') return 0;
@@ -576,7 +582,7 @@ dashboardContent.addEventListener('click', (event) => {
         if (records.length === 0) return;
 
         const wrapperRow = document.createElement('tr');
-        wrapperRow.className = 'details-wrapper-row bg-gray-50';
+        wrapperRow.className = 'details-wrapper-row'; // Removed bg-gray-50 for cleaner look
         const wrapperCell = document.createElement('td');
         wrapperCell.colSpan = accordionRow.cells.length;
         wrapperCell.className = 'p-2';
@@ -595,12 +601,28 @@ dashboardContent.addEventListener('click', (event) => {
         records.forEach(row => {
             const detailTr = document.createElement('tr');
             let typeDisplay = "Bathroom", durationDisplay = "N/A";
+            
+            // ** FIX: Apply 3-tier coloring to accordion rows **
             if (row.Type === 'late') {
-                typeDisplay = "Late Sign In"; detailTr.classList.add('bg-yellow-100');
+                typeDisplay = "Late Sign In";
+                if (typeof row.Seconds === 'number') {
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(ROW_COLORS.late.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(ROW_COLORS.late.high);
+                    else detailTr.classList.add(ROW_COLORS.late.moderate);
+                } else {
+                     detailTr.classList.add(ROW_COLORS.late.moderate);
+                }
             } else if (typeof row.Seconds === 'number') {
-                if (row.Seconds > DURATION_THRESHOLDS.moderate) detailTr.classList.add('bg-red-100');
+                if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(ROW_COLORS.long.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(ROW_COLORS.long.high);
+                    else detailTr.classList.add(ROW_COLORS.long.moderate);
+                } else {
+                    detailTr.classList.add(ROW_COLORS.normal);
+                }
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
+
             const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
             detailTr.innerHTML = `
                 <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
