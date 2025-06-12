@@ -120,22 +120,22 @@ function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: '
 
 // --- Sorting Logic ---
 function updateSortIndicators() {
-    // Sign Out Report Indicators
+    // Logic for Sign Out Report
     const signOutState = appState.sortState.signOut;
     document.querySelectorAll('#reportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             const column = th.dataset.column;
             indicator.textContent = ' ↕';
-            indicator.style.color = '#cbd5e1'; // Inactive color
+            // ** FIX: Changed inactive arrow color to black **
+            indicator.style.color = '#1f2937'; // Default to black
             if (signOutState.column === column) {
                 indicator.textContent = signOutState.direction === 'asc' ? ' ▲' : ' ▼';
-                indicator.style.color = '#1f2937'; // Active color
             }
         }
     });
 
-    // Class Trends Report Indicators
+    // Logic for Class Trends Report
     const trendsState = appState.sortState.classTrends;
     document.querySelectorAll('#trendsReportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
