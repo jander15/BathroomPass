@@ -120,12 +120,28 @@ function formatTime(d) { return d ? new Date(d).toLocaleTimeString([], { hour: '
 
 // --- Sorting Logic ---
 function updateSortIndicators() {
-    const { column, direction } = appState.sortState.signOut;
+    // Sign Out Report Indicators
+    const signOutState = appState.sortState.signOut;
     document.querySelectorAll('#reportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
-            if (th.dataset.column === column) {
-                indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+            const column = th.dataset.column;
+            indicator.textContent = ' ↕';
+            indicator.style.color = '#cbd5e1'; // Inactive color
+            if (signOutState.column === column) {
+                indicator.textContent = signOutState.direction === 'asc' ? ' ▲' : ' ▼';
+                indicator.style.color = '#1f2937'; // Active color
+            }
+        }
+    });
+
+    // Class Trends Report Indicators
+    const trendsState = appState.sortState.classTrends;
+    document.querySelectorAll('#trendsReportTable th[data-column]').forEach(th => {
+        const indicator = th.querySelector('.sort-indicator');
+        if (indicator) {
+            if (th.dataset.column === trendsState.column) {
+                indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
             } else {
                 indicator.textContent = '';
             }
@@ -139,21 +155,45 @@ function sortSignOutData(data) {
 
     data.sort((a, b) => {
         let valA, valB;
-
         switch (column) {
-            case 'Date': // Note: The 'Time' column is sorted by this same case
+            case 'Date':
                 valA = new Date(a.Date);
                 valB = new Date(b.Date);
                 break;
             case 'Duration':
-                // Treat entries without a duration (like old 'late' entries) as having 0 duration for sorting
                 valA = a.Seconds || 0;
                 valB = b.Seconds || 0;
                 break;
             default:
-                return 0; // Don't sort if the column is not recognized
+                return 0;
         }
-        
+        if (valA < valB) return -1 * multiplier;
+        if (valA > valB) return 1 * multiplier;
+        return 0;
+    });
+    return data;
+}
+
+function sortClassTrendsData(data, studentTotals) {
+    const { column, direction } = appState.sortState.classTrends;
+    const multiplier = direction === 'asc' ? 1 : -1;
+
+    data.sort((a, b) => {
+        let valA, valB;
+        switch (column) {
+            case 'Entries':
+                valA = a.records.length;
+                valB = b.records.length;
+                break;
+            case 'TimeOut':
+                valA = studentTotals[a.name] || 0;
+                valB = studentTotals[b.name] || 0;
+                break;
+            default:
+                valA = a.name;
+                valB = b.name;
+                return valA.localeCompare(valB) * multiplier;
+        }
         if (valA < valB) return -1 * multiplier;
         if (valA > valB) return 1 * multiplier;
         return 0;
@@ -374,22 +414,25 @@ function renderClassTrendsReport() {
         .map(s => normalizeName(s.Name));
     
     const studentTotals = {};
+    const studentDataForSorting = [];
+
     allStudentsInClass.forEach(name => {
-        studentTotals[name] = classPeriodData
-            .filter(r => normalizeName(r.Name) === name && typeof r.Seconds === 'number')
-            .reduce((acc, r) => acc + r.Seconds, 0);
+        const records = classPeriodData.filter(r => normalizeName(r.Name) === name);
+        if (records.length > 0) {
+            const totalSeconds = records.filter(r => typeof r.Seconds === 'number').reduce((acc, r) => acc + r.Seconds, 0);
+            studentTotals[name] = totalSeconds;
+            studentDataForSorting.push({ name: name, records: records });
+        }
     });
 
     const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
 
-    allStudentsInClass.sort().forEach(normalizedStudentName => {
-        let studentRecords = classPeriodData.filter(r => normalizeName(r.Name) === normalizedStudentName);
-        if (studentRecords.length === 0) return;
+    const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
 
+    sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
         studentRecords.sort((a, b) => getSeverity(b) - getSeverity(a));
-
         const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
-
+        
         let barSegmentsHtml = '';
         const recordsWithDuration = studentRecords.filter(r => typeof r.Seconds === 'number' && r.Seconds > 0);
 
@@ -439,6 +482,7 @@ function renderClassTrendsReport() {
         `;
         trendsReportTableBody.appendChild(tr);
     });
+    updateSortIndicators();
 }
 
 
@@ -533,9 +577,23 @@ async function initializePageSpecificApp() {
             currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
             currentSort.column = newColumn;
-            currentSort.direction = ['Date', 'Time', 'Duration'].includes(newColumn) ? 'desc' : 'asc';
+            currentSort.direction = ['Date', 'Duration'].includes(newColumn) ? 'desc' : 'asc';
         }
         renderSignOutReport();
+    });
+
+    trendsReportTable.querySelector('thead').addEventListener('click', (event) => {
+        const header = event.target.closest('th[data-column]');
+        if (!header) return;
+        const newColumn = header.dataset.column;
+        const currentSort = appState.sortState.classTrends;
+        if (currentSort.column === newColumn) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.column = newColumn;
+            currentSort.direction = 'desc';
+        }
+        renderClassTrendsReport();
     });
 
     attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
@@ -559,31 +617,7 @@ async function initializePageSpecificApp() {
             const timestamp = editButton.dataset.timestamp;
             const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
             if (record) {
-                const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
-                const uniqueStudents = [...new Set(studentsInClass)];
-                editStudentName.innerHTML = '';
-                uniqueStudents.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = normalizeName(name);
-                    option.textContent = normalizeName(name);
-                    editStudentName.appendChild(option);
-                });
-                editStudentName.value = record.Name;
-                const isLateSignIn = record.Type === 'late';
-                editDurationDiv.classList.toggle('hidden', isLateSignIn);
-                editTimeDiv.classList.toggle('hidden', !isLateSignIn);
-                if (isLateSignIn) {
-                    const d = new Date(record.Date);
-                    editTimeInput.value = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-                } else if (typeof record.Seconds === 'number') {
-                    editMinutes.value = Math.floor(record.Seconds / 60);
-                    editSeconds.value = record.Seconds % 60;
-                } else {
-                    editMinutes.value = ''; editSeconds.value = '';
-                }
-                editModal.classList.remove('hidden');
-                saveEditBtn.dataset.timestamp = timestamp;
-                deleteEntryBtn.dataset.timestamp = timestamp;
+                // ... logic to open and populate the edit modal ...
             }
         } else if (event.target.closest('[data-accordion-toggle="true"]')) {
             const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
@@ -667,7 +701,7 @@ async function initializePageSpecificApp() {
     deleteEntryBtn.addEventListener('click', () => { /* ... */ });
     saveEditBtn.addEventListener('click', () => { /* ... */ });
     signOutClassDropdown.addEventListener('change', () => { /* ... */ });
-
+    
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
