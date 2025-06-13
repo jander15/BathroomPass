@@ -126,30 +126,32 @@ function updateSortIndicators() {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             const column = th.dataset.column;
+            // ** FIX: Always show black triangles, with active one being solid and inactive being lighter **
             indicator.textContent = '▲'; 
-            indicator.style.color = '#9ca3af'; // Inactive color: medium gray
+            indicator.style.color = '#6b7280'; // Inactive color: medium-dark gray
             if (signOutState.column === column) {
                 indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
-                indicator.style.color = '#1f2937'; // Active color: black
+                indicator.style.color = '#111827'; // Active color: black
             }
         }
     });
 
     // Logic for Class Trends Report
     const trendsState = appState.sortState.classTrends;
-    document.querySelectorAll('#trendsReportTable th[data-column]').forEach(th => {
+    document.querySelectorAll('#trendsReportTable [data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
+            // ** FIX: Show indicator on trends report, mimicking the new style **
+            indicator.textContent = '▲';
+            indicator.style.color = '#d1d5db'; // Inactive color: light gray
             if (trendsState.column === th.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
-                indicator.style.color = '#1f2937';
-            } else {
-                indicator.textContent = '▲';
-                indicator.style.color = '#d1d5db';
+                indicator.style.color = '#111827';
             }
         }
     });
 }
+
 
 function sortSignOutData(data) {
     const { column, direction } = appState.sortState.signOut;
