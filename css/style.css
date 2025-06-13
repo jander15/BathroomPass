@@ -56,36 +56,16 @@ iframe[name="iframe"] {
 /* This gives every segment a smooth transition and a default state */
 .bar-segment {
     transition: all 0.15s ease-in-out;
-    position: relative; /* Needed for z-index to work */
+    position: relative; /* Needed for z-index and border to work correctly */
     z-index: 10;
+    box-sizing: border-box; /* Ensures border is added inside the element's width */
 }
 
-/* This is the "raise and scale" effect on hover */
+/* This is the "raise, scale, and border" effect on hover */
 .bar-segment:hover {
     transform: scale(1.05) translateY(-1px); /* Slightly enlarge and lift */
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);  /* Add a subtle shadow */
+    border: 1px solid #111; /* Add a thin black border */
     z-index: 20; /* Ensure the hovered segment is on top of its neighbors */
 }
 
-/* We still need the color-specific hover effects to darken the segment */
-.bg-blue-200:hover {
-    border-color: #60a5fa; 
-}
-.bg-yellow-100:hover {
-    border-color: #fde047;
-}
-.bg-yellow-200:hover {
-    border-color: #facc15;
-}
-.bg-yellow-300:hover {
-    border-color: #eab308;
-}
-.bg-red-200:hover {
-    border-color: #fca5a5;
-}
-.bg-red-300:hover {
-    border-color: #f87171;
-}
-.bg-red-500:hover {
-    border-color: #ef4444;
-}
