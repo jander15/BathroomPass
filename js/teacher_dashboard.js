@@ -149,7 +149,6 @@ function updateSortIndicators() {
     });
 }
 
-
 function sortSignOutData(data) {
     const { column, direction } = appState.sortState.signOut;
     const multiplier = direction === 'asc' ? 1 : -1;
@@ -574,7 +573,6 @@ async function initializePageSpecificApp() {
     // Add All Event Listeners Here
     reloadDataBtn.addEventListener('click', async () => {
         await fetchAllSignOutData();
-        // After fetching, re-render the currently active tab
         const activeTab = appState.ui.currentDashboardTab;
         if (activeTab === 'signOut') renderSignOutReport();
         else if (activeTab === 'attendance') renderAttendanceReport();
@@ -595,13 +593,13 @@ async function initializePageSpecificApp() {
             currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
             currentSort.column = newColumn;
-            currentSort.direction = ['Date', 'Duration'].includes(newColumn) ? 'desc' : 'asc';
+            currentSort.direction = 'desc';
         }
         renderSignOutReport();
     });
 
     trendsReportTable.querySelector('thead').addEventListener('click', (event) => {
-        const header = event.target.closest('th[data-column]');
+        const header = event.target.closest('[data-column]');
         if (!header) return;
         const newColumn = header.dataset.column;
         const currentSort = appState.sortState.classTrends;
@@ -813,6 +811,10 @@ async function initializePageSpecificApp() {
             populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             trendsClassDropdown.removeAttribute("disabled");
             await fetchAllSignOutData();
+            // Initial renders after data is loaded
+            renderSignOutReport();
+            renderAttendanceReport();
+            renderClassTrendsReport();
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
             [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
