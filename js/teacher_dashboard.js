@@ -136,16 +136,14 @@ function updateSortIndicators() {
 
     // Logic for Class Trends Report
     const trendsState = appState.sortState.classTrends;
-    // ** FIX: Target the specific data-column attributes, not the whole header **
     document.querySelectorAll('#trendsReportTable [data-column]').forEach(el => {
         const indicator = el.querySelector('.sort-indicator');
         if (indicator) {
+            indicator.textContent = '▲';
+            indicator.style.color = '#d1d5db'; // Inactive color: light gray
             if (trendsState.column === el.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
                 indicator.style.color = '#111827';
-            } else {
-                indicator.textContent = ' ▲';
-                indicator.style.color = '#d1d5db';
             }
         }
     });

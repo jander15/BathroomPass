@@ -101,12 +101,12 @@
                     <table id="reportTable" class="min-w-full bg-white hidden">
                         <thead>
                             <tr class="bg-gray-100">
-                                <th class="py-2 px-4 border-b text-left cursor-pointer" data-column="Date">Date <span class="sort-indicator"></span></th>
+                                <th class="py-2 px-4 border-b text-left cursor-pointer" data-column="Date">Date<span class="sort-indicator"></span></th>
                                 <th class="py-2 px-4 border-b text-left">Time</th>
                                 <th class="py-2 px-4 border-b text-left">Class</th>
                                 <th class="py-2 px-4 border-b text-left">Name</th>
                                 <th class="py-2 px-4 border-b text-left">Type</th>
-                                <th class="py-2 px-4 border-b text-left cursor-pointer" data-column="Duration">Duration <span class="sort-indicator"></span></th>
+                                <th class="py-2 px-4 border-b text-left cursor-pointer" data-column="Duration">Duration<span class="sort-indicator"></span></th>
                                 <th class="py-2 px-4 border-b text-right w-12">Edit</th>
                             </tr>
                         </thead>
@@ -173,18 +173,14 @@
                         <thead>
                             <tr class="bg-gray-100 text-sm">
                                 <th class="py-2 px-3 border-b text-left w-1/4">Student</th>
-                                <th class="py-2 px-3 border-b text-center">
-                                    <div class="flex items-center justify-center cursor-pointer" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins">
-                                        <span>#</span>
-                                        <span class="sort-indicator ml-1"></span>
-                                    </div>
+                                <th class="py-2 px-3 border-b text-center cursor-pointer" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins">
+                                    # Entries<span class="sort-indicator ml-1"></span>
                                 </th>
                                 <th class="py-2 px-3 border-b text-left w-3/4">
                                     <div class="flex items-center space-x-4">
-                                        <span class="cursor-pointer" data-column="TimeOut">
-                                            Time Out Breakdown
-                                            <span class="sort-indicator ml-1"></span>
-                                        </span>
+                                        <div class="cursor-pointer" data-column="TimeOut">
+                                            Time Out Breakdown<span class="sort-indicator ml-1"></span>
+                                        </div>
                                         <div class="flex items-center flex-wrap space-x-3 text-xs font-normal text-gray-600">
                                             <span>Key:</span>
                                             <div class="flex items-center space-x-1">
