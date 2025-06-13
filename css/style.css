@@ -69,23 +69,23 @@ iframe[name="iframe"] {
 
 /* We still need the color-specific hover effects to darken the segment */
 .bg-blue-200:hover {
-    background-color: #60a5fa; 
+    border-color: #60a5fa; 
 }
 .bg-yellow-100:hover {
-    background-color: #fde047;
+    border-color: #fde047;
 }
 .bg-yellow-200:hover {
-    background-color: #facc15;
+    border-color: #facc15;
 }
 .bg-yellow-300:hover {
-    background-color: #eab308;
+    border-color: #eab308;
 }
 .bg-red-200:hover {
-    background-color: #fca5a5;
+    border-color: #fca5a5;
 }
 .bg-red-300:hover {
-    background-color: #f87171;
+    border-color: #f87171;
 }
 .bg-red-500:hover {
-    background-color: #ef4444;
+    border-color: #ef4444;
 }
