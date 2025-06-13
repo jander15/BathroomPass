@@ -173,13 +173,17 @@
                         <thead>
                             <tr class="bg-gray-100 text-sm">
                                 <th class="py-2 px-3 border-b text-left w-1/4">Student</th>
-                                <th class="py-2 px-3 border-b text-center cursor-pointer" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins">
-                                    # Entries<span class="sort-indicator ml-1"></span>
+                                <th class="py-2 px-3 border-b text-center">
+                                    <div class="flex items-center justify-center cursor-pointer" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins">
+                                        <span># Entries</span>
+                                        <span class="sort-indicator ml-1"></span>
+                                    </div>
                                 </th>
                                 <th class="py-2 px-3 border-b text-left w-3/4">
                                     <div class="flex items-center space-x-4">
-                                        <div class="cursor-pointer" data-column="TimeOut">
-                                            Time Out Breakdown<span class="sort-indicator ml-1"></span>
+                                        <div class="flex items-center cursor-pointer" data-column="TimeOut">
+                                            <span>Time Out Breakdown</span>
+                                            <span class="sort-indicator ml-1"></span>
                                         </div>
                                         <div class="flex items-center flex-wrap space-x-3 text-xs font-normal text-gray-600">
                                             <span>Key:</span>
@@ -231,7 +235,7 @@
                             <div class="mt-1 flex items-center space-x-2">
                                 <input type="number" id="editMinutes" placeholder="Mins" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
                                 <span class="text-gray-500">:</span>
-                                <input type="number" id="editSeconds" placeholder="Secs" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                                <input type="number" id="editSeconds" placeholder="Secs" class="block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3">
                             </div>
                         </div>
                     </div>
