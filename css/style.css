@@ -52,30 +52,40 @@ iframe[name="iframe"] {
 }
 
 /* Add these new rules for the bar segment hover effects */
+
+/* This gives every segment a smooth transition and a default state */
+.bar-segment {
+    transition: all 0.15s ease-in-out;
+    position: relative; /* Needed for z-index to work */
+    z-index: 10;
+}
+
+/* This is the "raise and scale" effect on hover */
+.bar-segment:hover {
+    transform: scale(1.05) translateY(-1px); /* Slightly enlarge and lift */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);  /* Add a subtle shadow */
+    z-index: 20; /* Ensure the hovered segment is on top of its neighbors */
+}
+
+/* We still need the color-specific hover effects to darken the segment */
 .bg-blue-200:hover {
-    background-color: #60a5fa; /* A darker shade of blue-200 */
+    background-color: #60a5fa; 
 }
-
 .bg-yellow-100:hover {
-    background-color: #fde047; /* A darker shade of yellow-100 */
+    background-color: #fde047;
 }
-
 .bg-yellow-200:hover {
-    background-color: #facc15; /* A darker shade of yellow-200 */
+    background-color: #facc15;
 }
-
 .bg-yellow-300:hover {
-    background-color: #eab308; /* A darker shade of yellow-300 */
+    background-color: #eab308;
 }
-
 .bg-red-200:hover {
-    background-color: #fca5a5; /* A darker shade of red-200 */
+    background-color: #fca5a5;
 }
-
 .bg-red-300:hover {
-    background-color: #f87171; /* A darker shade of red-300 */
+    background-color: #f87171;
 }
-
 .bg-red-500:hover {
-    background-color: #ef4444; /* A darker shade of red-500 */
+    background-color: #ef4444;
 }

@@ -474,7 +474,7 @@ function renderClassTrendsReport() {
             }
             const segmentWidthPercent = (totalSecondsOut > 0) ? (durationInSeconds / totalSecondsOut) * 100 : 0;
             const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
-            barSegmentsHtml += `<div class="h-full ${colorClass}" style="width: ${segmentWidthPercent}%; border-right: 1px solid #111;" title="${tooltipText}"></div>`;
+            barSegmentsHtml += `<div class="h-full bar-segment ${colorClass}" style="width: ${segmentWidthPercent}%;" title="${tooltipText}"></div>`;
         });
         
         const tr = document.createElement('tr');
