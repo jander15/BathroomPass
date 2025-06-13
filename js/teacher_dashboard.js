@@ -500,29 +500,24 @@ function renderClassTrendsReport() {
 
 
 // --- Data & State Management Functions ---
-async function handleEditEntry(originalTimestamp, newName, type, newTimestamp, className, newSeconds) {
-    const payload = { 
-        action: 'editEntry', 
-        entryTimestamp: originalTimestamp, 
-        newName, 
-        type,           // Pass the original type
-        newTimestamp,   // Pass the new timestamp if it exists
-        className,      // Pass the class name for recalculation
-        newSeconds,     // Pass the new duration for bathroom edits
-        userEmail: appState.currentUser.email, 
-        idToken: appState.currentUser.idToken 
-    };
+async function handleEditEntry(payload) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            // Refetch all data to ensure UI is perfectly in sync with the backend calculations
+            // After a successful edit, refetch all data to ensure the UI is perfectly in sync.
             await fetchAllSignOutData();
+            // Re-render the currently active tab with the new data.
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
             else if (activeTab === 'classTrends') renderClassTrendsReport();
-        } else { throw new Error(response.error || 'Failed to edit entry.'); }
-    } catch (error) { console.error('Error editing entry:', error); }
+        } else { 
+            throw new Error(response.error || 'Failed to edit entry on the server.'); 
+        }
+    } catch (error) { 
+        console.error('Error in handleEditEntry:', error); 
+        showErrorAlert(error.message);
+    }
 }
 
 async function handleDeleteEntry(timestamp) {
@@ -530,15 +525,17 @@ async function handleDeleteEntry(timestamp) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === timestamp);
-            if (entryIndex > -1) appState.data.allSignOuts[entryIndex].Deleted = true;
+            appState.data.allSignOuts = appState.data.allSignOuts.filter(entry => entry.Date !== timestamp);
             
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
             else if (activeTab === 'classTrends') renderClassTrendsReport();
         } else { throw new Error(response.error || 'Failed to delete entry.'); }
-    } catch (error) { console.error('Error deleting entry:', error); }
+    } catch (error) { 
+        console.error('Error deleting entry:', error); 
+        showErrorAlert(error.message);
+    }
 }
 
 async function fetchAllSignOutData() {
