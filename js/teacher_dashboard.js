@@ -125,28 +125,27 @@ function updateSortIndicators() {
     document.querySelectorAll('#reportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
-            const column = th.dataset.column;
-            // ** FIX: Always show black triangles, with active one being solid and inactive being lighter **
             indicator.textContent = '▲'; 
             indicator.style.color = '#6b7280'; // Inactive color: medium-dark gray
-            if (signOutState.column === column) {
+            if (signOutState.column === th.dataset.column) {
                 indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
-                indicator.style.color = '#111827'; // Active color: black
+                indicator.style.color = '#1f2937'; // Active color: black
             }
         }
     });
 
     // Logic for Class Trends Report
     const trendsState = appState.sortState.classTrends;
-    document.querySelectorAll('#trendsReportTable [data-column]').forEach(th => {
-        const indicator = th.querySelector('.sort-indicator');
+    // ** FIX: Target the specific data-column attributes, not the whole header **
+    document.querySelectorAll('#trendsReportTable [data-column]').forEach(el => {
+        const indicator = el.querySelector('.sort-indicator');
         if (indicator) {
-            // ** FIX: Show indicator on trends report, mimicking the new style **
-            indicator.textContent = '▲';
-            indicator.style.color = '#d1d5db'; // Inactive color: light gray
-            if (trendsState.column === th.dataset.column) {
+            if (trendsState.column === el.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
                 indicator.style.color = '#111827';
+            } else {
+                indicator.textContent = ' ▲';
+                indicator.style.color = '#d1d5db';
             }
         }
     });
