@@ -173,11 +173,20 @@
                         <thead>
                             <tr class="bg-gray-100 text-sm">
                                 <th class="py-2 px-3 border-b text-left w-1/4">Student</th>
-                                <th class="py-2 px-3 border-b text-center cursor-pointer mr-2" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins"># <span class="sort-indicator"></span></th>
-                                <th class="py-2 px-3 border-b text-left w-3/4 cursor-pointer" data-column="TimeOut">
-                                    <div class="flex items-center justify-between">
-                                        <span>Time Out Breakdown <span class="sort-indicator"></span></span>
-                                        <div class="flex items-center space-x-3 text-xs font-normal text-gray-600">
+                                <th class="py-2 px-3 border-b text-center cursor-pointer" data-column="Entries" title="Total Sign-Outs + Late Sign-Ins">
+                                    <div class="flex items-center justify-center">
+                                        <span># </span>
+                                        <span class="sort-indicator ml-1"></span>
+                                    </div>
+                                </th>
+                                <th class="py-2 px-3 border-b text-left w-3/4">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="cursor-pointer" data-column="TimeOut">
+                                            <span>Time Out Breakdown</span>
+                                            <span class="sort-indicator ml-1"></span>
+                                        </div>
+                                        <div class="flex items-center flex-wrap space-x-3 text-xs font-normal text-gray-600">
+                                            <span>Key:</span>
                                             <div class="flex items-center space-x-1">
                                                 <span class="font-semibold">Late:</span>
                                                 <div class="w-3 h-3 bg-yellow-300 rounded-sm" title="Very High"></div>
