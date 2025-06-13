@@ -126,13 +126,11 @@ function updateSortIndicators() {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             const column = th.dataset.column;
-            // ** FIX: Always show black triangles, with active one being solid and inactive being an outline/lighter **
+            indicator.textContent = '▲'; 
+            indicator.style.color = '#9ca3af'; // Inactive color: medium gray
             if (signOutState.column === column) {
                 indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
-                indicator.style.color = '#111827'; // Active color: black
-            } else {
-                indicator.textContent = '▲'; // Show an inactive up arrow
-                indicator.style.color = '#9ca3af';   // Inactive color: medium gray
+                indicator.style.color = '#1f2937'; // Active color: black
             }
         }
     });
@@ -142,12 +140,11 @@ function updateSortIndicators() {
     document.querySelectorAll('#trendsReportTable th[data-column]').forEach(th => {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
-            // ** FIX: Logic to show indicators in the Trends report header **
             if (trendsState.column === th.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
-                indicator.style.color = '#111827';
+                indicator.style.color = '#1f2937';
             } else {
-                indicator.textContent = ' ▲';
+                indicator.textContent = '▲';
                 indicator.style.color = '#d1d5db';
             }
         }
@@ -381,9 +378,8 @@ function renderAttendanceReport() {
 
 function renderClassTrendsReport() {
     const getSeverity = (record) => {
-        // ** FIX: New severity scores to correctly sort LATE entries by duration **
         if (record.Type === 'late') {
-            if (typeof record.Seconds !== 'number') return 5; // A late entry with no duration is still severe
+            if (typeof record.Seconds !== 'number') return 5; 
             if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 7;
             if (record.Seconds >= DURATION_THRESHOLDS.high) return 6;
             return 5;
@@ -395,9 +391,9 @@ function renderClassTrendsReport() {
         return 1;
     };
 
-    if (!appState.data.allSignOuts) { /* ... */ return; }
+    if (!appState.data.allSignOuts) { trendsReportMessage.textContent = "Data is loading..."; return; }
     const selectedClass = trendsClassDropdown.value;
-    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { /* ... */ return; }
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) { trendsReportMessage.textContent = "Please select a class."; trendsReportTable.classList.add('hidden'); return; }
 
     trendsReportMessage.classList.add('hidden');
     trendsReportTable.classList.remove('hidden');
@@ -441,14 +437,12 @@ function renderClassTrendsReport() {
     const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
 
     sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
-        // ** FIX: Corrected sorting logic with secondary sort **
         studentRecords.sort((a, b) => {
             const severityA = getSeverity(a);
             const severityB = getSeverity(b);
             if (severityA !== severityB) {
-                return severityB - severityA; // Primary sort: by severity
+                return severityB - severityA;
             }
-            // Secondary sort: by duration (descending) if severities are equal
             return (b.Seconds || 0) - (a.Seconds || 0);
         });
 
@@ -507,7 +501,6 @@ function renderClassTrendsReport() {
 }
 
 
-
 // --- Data & State Management Functions ---
 async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
     const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
@@ -556,9 +549,6 @@ async function fetchAllSignOutData() {
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success' && Array.isArray(data.report)) {
             appState.data.allSignOuts = data.report;
-            renderSignOutReport();
-            renderAttendanceReport();
-            renderClassTrendsReport();
         } else { throw new Error(data.error || "Failed to fetch all data."); }
     } catch (error) {
         console.error("Failed to fetch all sign out data:", error);
@@ -583,7 +573,14 @@ async function initializePageSpecificApp() {
     toggleTrendsDateInputs();
 
     // Add All Event Listeners Here
-    reloadDataBtn.addEventListener('click', fetchAllSignOutData);
+    reloadDataBtn.addEventListener('click', async () => {
+        await fetchAllSignOutData();
+        // After fetching, re-render the currently active tab
+        const activeTab = appState.ui.currentDashboardTab;
+        if (activeTab === 'signOut') renderSignOutReport();
+        else if (activeTab === 'attendance') renderAttendanceReport();
+        else if (activeTab === 'classTrends') renderClassTrendsReport();
+    });
 
     [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
         if(el) el.addEventListener('change', renderSignOutReport);
@@ -628,8 +625,8 @@ async function initializePageSpecificApp() {
     });
     [trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
 
-    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); });
-    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); });
+    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
+    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
     classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
     dashboardContent.addEventListener('click', (event) => {
@@ -804,7 +801,7 @@ async function initializePageSpecificApp() {
         }
         renderSignOutReport();
     });
-
+    
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
