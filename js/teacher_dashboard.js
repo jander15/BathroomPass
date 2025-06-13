@@ -500,18 +500,23 @@ function renderClassTrendsReport() {
 
 
 // --- Data & State Management Functions ---
-async function handleEditEntry(originalTimestamp, newName, newSeconds, newType, newTimestamp) {
-    const payload = { action: 'editEntry', entryTimestamp: originalTimestamp, newName, newSeconds, newType, newTimestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+async function handleEditEntry(originalTimestamp, newName, type, newTimestamp, className, newSeconds) {
+    const payload = { 
+        action: 'editEntry', 
+        entryTimestamp: originalTimestamp, 
+        newName, 
+        type,           // Pass the original type
+        newTimestamp,   // Pass the new timestamp if it exists
+        className,      // Pass the class name for recalculation
+        newSeconds,     // Pass the new duration for bathroom edits
+        userEmail: appState.currentUser.email, 
+        idToken: appState.currentUser.idToken 
+    };
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            const entryIndex = appState.data.allSignOuts.findIndex(entry => entry.Date === originalTimestamp);
-            if(entryIndex > -1) {
-                appState.data.allSignOuts[entryIndex].Name = newName;
-                appState.data.allSignOuts[entryIndex].Seconds = newSeconds;
-                appState.data.allSignOuts[entryIndex].Type = newType;
-                if (newTimestamp) appState.data.allSignOuts[entryIndex].Date = newTimestamp;
-            }
+            // Refetch all data to ensure UI is perfectly in sync with the backend calculations
+            await fetchAllSignOutData();
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
