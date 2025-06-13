@@ -251,7 +251,7 @@ async function handleLateSignInFormSubmit(event) {
 
     const payload = {
         action: ACTION_LOG_LATE_SIGN_IN,
-        Seconds: 'Late Sign In', Name: nameOnly, Class: classValue, TeacherEmail: appState.currentUser.email
+        Name: nameOnly, Class: classValue, TeacherEmail: appState.currentUser.email
     };
 
     try {
