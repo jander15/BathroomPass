@@ -126,10 +126,10 @@ function updateSortIndicators() {
         const indicator = th.querySelector('.sort-indicator');
         if (indicator) {
             indicator.textContent = '▲'; 
-            indicator.style.color = '#6b7280'; // Inactive color: medium-dark gray
+            indicator.style.color = '#6b7280';
             if (signOutState.column === th.dataset.column) {
                 indicator.textContent = signOutState.direction === 'asc' ? '▲' : '▼';
-                indicator.style.color = '#1f2937'; // Active color: black
+                indicator.style.color = '#1f2937';
             }
         }
     });
@@ -140,7 +140,7 @@ function updateSortIndicators() {
         const indicator = el.querySelector('.sort-indicator');
         if (indicator) {
             indicator.textContent = '▲';
-            indicator.style.color = '#d1d5db'; // Inactive color: light gray
+            indicator.style.color = '#d1d5db';
             if (trendsState.column === el.dataset.column) {
                 indicator.textContent = trendsState.direction === 'asc' ? ' ▲' : ' ▼';
                 indicator.style.color = '#111827';
@@ -504,9 +504,7 @@ async function handleEditEntry(payload) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            // After a successful edit, refetch all data to ensure the UI is perfectly in sync.
             await fetchAllSignOutData();
-            // Re-render the currently active tab with the new data.
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
@@ -521,12 +519,11 @@ async function handleEditEntry(payload) {
 }
 
 async function handleDeleteEntry(timestamp) {
-    const payload = { action: 'deleteEntry', entryTimestamp: timestamp, userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+    const payload = { action: 'deleteEntry', entryTimestamp: timestamp };
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
             appState.data.allSignOuts = appState.data.allSignOuts.filter(entry => entry.Date !== timestamp);
-            
             const activeTab = appState.ui.currentDashboardTab;
             if (activeTab === 'signOut') renderSignOutReport();
             else if (activeTab === 'attendance') renderAttendanceReport();
@@ -545,7 +542,7 @@ async function fetchAllSignOutData() {
     reloadDataBtn.disabled = true;
     reloadDataBtn.classList.add('opacity-50');
     try {
-        const payload = { action: 'getAllSignOutsForTeacher', userEmail: appState.currentUser.email, idToken: appState.currentUser.idToken };
+        const payload = { action: 'getAllSignOutsForTeacher' };
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success' && Array.isArray(data.report)) {
             appState.data.allSignOuts = data.report;
@@ -624,8 +621,8 @@ async function initializePageSpecificApp() {
     });
     [trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
 
-    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
-    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
+    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); });
+    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); });
     classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
     dashboardContent.addEventListener('click', (event) => {
@@ -752,12 +749,15 @@ async function initializePageSpecificApp() {
         const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
         if (!record) { editModal.classList.add('hidden'); return; }
 
-        const newName = editStudentName.value;
-        const newType = record.Type;
-        let newSeconds, newTimestamp = null;
+        const payload = {
+            action: 'editEntry',
+            entryTimestamp: timestamp,
+            newName: editStudentName.value,
+            type: record.Type,
+            className: record.Class,
+        };
 
-        if (newType === 'late') {
-            newSeconds = 'Late Sign In';
+        if (record.Type === 'late') {
             const newTime = editTimeInput.value;
             if (newTime) {
                 const originalDate = new Date(record.Date);
@@ -765,12 +765,13 @@ async function initializePageSpecificApp() {
                 originalDate.setHours(parseInt(hours, 10));
                 originalDate.setMinutes(parseInt(minutes, 10));
                 originalDate.setSeconds(0);
-                newTimestamp = originalDate.toISOString();
+                payload.newTimestamp = originalDate.toISOString();
             }
         } else {
-            newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
+            payload.newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
         }
-        if (timestamp && newName) handleEditEntry(timestamp, newName, newSeconds, newType, newTimestamp);
+        
+        handleEditEntry(payload);
         editModal.classList.add('hidden');
     });
 
