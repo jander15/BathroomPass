@@ -610,11 +610,14 @@ async function initializePageSpecificApp() {
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
+            // ** FIX: Always load the data first, as the side panels are always active **
             await loadInitialPassData();
             
+            // Then, check the initial status of the pass system
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
             updatePassAvailability(statusPayload.isEnabled);
 
+            // Finally, start polling for status changes
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
