@@ -34,6 +34,23 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 // --- Bathroom Pass Page Specific Functions ---
 
 /**
+ * Central function to manage the state of the queue dropdown and buttons.
+ */
+function updateQueueControls() {
+    const isClassSelected = courseDropdown.value && courseDropdown.value !== DEFAULT_CLASS_OPTION;
+    const isPassInUse = appState.passHolder || appState.queue.length > 0;
+
+    // The queue is available if a class is selected AND (the pass system is disabled OR the pass is currently in use).
+    if (isClassSelected && (!appState.ui.isPassEnabled || isPassInUse)) {
+        nameQueueDropdown.removeAttribute("disabled");
+    } else {
+        nameQueueDropdown.setAttribute("disabled", "disabled");
+    }
+
+    toggleAddToQueueButtonVisibility();
+}
+
+/**
  * Updates the UI to reflect whether the pass system is enabled or disabled.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
@@ -45,7 +62,13 @@ function updatePassAvailability(isEnabled) {
         mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
 
-    
+        if (!appState.passHolder && appState.queue.length > 0) {
+            const nextPerson = appState.queue.shift();
+            preparePassForNextInQueue(nextPerson);
+            updateQueueDisplay();
+        } else if (!appState.passHolder) {
+            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+        }
 
     } else {
         formDisabledOverlay.classList.remove('hidden');
@@ -53,6 +76,8 @@ function updatePassAvailability(isEnabled) {
         studentOutHeader.classList.add('bg-gray-500');
         headerStatusSpan.textContent = "PASS UNAVAILABLE";
     }
+    
+    updateQueueControls();
 }
 
 /**
@@ -132,11 +157,10 @@ function startPassTimerAndTransitionUI() {
         appState.passHolder = fullString;
         
         updateQueueDisplay(); 
+        showQueueView();
         
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-        nameQueueDropdown.removeAttribute('disabled'); 
-        toggleAddToQueueButtonVisibility();
-        showQueueView();
+        updateQueueControls();
     }
 }
 
@@ -202,10 +226,10 @@ function setPassToAvailableState() {
     emojiRight.textContent = ""; 
     emojiDropdown.value = NO_EMOJI_OPTION; 
     
-    nameQueueDropdown.setAttribute("disabled", "disabled"); 
     nameQueueDropdown.value = DEFAULT_NAME_OPTION;
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
+    updateQueueControls();
 }
 
 /**
@@ -248,7 +272,8 @@ async function handleMainFormSubmit(event) {
                 setPassToAvailableState();
             }
             updateQueueDisplay(); 
-            toggleAddToQueueButtonVisibility();
+            updateQueueControls();
+
         } else {
             throw new Error(data.error || 'Unknown error from server.');
         }
@@ -396,7 +421,6 @@ function handleAddToQueueClick() {
         updateQueueMessage(`${name} has been added to the queue.`);
         updateQueueDisplay();
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-        toggleAddToQueueButtonVisibility(); 
 
         if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
             const nextPerson = appState.queue.shift();
@@ -404,6 +428,7 @@ function handleAddToQueueClick() {
             updateQueueDisplay();
         }
     }
+    updateQueueControls();
 }
 
 /**
@@ -425,6 +450,7 @@ function handleRemoveFromQueueClick() {
             updateQueueMessage('Error: Name not found in queue.'); 
         }
     }
+    updateQueueControls();
 }
 
 /**
@@ -457,25 +483,13 @@ function handleCourseSelectionChange(){
 
     if (selectedCourse !== "" && selectedCourse !== DEFAULT_CLASS_OPTION) {
         nameDropdown.removeAttribute("disabled");
-        nameQueueDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
         
-        populateDropdown('nameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
-        populateDropdown('nameQueue', [], LOADING_OPTION, LOADING_OPTION); 
-        populateDropdown('lateNameDropdown', [], LOADING_OPTION, LOADING_OPTION); 
-
         populateNameDropdownsForCourse(selectedCourse); 
 
         nameDropdown.value = DEFAULT_NAME_OPTION; 
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         lateNameDropdown.value = DEFAULT_NAME_OPTION; 
-        
-        if (!appState.passHolder && appState.queue.length === 0) { 
-            nameQueueDropdown.setAttribute("disabled", "disabled");
-            nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-        } else { 
-            nameQueueDropdown.removeAttribute("disabled");
-        }
 
         emojiDropdown.removeAttribute("disabled"); 
         emojiDropdown.value = NO_EMOJI_OPTION; 
@@ -493,7 +507,7 @@ function handleCourseSelectionChange(){
         emojiDropdown.value = NO_EMOJI_OPTION; 
         signOutButton.style.display = "none"; 
     }
-    toggleAddToQueueButtonVisibility();
+    updateQueueControls();
     handleLateNameSelectionChange(); 
     handleNameSelectionChange();
 }
@@ -596,7 +610,7 @@ async function initializePageSpecificApp() {
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            await loadInitialPassData(); // Always load data for queue/late sign in
+            await loadInitialPassData();
             
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
             updatePassAvailability(statusPayload.isEnabled);
