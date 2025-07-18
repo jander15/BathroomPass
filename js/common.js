@@ -29,21 +29,21 @@ const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const appState = {
     currentUser: { email: '', name: '', profilePic: '', idToken: '' },
     timer: { seconds: 0, minutes: 0, intervalId: null, isTardy: false },
-    passHolder: null, // Stores the name of the student currently out on pass
-    queue: [], // Array of names in the queue
-    selectedQueueName: null, // The name selected in the queue for removal
-    data: { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] }, // All fetched data
-    ui: { currentRightView: 'lateSignIn', 
-          currentDashboardTab: 'signOut',
-          pollingIntervalId: null
- 
-    }, // Tracks which right-side panel is active
+    passHolder: null,
+    queue: [],
+    selectedQueueName: null,
+    data: { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [], allSignOuts: [] },
+    ui: { 
+        currentRightView: 'lateSignIn',
+        currentDashboardTab: 'signOut',
+        pollingIntervalId: null,
+        isDataLoaded: false // <-- ADD THIS NEW PROPERTY
+    },
     sortState: {
         signOut: { column: 'Date', direction: 'desc' },
         classTrends: { column: 'TimeOut', direction: 'desc' }
     }
 };
-
 
 // --- Common DOM Element References (Declared, then assigned in cacheCommonDOMElements) ---
 // These are declared as 'let' so they can be assigned after DOMContentLoaded.

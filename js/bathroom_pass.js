@@ -6,7 +6,6 @@ const emojiLeft = document.getElementById('emojiLeft');
 const studentOutNameSpan = document.getElementById('studentOutName'); 
 const headerStatusSpan = document.getElementById('headerStatus'); 
 const emojiRight = document.getElementById('emojiRight'); 
-
 const mainForm = document.getElementById('form');
 const passLabel = document.getElementById('passLabel'); 
 const courseDropdown = document.getElementById('courseDropdown');
@@ -35,7 +34,7 @@ const disabledOverlay = document.getElementById('disabledOverlay');
 // --- Bathroom Pass Page Specific Functions ---
 
 /**
- * Updates the UI to reflect whether the pass system is enabled or disabled.
+ * Updates the UI based on pass status and triggers data load if needed.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
@@ -45,16 +44,39 @@ function updatePassAvailability(isEnabled) {
         if (!appState.passHolder) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
+
+        // ** FIX: If pass is enabled but data hasn't been loaded, load it now. **
+        if (!appState.ui.isDataLoaded) {
+            console.log("Pass system is now enabled, loading initial data...");
+            loadInitialPassData(); 
+        }
+
     } else {
         disabledOverlay.classList.remove('hidden');
         studentOutHeader.classList.add('bg-gray-500');
         headerStatusSpan.textContent = "PASS UNAVAILABLE";
-        // If a timer is running when the system is disabled, stop it and reset.
         if (appState.timer.intervalId) {
             clearInterval(appState.timer.intervalId);
             resetMainPassUI();
             setPassToAvailableState();
         }
+    }
+}
+
+/**
+ * A helper function to contain the data loading logic.
+ */
+async function loadInitialPassData() {
+    try {
+        await fetchAllStudentData(); 
+        populateCourseDropdownFromData();
+        populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
+        courseDropdown.disabled = false;
+        appState.ui.isDataLoaded = true; // Mark data as loaded
+    } catch (error) {
+        console.error("Failed to load initial pass data:", error);
+        showErrorAlert("Could not load class data. Please reload the page.");
+        populateDropdown('courseDropdown', [], "Error loading classes");
     }
 }
 
@@ -544,7 +566,6 @@ function showLateSignInView() {
 
 /**
  * Initializes the Bathroom Pass application elements and fetches initial data.
- * This is the page-specific initialization called by common.js.
  */
 async function initializePageSpecificApp() {
     alertDiv.classList.add("hidden");
@@ -583,12 +604,7 @@ async function initializePageSpecificApp() {
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
             updatePassAvailability(statusPayload.isEnabled);
 
-            if (statusPayload.isEnabled) {
-                await fetchAllStudentData();
-                populateCourseDropdownFromData();
-                populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-                courseDropdown.removeAttribute("disabled");
-            }
+            // The data loading is now handled by updatePassAvailability
 
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
@@ -602,11 +618,11 @@ async function initializePageSpecificApp() {
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
-            populateDropdown('courseDropdown', [], "Error loading classes", "");
+            showErrorAlert("Could not check pass system status. Please reload.");
+            updatePassAvailability(false); // Explicitly disable on error
         }
     } else {
         console.warn("User email or ID token not available. Cannot fetch data for Bathroom Pass.");
-        populateDropdown('courseDropdown', [], "Sign in to load data", "");
     }
     
     showLateSignInView(); 
@@ -615,7 +631,6 @@ async function initializePageSpecificApp() {
 
 /**
  * Resets all Bathroom Pass page specific UI and state.
- * This is the page-specific reset called by common.js on sign-out.
  */
 function resetPageSpecificAppState() {
     if (appState.timer.intervalId) {
@@ -631,6 +646,7 @@ function resetPageSpecificAppState() {
     appState.queue = [];
     appState.selectedQueueName = null;
     appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] };
+    appState.ui.isDataLoaded = false;
 
     minutesSpan.textContent = "0";
     secondsSpan.textContent = "00";
