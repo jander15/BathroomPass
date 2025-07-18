@@ -37,7 +37,16 @@
         <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
     </div>
 
-    <div id="appContent" class="hidden flex flex-col items-center p-4 min-h-screen w-full">
+    
+
+    <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
+        <!-- ** NEW: Overlay for disabled state ** -->
+        <div id="disabledOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 z-40 flex items-center justify-center">
+            <div class="text-center p-8 bg-white rounded-lg shadow-xl">
+                <h2 class="text-3xl font-bold text-gray-800">Pass System is Currently Disabled</h2>
+                <p class="text-gray-600 mt-2">Please wait for your teacher to re-enable the pass system.</p>
+            </div>
+        </div>
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-red-500 hover:border-blue-500 transition-all duration-200">
             <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">

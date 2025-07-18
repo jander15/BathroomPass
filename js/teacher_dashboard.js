@@ -45,6 +45,8 @@ const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 const dashboardContent = document.getElementById('dashboardContent');
+const passStatusToggle = document.getElementById('passStatusToggle');
+const passStatusLabel = document.getElementById('passStatusLabel');
 
 
 // --- Helper & Formatting Functions ---
@@ -623,7 +625,7 @@ async function initializePageSpecificApp() {
 
     signOutReportTab.addEventListener('click', () => { switchTab('signOut'); });
     attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); });
-    classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
+    classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); });
 
     dashboardContent.addEventListener('click', (event) => {
         const editButton = event.target.closest('.edit-btn');
