@@ -33,6 +33,26 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 
 // --- Bathroom Pass Page Specific Functions ---
 
+
+/**
+ * ** NEW FUNCTION **
+ * Updates the selected class in the dropdown if it has changed.
+ * @param {string | null} currentClassName - The name of the class that should be selected.
+ */
+function updateCurrentClass(currentClassName) {
+    if (currentClassName && courseDropdown.value !== currentClassName) {
+        // Check if the option exists before trying to select it
+        const optionExists = Array.from(courseDropdown.options).some(opt => opt.value === currentClassName);
+        if (optionExists) {
+            console.log(`Auto-selecting current class: ${currentClassName}`);
+            courseDropdown.value = currentClassName;
+            // Manually trigger the 'change' event to update the student list
+            courseDropdown.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+
 /**
  * Central function to manage the state of the queue dropdown and buttons.
  */
@@ -630,14 +650,18 @@ async function initializePageSpecificApp() {
         try {
             await loadInitialPassData();
             
-            const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
-            updatePassAvailability(statusPayload.isEnabled);
+            // ** UPDATED: Initial call is now to getLiveState **
+            const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+            updatePassAvailability(liveState.isEnabled);
+            updateCurrentClass(liveState.currentClass);
 
+            // ** UPDATED: Polling now calls getLiveState **
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
-                    const latestStatus = await sendAuthenticatedRequest({ action: 'getPassStatus' });
-                    updatePassAvailability(latestStatus.isEnabled);
+                    const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+                    updatePassAvailability(latestState.isEnabled);
+                    updateCurrentClass(latestState.currentClass);
                 } catch (error) {
                     console.error("Polling error:", error);
                 }
@@ -649,7 +673,7 @@ async function initializePageSpecificApp() {
             updatePassAvailability(false);
         }
     } else {
-        console.warn("User email or ID token not available. Cannot fetch data for Bathroom Pass.");
+        console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
     showLateSignInView(); 
