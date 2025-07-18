@@ -28,31 +28,37 @@ const lateSignInView = document.getElementById('lateSignInView');
 const lateSignInForm = document.getElementById('lateSignInForm');
 const lateNameDropdown = document.getElementById('lateNameDropdown');
 const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
-const disabledOverlay = document.getElementById('disabledOverlay');
+const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 
 
 // --- Bathroom Pass Page Specific Functions ---
 
 /**
- * ** UPDATED: Simplified function to only handle the UI overlay **
+ * Updates the UI to reflect whether the pass system is enabled or disabled.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
+    appState.ui.isPassEnabled = isEnabled;
+
     if (isEnabled) {
-        disabledOverlay.classList.add('hidden');
+        formDisabledOverlay.classList.add('hidden');
+        mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
-        if (!appState.passHolder) {
+
+        // If the pass is now available and no one is out, check the queue.
+        if (!appState.passHolder && appState.queue.length > 0) {
+            const nextPerson = appState.queue.shift();
+            preparePassForNextInQueue(nextPerson);
+            updateQueueDisplay();
+        } else if (!appState.passHolder) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
+
     } else {
-        disabledOverlay.classList.remove('hidden');
+        formDisabledOverlay.classList.remove('hidden');
+        mainForm.classList.add('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.add('bg-gray-500');
         headerStatusSpan.textContent = "PASS UNAVAILABLE";
-        if (appState.timer.intervalId) {
-            clearInterval(appState.timer.intervalId);
-            resetMainPassUI();
-            setPassToAvailableState();
-        }
     }
 }
 
@@ -65,7 +71,7 @@ async function loadInitialPassData() {
         populateCourseDropdownFromData();
         populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
         courseDropdown.disabled = false;
-        appState.ui.isDataLoaded = true; // Mark data as loaded
+        appState.ui.isDataLoaded = true;
     } catch (error) {
         console.error("Failed to load initial pass data:", error);
         showErrorAlert("Could not load class data. Please reload the page.");
@@ -95,6 +101,10 @@ function updateTimerDisplay() {
  * Starts the bathroom pass timer and transitions UI for a signed-out student.
  */
 function startPassTimerAndTransitionUI() {
+    if (!appState.ui.isPassEnabled) {
+        showErrorAlert("The pass system is currently disabled by the teacher.");
+        return;
+    }
     if (!appState.timer.intervalId) {
         appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
         appState.timer.isTardy = false; 
@@ -133,7 +143,7 @@ function startPassTimerAndTransitionUI() {
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         nameQueueDropdown.removeAttribute('disabled'); 
         toggleAddToQueueButtonVisibility();
-        showQueueView(); // Show queue view on signout.
+        showQueueView();
     }
 }
 
@@ -238,7 +248,7 @@ async function handleMainFormSubmit(event) {
             showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
             appState.passHolder = null; 
 
-            if (appState.queue.length > 0) {
+            if (appState.queue.length > 0 && appState.ui.isPassEnabled) {
                 const nextPerson = appState.queue.shift();
                 preparePassForNextInQueue(nextPerson);
             } else {
@@ -395,8 +405,10 @@ function handleAddToQueueClick() {
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         toggleAddToQueueButtonVisibility(); 
 
-        if (!appState.passHolder && appState.queue.length === 1) { 
-            showQueueView();
+        if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
+            const nextPerson = appState.queue.shift();
+            preparePassForNextInQueue(nextPerson);
+            updateQueueDisplay();
         }
     }
 }
@@ -418,9 +430,6 @@ function handleRemoveFromQueueClick() {
             updateQueueDisplay(); 
         } else {
             updateQueueMessage('Error: Name not found in queue.'); 
-        }
-        if (appState.queue.length === 0 && !appState.passHolder) {
-            showLateSignInView(); 
         }
     }
 }
@@ -558,7 +567,6 @@ function showLateSignInView() {
 }
 
 /**
- * ** UPDATED: Corrected initialization and polling logic **
  * Initializes the Bathroom Pass application elements and fetches initial data.
  */
 async function initializePageSpecificApp() {
@@ -595,13 +603,10 @@ async function initializePageSpecificApp() {
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
+            await loadInitialPassData(); // Always load data for queue/late sign in
             
-            if (statusPayload.isEnabled) {
-                await loadInitialPassData();
-            } else {
-                updatePassAvailability(false);
-            }
+            const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
+            updatePassAvailability(statusPayload.isEnabled);
 
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
@@ -644,6 +649,7 @@ function resetPageSpecificAppState() {
     appState.selectedQueueName = null;
     appState.data = { allNamesFromSheet: [], courses: [], namesForSelectedCourse: [] };
     appState.ui.isDataLoaded = false;
+    appState.ui.isPassEnabled = true;
 
     minutesSpan.textContent = "0";
     secondsSpan.textContent = "00";

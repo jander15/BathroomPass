@@ -37,7 +37,9 @@ const appState = {
         currentRightView: 'lateSignIn',
         currentDashboardTab: 'signOut',
         pollingIntervalId: null,
-        isDataLoaded: false // <-- ADD THIS NEW PROPERTY
+        isDataLoaded: false, 
+        isPassEnabled: true
+
     },
     sortState: {
         signOut: { column: 'Date', direction: 'desc' },
