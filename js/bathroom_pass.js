@@ -51,18 +51,27 @@ function updateQueueControls() {
 }
 
 /**
+ * ** UPDATED: This function now defers the disable state if a student is out **
  * Updates the UI to reflect whether the pass system is enabled or disabled.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
+    const previousState = appState.ui.isPassEnabled;
     appState.ui.isPassEnabled = isEnabled;
+
+    // If a student is currently signed out, do NOT change the UI.
+    // The change will be applied when they sign back in.
+    if (appState.passHolder) {
+        return; 
+    }
 
     if (isEnabled) {
         formDisabledOverlay.classList.add('hidden');
         mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
 
-        if (!appState.passHolder && appState.queue.length > 0) {
+        // If the pass was just re-enabled and no one is out, check the queue.
+        if (!previousState && isEnabled && appState.queue.length > 0) {
             const nextPerson = appState.queue.shift();
             preparePassForNextInQueue(nextPerson);
             updateQueueDisplay();
@@ -70,7 +79,7 @@ function updatePassAvailability(isEnabled) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
 
-    } else {
+    } else { // isEnabled is false
         formDisabledOverlay.classList.remove('hidden');
         mainForm.classList.add('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.add('bg-gray-500');
@@ -233,6 +242,7 @@ function setPassToAvailableState() {
 }
 
 /**
+ * ** UPDATED: This function now applies the deferred disable state **
  * Handles the main Bathroom Pass sign-in form submission.
  * @param {Event} event - The form submission event.
  */
@@ -265,12 +275,20 @@ async function handleMainFormSubmit(event) {
             showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
             appState.passHolder = null; 
 
-            if (appState.queue.length > 0 && appState.ui.isPassEnabled) {
+            // Check the global pass status AFTER signing in
+            if (!appState.ui.isPassEnabled) {
+                // If the pass system is supposed to be disabled, disable it now.
+                updatePassAvailability(false);
+                setPassToAvailableState();
+            } else if (appState.queue.length > 0) {
+                // If the system is enabled and there's a queue, promote the next person.
                 const nextPerson = appState.queue.shift();
                 preparePassForNextInQueue(nextPerson);
             } else {
+                // If the system is enabled and the queue is empty, set to available.
                 setPassToAvailableState();
             }
+
             updateQueueDisplay(); 
             updateQueueControls();
 
@@ -610,14 +628,11 @@ async function initializePageSpecificApp() {
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            // ** FIX: Always load the data first, as the side panels are always active **
             await loadInitialPassData();
             
-            // Then, check the initial status of the pass system
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
             updatePassAvailability(statusPayload.isEnabled);
 
-            // Finally, start polling for status changes
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
