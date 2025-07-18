@@ -34,7 +34,7 @@ const disabledOverlay = document.getElementById('disabledOverlay');
 // --- Bathroom Pass Page Specific Functions ---
 
 /**
- * Updates the UI based on pass status and triggers data load if needed.
+ * ** UPDATED: Simplified function to only handle the UI overlay **
  * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
@@ -44,12 +44,6 @@ function updatePassAvailability(isEnabled) {
         if (!appState.passHolder) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
-
-        if (!appState.ui.isDataLoaded) {
-            console.log("Pass system is now enabled, loading initial data...");
-            loadInitialPassData(); 
-        }
-
     } else {
         disabledOverlay.classList.remove('hidden');
         studentOutHeader.classList.add('bg-gray-500');
@@ -564,6 +558,7 @@ function showLateSignInView() {
 }
 
 /**
+ * ** UPDATED: Corrected initialization and polling logic **
  * Initializes the Bathroom Pass application elements and fetches initial data.
  */
 async function initializePageSpecificApp() {
@@ -602,7 +597,6 @@ async function initializePageSpecificApp() {
         try {
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
             
-            // ** FIX: Correctly handle initial state and start polling **
             if (statusPayload.isEnabled) {
                 await loadInitialPassData();
             } else {
@@ -622,7 +616,7 @@ async function initializePageSpecificApp() {
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
             showErrorAlert("Could not check pass system status. Please reload.");
-            updatePassAvailability(false); // Explicitly disable on error
+            updatePassAvailability(false);
         }
     } else {
         console.warn("User email or ID token not available. Cannot fetch data for Bathroom Pass.");
