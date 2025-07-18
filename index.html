@@ -49,9 +49,17 @@
                 </button>
             </div>
         </div>
-        <h1 id="studentOutHeader" class="font-bold text-center mb-6 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
+        <h1 id="studentOutHeader" class="font-bold text-center mb-4 p-2 w-full max-w-md rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
             <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
+
+        <!-- ** NEW: Global Class Selector ** -->
+        <div class="w-full max-w-md mb-6">
+            <div class="flex items-center bg-white p-3 rounded-lg shadow-md">
+                <label class="block font-medium text-gray-700 w-20" for="courseDropdown">Class:</label>
+                <select id="courseDropdown" name="Class" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
+            </div>
+        </div>
 
         <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
@@ -72,8 +80,6 @@
         </div>
 
         <div id="mainContentContainer" class="flex flex-col lg:flex-row items-start lg:items-stretch justify-center w-full max-w-6xl gap-6">
-
-            <!-- ** UPDATED: Added a relative container around the form ** -->
             <div class="w-full lg:w-2/3 flex-shrink-0 relative">
                 <form
                     id="form"
@@ -81,13 +87,6 @@
                     style="background-color: #4ade80;" 
                 >
                     <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
-
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                        <label class="block w=3/4 font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="class">Class:</label>
-                        <select id="courseDropdown" name="Class"
-                            class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                        </select>
-                    </div>
 
                     <div class="flex flex-col sm:flex-row items-start sm:items-center">
                         <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
@@ -112,7 +111,6 @@
 
                     <p class="text-center text-lg font-medium text-gray-800 mt-4">Time: <span id="minutes" class="font-bold">0</span>:<span id="seconds" class="font-bold">00</span></p>
                 </form>
-                <!-- ** NEW: Form-specific overlay ** -->
                 <div id="formDisabledOverlay" class="hidden absolute inset-0 bg-gray-600 bg-opacity-75 z-30 flex items-center justify-center rounded-lg">
                     <h3 class="text-2xl font-bold text-white">Pass is Disabled</h3>
                 </div>
