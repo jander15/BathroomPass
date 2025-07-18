@@ -580,6 +580,21 @@ async function initializePageSpecificApp() {
         else if (activeTab === 'classTrends') renderClassTrendsReport();
     });
 
+    // ** FIX: The missing event listener for the toggle is now here. **
+    passStatusToggle.addEventListener('change', async () => {
+        const isEnabled = passStatusToggle.checked;
+        passStatusLabel.textContent = isEnabled ? 'Enabled' : 'Disabled';
+        try {
+            await sendAuthenticatedRequest({ action: 'setPassStatus', isEnabled: isEnabled });
+        } catch (error) {
+            console.error("Failed to set pass status:", error);
+            showErrorAlert("Could not update pass status. Please try again.");
+            // Revert UI on failure
+            passStatusToggle.checked = !isEnabled;
+            passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
+        }
+    });
+
     [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
         if(el) el.addEventListener('change', renderSignOutReport);
     });
@@ -623,9 +638,9 @@ async function initializePageSpecificApp() {
     });
     [trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
 
-    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); });
-    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); });
-    classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); });
+    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
+    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
+    classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
     dashboardContent.addEventListener('click', (event) => {
         const editButton = event.target.closest('.edit-btn');
@@ -807,6 +822,10 @@ async function initializePageSpecificApp() {
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
+            const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
+            passStatusToggle.checked = statusPayload.isEnabled;
+            passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
+            
             await fetchAllStudentData(); 
             await populateCourseDropdownFromData();
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
