@@ -45,14 +45,7 @@ function updatePassAvailability(isEnabled) {
         mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
 
-        // If the pass is now available and no one is out, check the queue.
-        if (!appState.passHolder && appState.queue.length > 0) {
-            const nextPerson = appState.queue.shift();
-            preparePassForNextInQueue(nextPerson);
-            updateQueueDisplay();
-        } else if (!appState.passHolder) {
-            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-        }
+    
 
     } else {
         formDisabledOverlay.classList.remove('hidden');
