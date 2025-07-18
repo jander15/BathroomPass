@@ -45,7 +45,6 @@ function updatePassAvailability(isEnabled) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
 
-        // ** FIX: If pass is enabled but data hasn't been loaded, load it now. **
         if (!appState.ui.isDataLoaded) {
             console.log("Pass system is now enabled, loading initial data...");
             loadInitialPassData(); 
@@ -602,9 +601,13 @@ async function initializePageSpecificApp() {
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
             const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
-            updatePassAvailability(statusPayload.isEnabled);
-
-            // The data loading is now handled by updatePassAvailability
+            
+            // ** FIX: Correctly handle initial state and start polling **
+            if (statusPayload.isEnabled) {
+                await loadInitialPassData();
+            } else {
+                updatePassAvailability(false);
+            }
 
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
