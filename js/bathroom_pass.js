@@ -33,20 +33,25 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 
 // --- Bathroom Pass Page Specific Functions ---
 
+
 /**
+ * ** NEW FUNCTION **
  * Updates the selected class in the dropdown if it has changed.
  * @param {string | null} currentClassName - The name of the class that should be selected.
  */
 function updateCurrentClass(currentClassName) {
     if (currentClassName && courseDropdown.value !== currentClassName) {
+        // Check if the option exists before trying to select it
         const optionExists = Array.from(courseDropdown.options).some(opt => opt.value === currentClassName);
         if (optionExists) {
             console.log(`Auto-selecting current class: ${currentClassName}`);
             courseDropdown.value = currentClassName;
+            // Manually trigger the 'change' event to update the student list
             courseDropdown.dispatchEvent(new Event('change'));
         }
     }
 }
+
 
 /**
  * Central function to manage the state of the queue dropdown and buttons.
@@ -55,6 +60,7 @@ function updateQueueControls() {
     const isClassSelected = courseDropdown.value && courseDropdown.value !== DEFAULT_CLASS_OPTION;
     const isPassInUse = appState.passHolder || appState.queue.length > 0;
 
+    // The queue is available if a class is selected AND (the pass system is disabled OR the pass is currently in use).
     if (isClassSelected && (!appState.ui.isPassEnabled || isPassInUse)) {
         nameQueueDropdown.removeAttribute("disabled");
     } else {
@@ -65,18 +71,27 @@ function updateQueueControls() {
 }
 
 /**
+ * ** UPDATED: This function now defers the disable state if a student is out **
  * Updates the UI to reflect whether the pass system is enabled or disabled.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
+    const previousState = appState.ui.isPassEnabled;
     appState.ui.isPassEnabled = isEnabled;
+
+    // If a student is currently signed out, do NOT change the UI.
+    // The change will be applied when they sign back in.
+    if (appState.passHolder) {
+        return; 
+    }
 
     if (isEnabled) {
         formDisabledOverlay.classList.add('hidden');
         mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
 
-        if (!appState.passHolder && appState.queue.length > 0) {
+        // If the pass was just re-enabled and no one is out, check the queue.
+        if (!previousState && isEnabled && appState.queue.length > 0) {
             const nextPerson = appState.queue.shift();
             preparePassForNextInQueue(nextPerson);
             updateQueueDisplay();
@@ -84,7 +99,7 @@ function updatePassAvailability(isEnabled) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
 
-    } else {
+    } else { // isEnabled is false
         formDisabledOverlay.classList.remove('hidden');
         mainForm.classList.add('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.add('bg-gray-500');
@@ -247,6 +262,7 @@ function setPassToAvailableState() {
 }
 
 /**
+ * ** UPDATED: This function now applies the deferred disable state **
  * Handles the main Bathroom Pass sign-in form submission.
  * @param {Event} event - The form submission event.
  */
@@ -279,12 +295,20 @@ async function handleMainFormSubmit(event) {
             showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
             appState.passHolder = null; 
 
-            if (appState.queue.length > 0 && appState.ui.isPassEnabled) {
+            // Check the global pass status AFTER signing in
+            if (!appState.ui.isPassEnabled) {
+                // If the pass system is supposed to be disabled, disable it now.
+                updatePassAvailability(false);
+                setPassToAvailableState();
+            } else if (appState.queue.length > 0) {
+                // If the system is enabled and there's a queue, promote the next person.
                 const nextPerson = appState.queue.shift();
                 preparePassForNextInQueue(nextPerson);
             } else {
+                // If the system is enabled and the queue is empty, set to available.
                 setPassToAvailableState();
             }
+
             updateQueueDisplay(); 
             updateQueueControls();
 
@@ -626,10 +650,12 @@ async function initializePageSpecificApp() {
         try {
             await loadInitialPassData();
             
-            const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
-            updatePassAvailability(statusPayload.isEnabled);
-            updateCurrentClass(statusPayload.currentClass);
+            // ** UPDATED: Initial call is now to getLiveState **
+            const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+            updatePassAvailability(liveState.isEnabled);
+            updateCurrentClass(liveState.currentClass);
 
+            // ** UPDATED: Polling now calls getLiveState **
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
@@ -647,7 +673,7 @@ async function initializePageSpecificApp() {
             updatePassAvailability(false);
         }
     } else {
-        console.warn("User email or ID token not available. Cannot fetch data for Bathroom Pass.");
+        console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
     showLateSignInView(); 
