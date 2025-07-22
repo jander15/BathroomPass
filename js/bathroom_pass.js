@@ -33,6 +33,16 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 
 // --- Bathroom Pass Page Specific Functions ---
 
+/**
+ * Updates the date and time display in the info bar every second.
+ */
+function startInfoBarClock() {
+    setInterval(() => {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        infoBarDateTime.textContent = now.toLocaleDateString('en-US', options);
+    }, 1000); // Update every second
+}
 
 /**
  * ** NEW FUNCTION with added logging **
@@ -660,6 +670,8 @@ async function initializePageSpecificApp() {
     signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; 
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
+        startInfoBarClock();
+        infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
         try {
             await loadInitialPassData();
             
