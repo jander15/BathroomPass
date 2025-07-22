@@ -35,20 +35,33 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 
 
 /**
- * ** NEW FUNCTION **
+ * ** NEW FUNCTION with added logging **
  * Updates the selected class in the dropdown if it has changed.
  * @param {string | null} currentClassName - The name of the class that should be selected.
  */
 function updateCurrentClass(currentClassName) {
+    console.log("--- Starting updateCurrentClass ---");
+    console.log("Attempting to select class:", currentClassName);
+
     if (currentClassName && courseDropdown.value !== currentClassName) {
-        // Check if the option exists before trying to select it
-        const optionExists = Array.from(courseDropdown.options).some(opt => opt.value === currentClassName);
+        // Log all available options in the dropdown for comparison
+        const availableOptions = Array.from(courseDropdown.options).map(opt => opt.value);
+        console.log("Available options in dropdown:", availableOptions);
+
+        const optionExists = availableOptions.includes(currentClassName);
+
         if (optionExists) {
-            console.log(`Auto-selecting current class: ${currentClassName}`);
+            console.log("SUCCESS: Option exists. Setting dropdown value.");
             courseDropdown.value = currentClassName;
             // Manually trigger the 'change' event to update the student list
             courseDropdown.dispatchEvent(new Event('change'));
+        } else {
+            console.log("FAIL: The class name '" + currentClassName + "' was not found in the dropdown's available options.");
         }
+    } else if (!currentClassName) {
+        console.log("INFO: No current class name was provided from the backend.");
+    } else {
+        console.log("INFO: The correct class is already selected.");
     }
 }
 
