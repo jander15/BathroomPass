@@ -140,7 +140,7 @@ async function loadInitialPassData() {
         await fetchAllStudentData(); 
         populateCourseDropdownFromData();
         populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
-        courseDropdown.disabled = false;
+        courseDropdown.disabled = true;
         appState.ui.isDataLoaded = true;
     } catch (error) {
         console.error("Failed to load initial pass data:", error);
@@ -232,7 +232,7 @@ function resetMainPassUI() {
     signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
     signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
 
-    courseDropdown.removeAttribute("disabled");
+    //courseDropdown.removeAttribute("disabled");
     emojiDropdown.removeAttribute("disabled");
     mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
 }
