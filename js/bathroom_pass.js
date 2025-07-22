@@ -677,6 +677,7 @@ function showLateSignInView() {
  * Initializes the Bathroom Pass application elements and fetches initial data.
  */
 async function initializePageSpecificApp() {
+    // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
 
@@ -689,6 +690,7 @@ async function initializePageSpecificApp() {
     updateQueueDisplay(); 
     toggleAddToQueueButtonVisibility(); 
 
+    // --- Dropdown Initialization ---
     populateDropdown('courseDropdown', [], LOADING_OPTION, "");
     courseDropdown.setAttribute("disabled", "disabled");
 
@@ -708,65 +710,84 @@ async function initializePageSpecificApp() {
     signInButton.style.display = "none"; 
     signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; 
 
+    // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
+        // Set up the static parts of the info bar
         startInfoBarClock();
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
+
         try {
+            // Load all necessary data from the backend first
             await loadInitialPassData();
             
-            // ** UPDATED: Initial call is now to getLiveState **
+            // Get the initial state of the pass system
             const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
-            updatePassAvailability(liveState.isEnabled);
-            updateCurrentClass(liveState.currentClass);
 
-            // ** UPDATED: Polling now calls getLiveState **
+            // Set the initial class display based on the live state
+            if (liveState.currentClass) {
+                infoBarClass.textContent = `Class: ${liveState.currentClass}`;
+            } else {
+                infoBarClass.textContent = "Class Hasn't Started Yet";
+            }
+            appState.ui.currentClassPeriod = liveState.currentClass; // Set initial state for comparison
+
+            // Update the UI based on the initial state
+            updatePassAvailability(liveState.isEnabled);
+            updateCurrentClass(liveState.currentClass); // This updates the hidden dropdown
+
+            // --- Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
+            
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
-        const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+                    const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
 
-        // ** NEW LOGIC TO HANDLE CLASS CHANGE **
-        // Check if a class was previously set, if the new class is different, and if the new class isn't null
-        if (appState.ui.currentClassPeriod && latestState.currentClass && latestState.currentClass !== appState.ui.currentClassPeriod) {
-            
-            let alertMessage = "Class period changed. ";
-            let studentWasSignedOut = false;
-            let queueWasCleared = false;
+                    // Update the info bar with the latest class status
+                    if (latestState.currentClass) {
+                        infoBarClass.textContent = `Class: ${latestState.currentClass}`;
+                    } else {
+                        infoBarClass.textContent = "Class Hasn't Started Yet";
+                    }
+                    
+                    // Check if the class period has changed from a previously active one
+                    if (appState.ui.currentClassPeriod && latestState.currentClass !== appState.ui.currentClassPeriod) {
+                        let alertMessage = "Class period changed. ";
+                        let studentWasSignedOut = false;
+                        let queueWasCleared = false;
 
-            // 1. Automatically sign in the current pass holder, if one exists
-            if (appState.passHolder) {
-                const studentToSignIn = appState.passHolder;
-                const classOfSignOut = appState.ui.currentClassPeriod; // Use the class period they signed out from
-                await autoSignInStudent(studentToSignIn, classOfSignOut);
-                alertMessage += `${studentToSignIn} was automatically signed in. `;
-                studentWasSignedOut = true;
-            }
+                        // Automatically sign in the pass holder, if one exists
+                        if (appState.passHolder) {
+                            const studentToSignIn = appState.passHolder;
+                            const classOfSignOut = appState.ui.currentClassPeriod;
+                            await autoSignInStudent(studentToSignIn, classOfSignOut);
+                            alertMessage += `${studentToSignIn} was automatically signed in. `;
+                            studentWasSignedOut = true;
+                        }
 
-            // 2. Clear the queue
-            if (appState.queue.length > 0) {
-                appState.queue = [];
-                updateQueueDisplay();
-                alertMessage += "The queue has been cleared.";
-                queueWasCleared = true;
-            }
+                        // Clear the queue
+                        if (appState.queue.length > 0) {
+                            appState.queue = [];
+                            updateQueueDisplay();
+                            alertMessage += "The queue has been cleared.";
+                            queueWasCleared = true;
+                        }
 
-            // Show a single, combined alert if anything happened
-            if (studentWasSignedOut || queueWasCleared) {
-                showSuccessAlert(alertMessage.trim());
-            }
-        }
-        
-        // Update the current class in the app state for the next check
-        appState.ui.currentClassPeriod = latestState.currentClass;
+                        if (studentWasSignedOut || queueWasCleared) {
+                            showSuccessAlert(alertMessage.trim());
+                        }
+                    }
+                    
+                    // Update the app state for the next check
+                    appState.ui.currentClassPeriod = latestState.currentClass;
 
-        // The existing logic to update the UI continues as normal
-        updatePassAvailability(latestState.isEnabled);
-        updateCurrentClass(latestState.currentClass);
+                    // Update the rest of the UI as normal
+                    updatePassAvailability(latestState.isEnabled);
+                    updateCurrentClass(latestState.currentClass);
 
-    } catch (error) {
-        console.error("Polling error:", error);
-    }
-}, 20000); // Poll every 20 seconds
+                } catch (error) {
+                    console.error("Polling error:", error);
+                }
+            }, 20000); // Poll every 20 seconds
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
@@ -777,6 +798,7 @@ async function initializePageSpecificApp() {
         console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
+    // Set the initial view for the right-side forms
     showLateSignInView(); 
     handleLateNameSelectionChange();
 }
