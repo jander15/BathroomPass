@@ -44,6 +44,12 @@
                 <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
                 <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
                 <hr class="my-1">
+
+                <div class="px-4 py-2">
+                    <label for="courseDropdown" class="text-xs font-bold text-gray-600">MANUAL CLASS OVERRIDE</label>
+                    <select id="courseDropdown" name="Class" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none text-sm"></select>
+                </div>
+                <hr class="my-1">
                 <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                     Sign Out of Google
                 </button>
@@ -52,14 +58,6 @@
         <h1 id="studentOutHeader" class="font-bold text-center mb-4 p-2 w-full max-w-md rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
             <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
         </h1>
-
-        <!-- ** NEW: Global Class Selector ** -->
-        <div class="w-full max-w-md mb-6">
-            <div class="flex items-center bg-white p-3 rounded-lg shadow-md">
-                <label class="block font-medium text-gray-700 w-20" for="courseDropdown">Class:</label>
-                <select id="courseDropdown" name="Class" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
-            </div>
-        </div>
 
         <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
