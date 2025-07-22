@@ -38,7 +38,8 @@ const appState = {
         currentDashboardTab: 'signOut',
         pollingIntervalId: null,
         isDataLoaded: false, 
-        isPassEnabled: true
+        isPassEnabled: true,
+        currentClassPeriod: null
 
     },
     sortState: {

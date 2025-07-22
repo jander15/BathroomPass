@@ -285,6 +285,44 @@ function setPassToAvailableState() {
 }
 
 /**
+ * Signs in a student automatically without user interaction, typically for class changes.
+ * @param {string} studentName The full name of the student to sign in.
+ * @param {string} className The class they are being signed in from.
+ */
+async function autoSignInStudent(studentName, className) {
+    // If there's a timer running, stop it and get the final time
+    if (appState.timer.intervalId) {
+        clearInterval(appState.timer.intervalId);
+    }
+    const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
+    const nameOnly = studentName.includes("(") ? studentName.substring(0, studentName.indexOf("(") - 1).trim() : studentName.trim();
+
+    const payload = {
+        action: ACTION_LOG_SIGN_IN,
+        Seconds: timeOutSeconds,
+        Name: nameOnly,
+        Class: className,
+    };
+
+    try {
+        const data = await sendAuthenticatedRequest(payload);
+        if (data.result !== 'success') {
+            throw new Error(data.error || 'Auto sign-in failed on the server.');
+        }
+
+        // Reset the UI state now that the student is signed in
+        resetMainPassUI();
+        appState.passHolder = null;
+        setPassToAvailableState(); // Reset the main form to its default available state
+
+    } catch (error) {
+        console.error('Error during auto sign-in:', error);
+        showErrorAlert(`Failed to automatically sign in ${studentName}: ${error.message}`);
+    }
+}
+
+
+/**
  * ** UPDATED: This function now applies the deferred disable state **
  * Handles the main Bathroom Pass sign-in form submission.
  * @param {Event} event - The form submission event.
@@ -685,13 +723,50 @@ async function initializePageSpecificApp() {
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(async () => {
                 try {
-                    const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
-                    updatePassAvailability(latestState.isEnabled);
-                    updateCurrentClass(latestState.currentClass);
-                } catch (error) {
-                    console.error("Polling error:", error);
-                }
-            }, 20000);
+        const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+
+        // ** NEW LOGIC TO HANDLE CLASS CHANGE **
+        // Check if a class was previously set, if the new class is different, and if the new class isn't null
+        if (appState.ui.currentClassPeriod && latestState.currentClass && latestState.currentClass !== appState.ui.currentClassPeriod) {
+            
+            let alertMessage = "Class period changed. ";
+            let studentWasSignedOut = false;
+            let queueWasCleared = false;
+
+            // 1. Automatically sign in the current pass holder, if one exists
+            if (appState.passHolder) {
+                const studentToSignIn = appState.passHolder;
+                const classOfSignOut = appState.ui.currentClassPeriod; // Use the class period they signed out from
+                await autoSignInStudent(studentToSignIn, classOfSignOut);
+                alertMessage += `${studentToSignIn} was automatically signed in. `;
+                studentWasSignedOut = true;
+            }
+
+            // 2. Clear the queue
+            if (appState.queue.length > 0) {
+                appState.queue = [];
+                updateQueueDisplay();
+                alertMessage += "The queue has been cleared.";
+                queueWasCleared = true;
+            }
+
+            // Show a single, combined alert if anything happened
+            if (studentWasSignedOut || queueWasCleared) {
+                showSuccessAlert(alertMessage.trim());
+            }
+        }
+        
+        // Update the current class in the app state for the next check
+        appState.ui.currentClassPeriod = latestState.currentClass;
+
+        // The existing logic to update the UI continues as normal
+        updatePassAvailability(latestState.isEnabled);
+        updateCurrentClass(latestState.currentClass);
+
+    } catch (error) {
+        console.error("Polling error:", error);
+    }
+}, 20000); // Poll every 20 seconds
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
