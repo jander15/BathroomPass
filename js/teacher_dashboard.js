@@ -1,6 +1,7 @@
 // js/teacher_dashboard.js
 
 // --- DOM Element Caching ---
+const classOverrideDropdown = document.getElementById('classOverrideDropdown');
 const signOutClassDropdown = document.getElementById('signOutClassDropdown');
 const attendanceClassDropdown = document.getElementById('attendanceClassDropdown');
 const studentFilterDiv = document.getElementById('studentFilterDiv');
@@ -572,6 +573,21 @@ async function initializePageSpecificApp() {
     toggleTrendsDateInputs();
 
     // Add All Event Listeners Here
+
+    classOverrideDropdown.addEventListener('change', async () => {
+        const selectedClass = classOverrideDropdown.value;
+        try {
+            await sendAuthenticatedRequest({ 
+                action: 'setClassOverride', 
+                className: selectedClass 
+            });
+            showSuccessAlert(`Pass page class override set to: ${selectedClass}`);
+        } catch (error) {
+            console.error("Failed to set class override:", error);
+            showErrorAlert("Could not save override setting.");
+        }
+    });
+
     reloadDataBtn.addEventListener('click', async () => {
         await fetchAllSignOutData();
         const activeTab = appState.ui.currentDashboardTab;
@@ -834,6 +850,8 @@ async function initializePageSpecificApp() {
             attendanceClassDropdown.removeAttribute("disabled");
             populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             trendsClassDropdown.removeAttribute("disabled");
+            populateDropdown('classOverrideDropdown', appState.data.courses, "Auto", "AUTO");
+            classOverrideDropdown.removeAttribute("disabled");
             await fetchAllSignOutData();
             // Initial renders after data is loaded
             renderSignOutReport();
