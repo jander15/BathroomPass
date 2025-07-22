@@ -93,6 +93,10 @@
                     class="relative rounded-lg shadow-xl p-6 w-full space-y-4"
                     style="background-color: #4ade80;" 
                 >
+                    <div id="formDisabledOverlay" class="hidden absolute inset-0 bg-gray-600 bg-opacity-75 z-30 flex items-center justify-center rounded-lg">
+                        <h3 class="text-2xl font-bold text-white">Pass is Disabled</h3>
+                    </div>
+                    
                     <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
                     <div class="flex flex-col sm:flex-row items-start sm:items-center">
@@ -117,10 +121,6 @@
                     </div>
 
                     <p class="text-center text-lg font-medium text-gray-800 mt-4">Time: <span id="minutes" class="font-bold">0</span>:<span id="seconds" class="font-bold">00</span></p>
-                    
-                    <div id="formDisabledOverlay" class="hidden absolute inset-0 bg-gray-600 bg-opacity-75 z-30 flex items-center justify-center rounded-lg">
-                        <h3 class="text-2xl font-bold text-white">Pass is Disabled</h3>
-                    </div>
                 </form>
 
             </div>

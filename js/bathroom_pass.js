@@ -39,7 +39,7 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 function startInfoBarClock() {
     setInterval(() => {
         const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
         infoBarDateTime.textContent = now.toLocaleDateString('en-US', options);
     }, 1000); // Update every second
 }
@@ -551,6 +551,7 @@ function handleCourseSelectionChange(){
         nameDropdown.value = DEFAULT_NAME_OPTION; 
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         lateNameDropdown.value = DEFAULT_NAME_OPTION; 
+        infoBarClass.textContent = `Class: ${selectedCourse}`;
 
         emojiDropdown.removeAttribute("disabled"); 
         emojiDropdown.value = NO_EMOJI_OPTION; 
