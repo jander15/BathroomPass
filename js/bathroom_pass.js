@@ -8,7 +8,7 @@ const headerStatusSpan = document.getElementById('headerStatus');
 const emojiRight = document.getElementById('emojiRight'); 
 const mainForm = document.getElementById('form');
 const passLabel = document.getElementById('passLabel'); 
-const courseDropdown = document.getElementById('courseDropdown');
+// ** REMOVED: const courseDropdown = document.getElementById('courseDropdown'); **
 const nameDropdown = document.getElementById('nameDropdown');
 const emojiDropdown = document.getElementById('emojiDropdown');
 const signOutButton = document.getElementById('signOutButton');
@@ -29,6 +29,10 @@ const lateSignInForm = document.getElementById('lateSignInForm');
 const lateNameDropdown = document.getElementById('lateNameDropdown');
 const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
 const formDisabledOverlay = document.getElementById('formDisabledOverlay');
+// ** NEW: Caching the Info Bar elements **
+const infoBarDateTime = document.getElementById('infoBarDateTime');
+const infoBarTeacher = document.getElementById('infoBarTeacher');
+const infoBarClass = document.getElementById('infoBarClass');
 
 
 // --- Bathroom Pass Page Specific Functions ---
@@ -39,51 +43,48 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 function startInfoBarClock() {
     setInterval(() => {
         const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
         infoBarDateTime.textContent = now.toLocaleDateString('en-US', options);
-    }, 1000); // Update every second
+    }, 1000);
 }
+
+// ** REMOVED: The updateCurrentClass function is no longer needed. **
 
 /**
- * ** NEW FUNCTION with added logging **
- * Updates the selected class in the dropdown if it has changed.
- * @param {string | null} currentClassName - The name of the class that should be selected.
+ * ** NEW: This function takes the logic from the old handleCourseSelectionChange **
+ * It populates all student-related dropdowns based on the current class.
+ * @param {string | null} currentClassName - The name of the class to populate students for.
  */
-function updateCurrentClass(currentClassName) {
-    console.log("--- Starting updateCurrentClass ---");
-    console.log("Attempting to select class:", currentClassName);
-
-    if (currentClassName && courseDropdown.value !== currentClassName) {
-        // Log all available options in the dropdown for comparison
-        const availableOptions = Array.from(courseDropdown.options).map(opt => opt.value);
-        console.log("Available options in dropdown:", availableOptions);
-
-        const optionExists = availableOptions.includes(currentClassName);
-
-        if (optionExists) {
-            console.log("SUCCESS: Option exists. Setting dropdown value.");
-            courseDropdown.value = currentClassName;
-            // Manually trigger the 'change' event to update the student list
-            courseDropdown.dispatchEvent(new Event('change'));
-        } else {
-            console.log("FAIL: The class name '" + currentClassName + "' was not found in the dropdown's available options.");
-        }
-    } else if (!currentClassName) {
-        console.log("INFO: No current class name was provided from the backend.");
+function updateStudentDropdownsForClass(currentClassName) {
+    if (currentClassName) {
+        // Enable and populate the name dropdowns for the main form and queue
+        populateNameDropdownsForCourse(currentClassName);
+        nameDropdown.removeAttribute("disabled");
+        lateNameDropdown.removeAttribute("disabled");
+        nameQueueDropdown.removeAttribute("disabled");
+        emojiDropdown.removeAttribute("disabled");
     } else {
-        console.log("INFO: The correct class is already selected.");
+        // If there's no class, disable the dropdowns
+        const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
+        dropdownsToDisable.forEach(id => {
+            const dd = document.getElementById(id);
+            populateDropdown(id, [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
+            dd.setAttribute("disabled", "disabled");
+        });
+        emojiDropdown.setAttribute("disabled", "disabled");
     }
+    // Reset the state of the buttons
+    handleNameSelectionChange();
+    handleLateNameSelectionChange();
 }
-
 
 /**
  * Central function to manage the state of the queue dropdown and buttons.
  */
 function updateQueueControls() {
-    const isClassSelected = courseDropdown.value && courseDropdown.value !== DEFAULT_CLASS_OPTION;
+    const isClassSelected = !!appState.ui.currentClassPeriod; // ** Use state instead of dropdown value **
     const isPassInUse = appState.passHolder || appState.queue.length > 0;
 
-    // The queue is available if a class is selected AND (the pass system is disabled OR the pass is currently in use).
     if (isClassSelected && (!appState.ui.isPassEnabled || isPassInUse)) {
         nameQueueDropdown.removeAttribute("disabled");
     } else {
@@ -94,7 +95,6 @@ function updateQueueControls() {
 }
 
 /**
- * ** UPDATED: This function now defers the disable state if a student is out **
  * Updates the UI to reflect whether the pass system is enabled or disabled.
  * @param {boolean} isEnabled - The current status of the pass system.
  */
@@ -102,8 +102,6 @@ function updatePassAvailability(isEnabled) {
     const previousState = appState.ui.isPassEnabled;
     appState.ui.isPassEnabled = isEnabled;
 
-    // If a student is currently signed out, do NOT change the UI.
-    // The change will be applied when they sign back in.
     if (appState.passHolder) {
         return; 
     }
@@ -113,7 +111,6 @@ function updatePassAvailability(isEnabled) {
         mainForm.classList.remove('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.remove('bg-gray-500');
 
-        // If the pass was just re-enabled and no one is out, check the queue.
         if (!previousState && isEnabled && appState.queue.length > 0) {
             const nextPerson = appState.queue.shift();
             preparePassForNextInQueue(nextPerson);
@@ -122,7 +119,7 @@ function updatePassAvailability(isEnabled) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
 
-    } else { // isEnabled is false
+    } else {
         formDisabledOverlay.classList.remove('hidden');
         mainForm.classList.add('opacity-50', 'pointer-events-none');
         studentOutHeader.classList.add('bg-gray-500');
@@ -138,14 +135,12 @@ function updatePassAvailability(isEnabled) {
 async function loadInitialPassData() {
     try {
         await fetchAllStudentData(); 
-        populateCourseDropdownFromData();
-        populateDropdown('courseDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
-        courseDropdown.disabled = true;
+        populateCourseDropdownFromData(); // This still populates appState.data.courses, which is needed.
+        // ** REMOVED: The call to populate the now-deleted courseDropdown element. **
         appState.ui.isDataLoaded = true;
     } catch (error) {
         console.error("Failed to load initial pass data:", error);
         showErrorAlert("Could not load class data. Please reload the page.");
-        populateDropdown('courseDropdown', [], "Error loading classes");
     }
 }
 
@@ -186,7 +181,6 @@ function startPassTimerAndTransitionUI() {
         signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
 
         nameDropdown.setAttribute("disabled", "disabled");
-        courseDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.setAttribute("disabled", "disabled");
         mainForm.style.backgroundColor = FORM_COLOR_OUT;
 
@@ -232,14 +226,12 @@ function resetMainPassUI() {
     signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
     signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
 
-    //courseDropdown.removeAttribute("disabled");
     emojiDropdown.removeAttribute("disabled");
     mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
 }
 
 /**
  * Prepares the main pass UI for the next student in the queue.
- * @param {string} nextPerson - The name of the next student.
  */
 function preparePassForNextInQueue(nextPerson) {
     nameDropdown.value = nextPerson;
@@ -286,11 +278,8 @@ function setPassToAvailableState() {
 
 /**
  * Signs in a student automatically without user interaction, typically for class changes.
- * @param {string} studentName The full name of the student to sign in.
- * @param {string} className The class they are being signed in from.
  */
 async function autoSignInStudent(studentName, className) {
-    // If there's a timer running, stop it and get the final time
     if (appState.timer.intervalId) {
         clearInterval(appState.timer.intervalId);
     }
@@ -310,10 +299,9 @@ async function autoSignInStudent(studentName, className) {
             throw new Error(data.error || 'Auto sign-in failed on the server.');
         }
 
-        // Reset the UI state now that the student is signed in
         resetMainPassUI();
         appState.passHolder = null;
-        setPassToAvailableState(); // Reset the main form to its default available state
+        setPassToAvailableState();
 
     } catch (error) {
         console.error('Error during auto sign-in:', error);
@@ -323,9 +311,7 @@ async function autoSignInStudent(studentName, className) {
 
 
 /**
- * ** UPDATED: This function now applies the deferred disable state **
  * Handles the main Bathroom Pass sign-in form submission.
- * @param {Event} event - The form submission event.
  */
 async function handleMainFormSubmit(event) {
     event.preventDefault();
@@ -337,7 +323,7 @@ async function handleMainFormSubmit(event) {
     clearInterval(appState.timer.intervalId); 
 
     const nameOnly = appState.passHolder.includes("(") ? appState.passHolder.substring(0, appState.passHolder.indexOf("(")-1).trim() : appState.passHolder.trim();
-    const classValue = courseDropdown.value;
+    const classValue = appState.ui.currentClassPeriod; // ** Use state instead of dropdown value **
     const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
 
     const payload = {
@@ -356,17 +342,13 @@ async function handleMainFormSubmit(event) {
             showSuccessAlert(`${signedInStudentName} has been signed in successfully!`);
             appState.passHolder = null; 
 
-            // Check the global pass status AFTER signing in
             if (!appState.ui.isPassEnabled) {
-                // If the pass system is supposed to be disabled, disable it now.
                 updatePassAvailability(false);
                 setPassToAvailableState();
             } else if (appState.queue.length > 0) {
-                // If the system is enabled and there's a queue, promote the next person.
                 const nextPerson = appState.queue.shift();
                 preparePassForNextInQueue(nextPerson);
             } else {
-                // If the system is enabled and the queue is empty, set to available.
                 setPassToAvailableState();
             }
 
@@ -391,7 +373,6 @@ async function handleMainFormSubmit(event) {
 
 /**
  * Handles the Late Sign In form submission.
- * @param {Event} event - The form submission event.
  */
 async function handleLateSignInFormSubmit(event) {
     event.preventDefault();
@@ -407,7 +388,7 @@ async function handleLateSignInFormSubmit(event) {
     lateSignInSubmitBtn.textContent = "Processing...";
 
     const nameOnly = selectedLateName.includes("(") ? selectedLateName.substring(0, selectedLateName.indexOf("(")-1).trim() : selectedLateName.trim();
-    const classValue = courseDropdown.value;
+    const classValue = appState.ui.currentClassPeriod; // ** Use state instead of dropdown value **
 
     const payload = {
         action: ACTION_LOG_LATE_SIGN_IN,
@@ -420,7 +401,7 @@ async function handleLateSignInFormSubmit(event) {
         if (data.result === 'success') {
             showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
             lateNameDropdown.value = DEFAULT_NAME_OPTION; 
-            handleLateNameSelectionChange(); // This will hide the button
+            handleLateNameSelectionChange();
         } else {
             throw new Error(data.error || 'Unknown error from server.');
         }
@@ -436,8 +417,6 @@ async function handleLateSignInFormSubmit(event) {
 
 /**
  * Extracts a number from a name string (e.g., for sorting queue).
- * @param {string} name - The name string.
- * @returns {number} The extracted number or Infinity if none.
  */
 function getNumberFromName(name) {
     const match = name.match(/\((\d+)\)$/);
@@ -446,7 +425,6 @@ function getNumberFromName(name) {
 
 /**
  * Updates the queue message display.
- * @param {string} message - The message to display.
  */
 function updateQueueMessage(message) {
     messageText.textContent = message;
@@ -558,7 +536,7 @@ function handleRemoveFromQueueClick() {
 function populateNameDropdownsForCourse(selectedCourseName) {
     const namesForCourseSet = new Set();
     
-    if (selectedCourseName && selectedCourseName !== DEFAULT_CLASS_OPTION && selectedCourseName !== "") {
+    if (selectedCourseName) {
         appState.data.allNamesFromSheet.forEach(item => {
             if (item && item.Class === selectedCourseName && item.Name) {
                 namesForCourseSet.add(item.Name);
@@ -573,44 +551,7 @@ function populateNameDropdownsForCourse(selectedCourseName) {
     populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
 }
 
-/**
- * Handles changes in the class dropdown.
- */
-function handleCourseSelectionChange(){
-    const selectedCourse = courseDropdown.value;
-    signOutButton.style.display = "none";
-
-    if (selectedCourse !== "" && selectedCourse !== DEFAULT_CLASS_OPTION) {
-        nameDropdown.removeAttribute("disabled");
-        lateNameDropdown.removeAttribute("disabled");
-        
-        populateNameDropdownsForCourse(selectedCourse); 
-
-        nameDropdown.value = DEFAULT_NAME_OPTION; 
-        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-        lateNameDropdown.value = DEFAULT_NAME_OPTION; 
-        infoBarClass.textContent = `Class: ${selectedCourse}`;
-
-        emojiDropdown.removeAttribute("disabled"); 
-        emojiDropdown.value = NO_EMOJI_OPTION; 
-
-    } else { 
-        const nameDropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
-        nameDropdownsToDisable.forEach(id => {
-            const ddElement = document.getElementById(id);
-            populateDropdown(id, [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION); 
-            ddElement.setAttribute("disabled", "disabled");
-            ddElement.value = DEFAULT_NAME_OPTION; 
-        });
-
-        emojiDropdown.setAttribute("disabled", "disabled");
-        emojiDropdown.value = NO_EMOJI_OPTION; 
-        signOutButton.style.display = "none"; 
-    }
-    updateQueueControls();
-    handleLateNameSelectionChange(); 
-    handleNameSelectionChange();
-}
+// ** REMOVED: The handleCourseSelectionChange function is no longer needed. **
 
 /**
  * Handles changes in the name dropdown to toggle sign-out button and emoji dropdown.
@@ -691,9 +632,6 @@ async function initializePageSpecificApp() {
     toggleAddToQueueButtonVisibility(); 
 
     // --- Dropdown Initialization ---
-    populateDropdown('courseDropdown', [], LOADING_OPTION, "");
-    courseDropdown.setAttribute("disabled", "disabled");
-
     const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
     nameDropdownsToInit.forEach(id => {
         populateDropdown(id, [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION); 
@@ -712,28 +650,23 @@ async function initializePageSpecificApp() {
 
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
-        // Set up the static parts of the info bar
         startInfoBarClock();
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
         try {
-            // Load all necessary data from the backend first
             await loadInitialPassData();
             
-            // Get the initial state of the pass system
             const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
 
-            // Set the initial class display based on the live state
             if (liveState.currentClass) {
                 infoBarClass.textContent = `Class: ${liveState.currentClass}`;
             } else {
                 infoBarClass.textContent = "Class Hasn't Started Yet";
             }
-            appState.ui.currentClassPeriod = liveState.currentClass; // Set initial state for comparison
+            appState.ui.currentClassPeriod = liveState.currentClass;
 
-            // Update the UI based on the initial state
+            updateStudentDropdownsForClass(liveState.currentClass); // ** Populate students on initial load **
             updatePassAvailability(liveState.isEnabled);
-            updateCurrentClass(liveState.currentClass); // This updates the hidden dropdown
 
             // --- Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
@@ -742,20 +675,17 @@ async function initializePageSpecificApp() {
                 try {
                     const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
 
-                    // Update the info bar with the latest class status
                     if (latestState.currentClass) {
                         infoBarClass.textContent = `Class: ${latestState.currentClass}`;
                     } else {
                         infoBarClass.textContent = "Class Hasn't Started Yet";
                     }
                     
-                    // Check if the class period has changed from a previously active one
                     if (appState.ui.currentClassPeriod && latestState.currentClass !== appState.ui.currentClassPeriod) {
                         let alertMessage = "Class period changed. ";
                         let studentWasSignedOut = false;
                         let queueWasCleared = false;
 
-                        // Automatically sign in the pass holder, if one exists
                         if (appState.passHolder) {
                             const studentToSignIn = appState.passHolder;
                             const classOfSignOut = appState.ui.currentClassPeriod;
@@ -764,7 +694,6 @@ async function initializePageSpecificApp() {
                             studentWasSignedOut = true;
                         }
 
-                        // Clear the queue
                         if (appState.queue.length > 0) {
                             appState.queue = [];
                             updateQueueDisplay();
@@ -777,17 +706,16 @@ async function initializePageSpecificApp() {
                         }
                     }
                     
-                    // Update the app state for the next check
                     appState.ui.currentClassPeriod = latestState.currentClass;
-
-                    // Update the rest of the UI as normal
+                    
+                    // ** Update student lists if the class has changed **
+                    updateStudentDropdownsForClass(latestState.currentClass);
                     updatePassAvailability(latestState.isEnabled);
-                    updateCurrentClass(latestState.currentClass);
 
                 } catch (error) {
                     console.error("Polling error:", error);
                 }
-            }, 20000); // Poll every 20 seconds
+            }, 20000);
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
@@ -798,7 +726,6 @@ async function initializePageSpecificApp() {
         console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
-    // Set the initial view for the right-side forms
     showLateSignInView(); 
     handleLateNameSelectionChange();
 }
@@ -835,10 +762,10 @@ function resetPageSpecificAppState() {
     emojiLeft.textContent = "";
     emojiRight.textContent = "";
     
-    const dropdownsToReset = ['courseDropdown', 'nameDropdown', 'nameQueue', 'lateNameDropdown'];
+    const dropdownsToReset = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
     dropdownsToReset.forEach(id => {
         const ddElement = document.getElementById(id);
-        populateDropdown(id, [], (id === 'courseDropdown' ? DEFAULT_CLASS_OPTION : DEFAULT_NAME_OPTION), "");
+        populateDropdown(id, [], DEFAULT_NAME_OPTION, "");
         ddElement.setAttribute("disabled", "disabled");
     });
 
@@ -854,7 +781,7 @@ function resetPageSpecificAppState() {
 
 
 // --- Event Listeners ---
-courseDropdown.addEventListener("change", handleCourseSelectionChange);
+// ** REMOVED: courseDropdown.addEventListener("change", handleCourseSelectionChange); **
 nameDropdown.addEventListener("change", handleNameSelectionChange);
 signOutButton.addEventListener("click", startPassTimerAndTransitionUI);
 mainForm.addEventListener("submit", handleMainFormSubmit); 
