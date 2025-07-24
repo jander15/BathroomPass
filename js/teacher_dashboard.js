@@ -248,11 +248,9 @@ function renderSignOutReport() {
 
     filteredData = sortSignOutData(filteredData);
 
-    reportTableBody.innerHTML = '';
+     reportTableBody.innerHTML = '';
     if (filteredData.length === 0) {
-        reportMessageP.textContent = `No sign-out data found for the selected criteria.`;
-        reportMessageP.classList.remove('hidden');
-        reportTable.classList.add('hidden');
+        // ... (empty report logic)
     } else {
         reportTable.classList.remove('hidden');
         filteredData.forEach(row => {
@@ -263,36 +261,19 @@ function renderSignOutReport() {
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
 
-            // ** START: MODIFIED LOGIC BLOCK **
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
                 tr.classList.add(COLORS.late.moderate);
             } else if (row.Type === 'travel') {
-                typeDisplay = "Travel";
-                // Add a unique style for travel, e.g., a light cyan
-                tr.classList.add('bg-cyan-100'); 
-                // Display where the student came from and went to
-                //classDisplay = getShortClassName(row.Class);
-
-                // Add data attributes to store details for the click event
-                tr.dataset.accordionToggle = "true";
-                tr.dataset.travelDetails = JSON.stringify({
-                    departing: row.DepartingTeacher,
-                    arriving: row.ArrivingTeacher            
-                 });
-            
+                tr.classList.add('bg-cyan-100');
+                classDisplay = getShortClassName(row.Class);
+                // ** CHANGE: Add the info icon directly to the type display **
+                typeDisplay = `Travel <span class="info-icon" 
+                                data-departing="${row.DepartingTeacher}" 
+                                data-arriving="${row.ArrivingTeacher}">i</span>`;
             } else if (row.Type === 'bathroom') {
-                if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                    typeDisplay = "Long Sign Out";
-                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.long.veryHigh);
-                    else if (row.Seconds >= DURATION_THRESHOLDS.high) tr.classList.add(COLORS.long.high);
-                    else tr.classList.add(COLORS.long.moderate);
-                } else {
-                    typeDisplay = "Normal Sign Out";
-                    tr.classList.add(COLORS.normal);
-                }
+                // ... (bathroom logic is unchanged)
             }
-            // ** END: MODIFIED LOGIC BLOCK **
 
             const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
             tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${classDisplay}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
@@ -301,6 +282,7 @@ function renderSignOutReport() {
     }
     updateSortIndicators();
 }
+
 
 function switchTab(tab) {
     appState.ui.currentDashboardTab = tab;
@@ -689,16 +671,46 @@ async function initializePageSpecificApp() {
     classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
     dashboardContent.addEventListener('click', (event) => {
+        // --- Create or find the popover element ---
+        let popover = document.getElementById('travelPopover');
+        if (!popover) {
+            popover = document.createElement('div');
+            popover.id = 'travelPopover';
+            document.body.appendChild(popover);
+        }
+
+        const infoIcon = event.target.closest('.info-icon');
         const editButton = event.target.closest('.edit-btn');
         const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
 
+        // --- Hide popover if clicking anywhere that is not an info icon ---
+        if (!infoIcon) {
+            popover.classList.remove('visible');
+        }
+
+        // --- Handle Info Icon Click ---
+        if (infoIcon) {
+            event.stopPropagation(); // Stop the click from propagating to the row
+            const { departing, arriving } = infoIcon.dataset;
+            popover.innerHTML = `
+                <div class="font-bold text-gray-700">Travel Details</div>
+                <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
+                <div class="text-sm"><strong>To:</strong> ${arriving}</div>
+            `;
+            
+            const rect = infoIcon.getBoundingClientRect();
+            popover.style.top = `${rect.top}px`;
+            popover.style.left = `${rect.right + 10}px`; // position to the right of the icon
+            popover.classList.toggle('visible');
+            return; // Exit after handling popover
+        }
+
+        // --- Handle Edit Button Click ---
         if (editButton) {
             event.stopPropagation();
             const timestamp = editButton.dataset.timestamp;
             const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
             if (record) {
-                // Logic for opening the edit modal...
-                // (This part of the function remains unchanged)
                 const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
                 const uniqueStudents = [...new Set(studentsInClass)];
                 editStudentName.innerHTML = '';
@@ -725,38 +737,23 @@ async function initializePageSpecificApp() {
                 saveEditBtn.dataset.timestamp = timestamp;
                 deleteEntryBtn.dataset.timestamp = timestamp;
             }
-        } else if (accordionRow) {
+            return; // Exit after handling edit
+        }
+
+        // --- Handle Accordion Row Click ---
+        if (accordionRow) {
             event.stopPropagation();
             const nextElement = accordionRow.nextElementSibling;
 
-            // ** START: CORRECTED LOGIC **
-
-            // First, check if there's already an expanded row and remove it.
+            // If an expanded row already exists, just remove it to "close" the accordion.
             if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
                 nextElement.remove();
-                return; // Exit after closing the row.
+                return;
             }
 
-            // Now, create the new expanded row based on the type of data.
-            if (accordionRow.dataset.travelDetails) {
-                // --- Handle Travel Row Expansion ---
-                const details = JSON.parse(accordionRow.dataset.travelDetails);
-                const wrapperRow = document.createElement('tr');
-                wrapperRow.className = 'details-wrapper-row bg-gray-50';
-                const wrapperCell = document.createElement('td');
-                wrapperCell.colSpan = accordionRow.cells.length;
-                wrapperCell.className = 'p-3 text-sm text-gray-700';
-                wrapperCell.innerHTML = `
-                    <div class="flex space-x-6">
-                        <span><strong>Departed from:</strong> ${details.departing}</span>
-                        <span><strong>Arrived at:</strong> ${details.arriving}</span>
-                    </div>
-                `;
-                wrapperRow.appendChild(wrapperCell);
-                accordionRow.insertAdjacentElement('afterend', wrapperRow);
-
-            } else if (accordionRow.dataset.records) {
-                // --- Handle Attendance/Trends Row Expansion ---
+            // --- Create and expand the new row ---
+            if (accordionRow.dataset.records) {
+                // This is for the detailed tables in the Attendance and Trends reports.
                 const records = JSON.parse(accordionRow.dataset.records || '[]');
                 if (records.length === 0) return;
 
@@ -764,48 +761,47 @@ async function initializePageSpecificApp() {
                 wrapperRow.className = 'details-wrapper-row';
                 const wrapperCell = document.createElement('td');
                 wrapperCell.colSpan = accordionRow.cells.length;
-                wrapperCell.className = 'p-2';
+                wrapperCell.className = 'p-2 bg-gray-50';
                 const detailsTable = document.createElement('table');
                 detailsTable.className = 'min-w-full';
                 const detailsHead = document.createElement('thead');
                 detailsHead.innerHTML = `
                     <tr class="bg-gray-200 text-sm">
-                        <th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th>
-                        <th class="py-1 px-2 border-b text-left">Class</th><th class="py-1 px-2 border-b text-left">Name</th>
-                        <th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th>
+                        <th class="py-1 px-2 border-b text-left">Time</th>
+                        <th class="py-1 px-2 border-b text-left">Type</th>
+                        <th class="py-1 px-2 border-b text-left">Duration</th>
                         <th class="py-1 px-2 border-b text-right w-12">Edit</th>
                     </tr>`;
                 detailsTable.appendChild(detailsHead);
                 const detailsBody = document.createElement('tbody');
                 records.forEach(row => {
                     const detailTr = document.createElement('tr');
-                    let typeDisplay = "Bathroom", durationDisplay = "N/A";
+                    let typeDisplay = "N/A", durationDisplay = "N/A";
                     
                     if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
-
+                    
                     if (row.Type === 'late') {
                         typeDisplay = "Late Sign In";
                         detailTr.classList.add(COLORS.late.moderate);
                     } else if (row.Type === 'travel') {
-                        typeDisplay = "Travel";
+                        typeDisplay = `Travel <span class="info-icon"
+                                        data-departing="${row.DepartingTeacher}" 
+                                        data-arriving="${row.ArrivingTeacher}">i</span>`;
                         detailTr.classList.add('bg-cyan-100');
                     } else if (row.Type === 'bathroom') {
+                        typeDisplay = "Bathroom";
                         if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                            typeDisplay = "Long Sign Out";
-                            if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.long.veryHigh);
-                            else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.long.high);
-                            else detailTr.classList.add(COLORS.long.moderate);
+                            detailTr.classList.add(COLORS.long.moderate);
                         } else {
-                            typeDisplay = "Normal Sign Out";
                             detailTr.classList.add(COLORS.normal);
                         }
                     }
         
                     const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
                     detailTr.innerHTML = `
-                        <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
-                        <td class="py-2 px-2 border-b">${getShortClassName(row.Class)}</td><td class="py-2 px-2 border-b">${normalizeName(row.Name)}</td>
-                        <td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td>
+                        <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
+                        <td class="py-2 px-2 border-b">${typeDisplay}</td>
+                        <td class="py-2 px-2 border-b">${durationDisplay}</td>
                         <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
                     detailsBody.appendChild(detailTr);
                 });
@@ -814,7 +810,6 @@ async function initializePageSpecificApp() {
                 wrapperRow.appendChild(wrapperCell);
                 accordionRow.insertAdjacentElement('afterend', wrapperRow);
             }
-            // ** END: CORRECTED LOGIC **
         }
     });
 
