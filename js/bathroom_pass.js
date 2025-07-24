@@ -951,6 +951,7 @@ travelDepartingBtn.addEventListener('click', handleTravelDepartingClick);
 travelArrivingBtn.addEventListener('click', handleTravelArrivingClick);
 travelSignOutName.addEventListener('change', handleTravelSignOutChange);
 travelSignInName.addEventListener('change', handleTravelSignInChange);
-travelSignOutSubmitBtn.addEventListener('click', handleTravelSignOutSubmit); // <-- ADD THIS LINE
+travelSignOutSubmitBtn.addEventListener('click', handleTravelSignOutSubmit);
+travelSignInSubmitBtn.addEventListener('click', handleTravelSignInSubmit); 
 
 // ** END: New Travel Pass Event Listeners **
