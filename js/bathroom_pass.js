@@ -1,46 +1,52 @@
 // js/bathroom_pass.js
 
 // --- DOM Element Caching (Elements specific to the Bathroom Pass page) ---
-const studentOutHeader = document.getElementById('studentOutHeader'); 
-const emojiLeft = document.getElementById('emojiLeft'); 
-const studentOutNameSpan = document.getElementById('studentOutName'); 
-const headerStatusSpan = document.getElementById('headerStatus'); 
-const emojiRight = document.getElementById('emojiRight'); 
-const mainForm = document.getElementById('form');
-const passLabel = document.getElementById('passLabel'); 
+let studentOutHeader, emojiLeft, studentOutNameSpan, headerStatusSpan, emojiRight, mainForm,
+    passLabel, nameDropdown, emojiDropdown, signOutButton, signInButton,
+    minutesSpan, secondsSpan, queueViewBtn, lateSignInViewBtn, travelPassViewBtn, queueArea,
+    travelPassArea, nameQueueDropdown, addToQueueButton, messageArea, messageText, queueList,
+    removeFromQueueButton, lateSignInView, lateSignInForm, lateNameDropdown,
+    lateSignInSubmitBtn, formDisabledOverlay, travelSignOutDropdown, travelSignOutBtn,
+    travelSignInDropdown, travelSignInBtn, infoBarDateTime, infoBarTeacher, infoBarClass;
 
-const nameDropdown = document.getElementById('nameDropdown');
-const emojiDropdown = document.getElementById('emojiDropdown');
-const signOutButton = document.getElementById('signOutButton');
-const signInButton = document.getElementById('signInButton');
-const minutesSpan = document.getElementById('minutes');
-const secondsSpan = document.getElementById('seconds');
-const queueViewBtn = document.getElementById('queueViewBtn');
-const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
-const travelPassViewBtn = document.getElementById('travelPassViewBtn');
-const travelPassArea = document.getElementById('travelPassArea');
-
-const travelSignOutDropdown = document.getElementById('travelSignOutDropdown');
-const travelSignOutBtn = document.getElementById('travelSignOutBtn');
-const travelSignInDropdown = document.getElementById('travelSignInDropdown');
-const travelSignInBtn = document.getElementById('travelSignInBtn');
-const queueArea = document.getElementById('queueArea');
-const nameQueueDropdown = document.getElementById('nameQueue');
-const addToQueueButton = document.getElementById('add-to-queue');
-const messageArea = document.getElementById('message-area'); 
-const messageText = document.getElementById('message-text');
-const queueList = document.getElementById('queue-list');
-const removeFromQueueButton = document.getElementById('remove-from-queue');
-const lateSignInView = document.getElementById('lateSignInView');
-const lateSignInForm = document.getElementById('lateSignInForm');
-const lateNameDropdown = document.getElementById('lateNameDropdown');
-const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
-const formDisabledOverlay = document.getElementById('formDisabledOverlay');
-// ** NEW: Caching the Info Bar elements **
-const infoBarDateTime = document.getElementById('infoBarDateTime');
-const infoBarTeacher = document.getElementById('infoBarTeacher');
-const infoBarClass = document.getElementById('infoBarClass');
-
+function cacheBathroomPassDOMElements() {
+    studentOutHeader = document.getElementById('studentOutHeader'); 
+    emojiLeft = document.getElementById('emojiLeft'); 
+    studentOutNameSpan = document.getElementById('studentOutName'); 
+    headerStatusSpan = document.getElementById('headerStatus'); 
+    emojiRight = document.getElementById('emojiRight'); 
+    mainForm = document.getElementById('form');
+    passLabel = document.getElementById('passLabel'); 
+    nameDropdown = document.getElementById('nameDropdown');
+    emojiDropdown = document.getElementById('emojiDropdown');
+    signOutButton = document.getElementById('signOutButton');
+    signInButton = document.getElementById('signInButton');
+    minutesSpan = document.getElementById('minutes');
+    secondsSpan = document.getElementById('seconds');
+    queueViewBtn = document.getElementById('queueViewBtn');
+    lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
+    travelPassViewBtn = document.getElementById('travelPassViewBtn');
+    queueArea = document.getElementById('queueArea');
+    travelPassArea = document.getElementById('travelPassArea');
+    nameQueueDropdown = document.getElementById('nameQueue');
+    addToQueueButton = document.getElementById('add-to-queue');
+    messageArea = document.getElementById('message-area'); 
+    messageText = document.getElementById('message-text');
+    queueList = document.getElementById('queue-list');
+    removeFromQueueButton = document.getElementById('remove-from-queue');
+    lateSignInView = document.getElementById('lateSignInView');
+    lateSignInForm = document.getElementById('lateSignInForm');
+    lateNameDropdown = document.getElementById('lateNameDropdown');
+    lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
+    formDisabledOverlay = document.getElementById('formDisabledOverlay');
+    travelSignOutDropdown = document.getElementById('travelSignOutDropdown');
+    travelSignOutBtn = document.getElementById('travelSignOutBtn');
+    travelSignInDropdown = document.getElementById('travelSignInDropdown');
+    travelSignInBtn = document.getElementById('travelSignInBtn');
+    infoBarDateTime = document.getElementById('infoBarDateTime');
+    infoBarTeacher = document.getElementById('infoBarTeacher');
+    infoBarClass = document.getElementById('infoBarClass');
+}
 
 // --- Bathroom Pass Page Specific Functions ---
 
