@@ -31,14 +31,18 @@ const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 const infoBarDateTime = document.getElementById('infoBarDateTime');
 const infoBarTeacher = document.getElementById('infoBarTeacher');
 const infoBarClass = document.getElementById('infoBarClass');
-
-// ** START: New Travel Pass DOM Elements **
 const travelPassViewBtn = document.getElementById('travelPassViewBtn');
 const travelPassArea = document.getElementById('travelPassArea');
+
+// ** START: New Travel Pass DOM Elements **
+const travelDepartingBtn = document.getElementById('travelDepartingBtn');
+const travelArrivingBtn = document.getElementById('travelArrivingBtn');
+const travelDepartingSection = document.getElementById('travelDepartingSection');
+const travelArrivingSection = document.getElementById('travelArrivingSection');
 const travelSignOutName = document.getElementById('travelSignOutName');
-const travelSignOutBtn = document.getElementById('travelSignOutBtn');
+const travelSignOutSubmitBtn = document.getElementById('travelSignOutSubmitBtn');
 const travelSignInName = document.getElementById('travelSignInName');
-const travelSignInBtn = document.getElementById('travelSignInBtn');
+const travelSignInSubmitBtn = document.getElementById('travelSignInSubmitBtn');
 // ** END: New Travel Pass DOM Elements **
 
 
@@ -61,16 +65,13 @@ function startInfoBarClock() {
  */
 function updateStudentDropdownsForClass(currentClassName) {
     if (currentClassName) {
-        // Enable and populate the name dropdowns for the main form and queue
         populateNameDropdownsForCourse(currentClassName);
         nameDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
         emojiDropdown.removeAttribute("disabled");
-        // Also enable the travel pass sign-out dropdown
         travelSignOutName.removeAttribute("disabled");
     } else {
-        // If there's no class, disable the dropdowns
         const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName'];
         dropdownsToDisable.forEach(id => {
             const dd = document.getElementById(id);
@@ -79,16 +80,16 @@ function updateStudentDropdownsForClass(currentClassName) {
         });
         emojiDropdown.setAttribute("disabled", "disabled");
     }
-    // Reset the state of the buttons
     handleNameSelectionChange();
     handleLateNameSelectionChange();
+    handleTravelSignOutChange();
 }
 
 /**
  * Central function to manage the state of the queue dropdown and buttons.
  */
 function updateQueueControls() {
-    const isClassSelected = !!appState.ui.currentClassPeriod; // ** Use state instead of dropdown value **
+    const isClassSelected = !!appState.ui.currentClassPeriod;
     const isPassInUse = appState.passHolder || appState.queue.length > 0;
 
     if (isClassSelected && (!appState.ui.isPassEnabled || isPassInUse)) {
@@ -141,7 +142,7 @@ function updatePassAvailability(isEnabled) {
 async function loadInitialPassData() {
     try {
         await fetchAllStudentData(); 
-        populateCourseDropdownFromData(); // This still populates appState.data.courses, which is needed.
+        populateCourseDropdownFromData();
         appState.ui.isDataLoaded = true;
     } catch (error) {
         console.error("Failed to load initial pass data:", error);
@@ -299,15 +300,10 @@ async function autoSignInStudent(studentName, className) {
     };
 
     try {
-        const data = await sendAuthenticatedRequest(payload);
-        if (data.result !== 'success') {
-            throw new Error(data.error || 'Auto sign-in failed on the server.');
-        }
-
+        await sendAuthenticatedRequest(payload);
         resetMainPassUI();
         appState.passHolder = null;
         setPassToAvailableState();
-
     } catch (error) {
         console.error('Error during auto sign-in:', error);
         showErrorAlert(`Failed to automatically sign in ${studentName}: ${error.message}`);
@@ -553,9 +549,7 @@ function populateNameDropdownsForCourse(selectedCourseName) {
     populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
     populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
     populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
-    // ** START: Also populate the new travel sign out dropdown **
     populateDropdown('travelSignOutName', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
-    // ** END **
 }
 
 /**
@@ -590,7 +584,50 @@ function handleLateNameSelectionChange() {
     lateSignInSubmitBtn.classList.toggle('hidden', !isNameSelected);
 }
 
-// ** START: New Tab Switching Functions **
+// ** START: New Travel Pass Handlers **
+
+/**
+ * Handles changes in the Travel Pass sign-out dropdown to show/hide the submit button.
+ */
+function handleTravelSignOutChange() {
+    const selectedName = travelSignOutName.value;
+    const isNameSelected = selectedName && selectedName !== DEFAULT_NAME_OPTION;
+    travelSignOutSubmitBtn.classList.toggle('hidden', !isNameSelected);
+}
+
+/**
+ * Handles changes in the Travel Pass sign-in dropdown to show/hide the submit button.
+ */
+function handleTravelSignInChange() {
+    const selectedName = travelSignInName.value;
+    const isNameSelected = selectedName && selectedName !== DEFAULT_NAME_OPTION;
+    travelSignInSubmitBtn.classList.toggle('hidden', !isNameSelected);
+}
+
+/**
+ * Handles click on the "Departing" button in the Travel Pass tab.
+ */
+function handleTravelDepartingClick() {
+    travelDepartingSection.classList.remove('hidden');
+    travelArrivingSection.classList.add('hidden');
+    // Style this button as active
+    travelDepartingBtn.classList.add('border-white');
+    travelArrivingBtn.classList.remove('border-white');
+}
+
+/**
+ * Handles click on the "Arriving" button in the Travel Pass tab.
+ */
+function handleTravelArrivingClick() {
+    travelArrivingSection.classList.remove('hidden');
+    travelDepartingSection.classList.add('hidden');
+    // Style this button as active
+    travelArrivingBtn.classList.add('border-white');
+    travelDepartingBtn.classList.remove('border-white');
+}
+// ** END: New Travel Pass Handlers **
+
+// ** START: Updated Tab Switching Functions **
 
 /**
  * Displays the Travel Pass view and updates button styles.
@@ -606,9 +643,9 @@ function showTravelPassView() {
     travelPassViewBtn.classList.remove('bg-cyan-500');
 
     // Style other buttons as inactive
-    queueViewBtn.classList.add('bg-purple-400');
+    queueViewBtn.classList.add('bg-purple-400', 'text-white');
     queueViewBtn.classList.remove('bg-purple-500');
-    lateSignInViewBtn.classList.add('bg-yellow-200');
+    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
     lateSignInViewBtn.classList.remove('bg-yellow-300');
 }
 
@@ -623,12 +660,12 @@ function showQueueView() {
 
     // Style Queue button as active
     queueViewBtn.classList.add('bg-purple-500');
-    queueViewBtn.classList.remove('bg-purple-400');
+    queueViewBtn.classList.remove('bg-purple-400', 'text-white');
 
     // Style other buttons as inactive
     travelPassViewBtn.classList.add('bg-cyan-500');
     travelPassViewBtn.classList.remove('bg-cyan-600');
-    lateSignInViewBtn.classList.add('bg-yellow-200');
+    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
     lateSignInViewBtn.classList.remove('bg-yellow-300');
 }
 
@@ -648,10 +685,10 @@ function showLateSignInView() {
     // Style other buttons as inactive
     travelPassViewBtn.classList.add('bg-cyan-500');
     travelPassViewBtn.classList.remove('bg-cyan-600');
-    queueViewBtn.classList.add('bg-purple-400');
+    queueViewBtn.classList.add('bg-purple-400', 'text-white');
     queueViewBtn.classList.remove('bg-purple-500');
 }
-// ** END: New Tab Switching Functions **
+// ** END: Updated Tab Switching Functions **
 
 
 /**
@@ -707,7 +744,7 @@ async function initializePageSpecificApp() {
 
             updateStudentDropdownsForClass(liveState.currentClass); 
             updatePassAvailability(liveState.isEnabled);
-            travelSignInName.removeAttribute("disabled"); // Travel sign-in should always be enabled
+            travelSignInName.removeAttribute("disabled");
 
             // --- Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
@@ -726,27 +763,17 @@ async function initializePageSpecificApp() {
 
                     if (appState.ui.currentClassPeriod && classHasChanged) {
                         let alertMessage = "Class period changed. ";
-                        let studentWasSignedOut = false;
-                        let queueWasCleared = false;
-
                         if (appState.passHolder) {
-                            const studentToSignIn = appState.passHolder;
-                            const classOfSignOut = appState.ui.currentClassPeriod;
-                            await autoSignInStudent(studentToSignIn, classOfSignOut);
-                            alertMessage += `${studentToSignIn} was automatically signed in. `;
-                            studentWasSignedOut = true;
+                            await autoSignInStudent(appState.passHolder, appState.ui.currentClassPeriod);
+                            alertMessage += `${appState.passHolder} was automatically signed in. `;
                         }
                         
                         if (appState.queue.length > 0) {
                             appState.queue = [];
                             updateQueueDisplay();
                             alertMessage += "The queue has been cleared.";
-                            queueWasCleared = true;
                         }
-
-                        if (studentWasSignedOut || queueWasCleared) {
-                            showSuccessAlert(alertMessage.trim());
-                        }
+                        showSuccessAlert(alertMessage.trim());
                     }
 
                     if (classHasChanged) {
@@ -770,7 +797,8 @@ async function initializePageSpecificApp() {
         console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
-    showTravelPassView(); 
+    showTravelPassView();
+    handleTravelDepartingClick(); // Default to showing the departing section
     handleLateNameSelectionChange();
 }
 
@@ -818,10 +846,10 @@ function resetPageSpecificAppState() {
 
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
-    travelSignOutBtn.classList.add('hidden');
-    travelSignInBtn.classList.add('hidden');
+    travelSignOutSubmitBtn.classList.add('hidden');
+    travelSignInSubmitBtn.classList.add('hidden');
 
-    showTravelPassView(); 
+    showTravelPassView();
     updateQueueDisplay(); 
 }
 
@@ -838,3 +866,10 @@ removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
 queueViewBtn.addEventListener("click", showQueueView);
 lateSignInViewBtn.addEventListener("click", showLateSignInView);
 travelPassViewBtn.addEventListener("click", showTravelPassView);
+
+// ** START: New Travel Pass Event Listeners **
+travelDepartingBtn.addEventListener('click', handleTravelDepartingClick);
+travelArrivingBtn.addEventListener('click', handleTravelArrivingClick);
+travelSignOutName.addEventListener('change', handleTravelSignOutChange);
+travelSignInName.addEventListener('change', handleTravelSignInChange);
+// ** END: New Travel Pass Event Listeners **
