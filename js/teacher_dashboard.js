@@ -669,11 +669,15 @@ async function initializePageSpecificApp() {
 
     dashboardContent.addEventListener('click', (event) => {
         const editButton = event.target.closest('.edit-btn');
+        const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
+
         if (editButton) {
             event.stopPropagation();
             const timestamp = editButton.dataset.timestamp;
             const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
             if (record) {
+                // Logic for opening the edit modal...
+                // (This part of the function remains unchanged)
                 const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
                 const uniqueStudents = [...new Set(studentsInClass)];
                 editStudentName.innerHTML = '';
@@ -700,103 +704,96 @@ async function initializePageSpecificApp() {
                 saveEditBtn.dataset.timestamp = timestamp;
                 deleteEntryBtn.dataset.timestamp = timestamp;
             }
-        } else if (event.target.closest('[data-accordion-toggle="true"]')) {
-            const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
+        } else if (accordionRow) {
             event.stopPropagation();
             const nextElement = accordionRow.nextElementSibling;
 
-             if (accordionRow.dataset.travelDetails) {
+            // ** START: CORRECTED LOGIC **
+
+            // First, check if there's already an expanded row and remove it.
             if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
-                nextElement.remove(); // Toggle by removing
-                return;
+                nextElement.remove();
+                return; // Exit after closing the row.
             }
-            const details = JSON.parse(accordionRow.dataset.travelDetails);
-            const wrapperRow = document.createElement('tr');
-            wrapperRow.className = 'details-wrapper-row bg-gray-50';
-            const wrapperCell = document.createElement('td');
-            wrapperCell.colSpan = accordionRow.cells.length;
-            wrapperCell.className = 'p-3 text-sm text-gray-700';
-            wrapperCell.innerHTML = `
-                <div class="flex space-x-6">
-                    <span><strong>Departed from:</strong> ${details.departing}</span>
-                    <span><strong>Arrived at:</strong> ${details.arriving}</span>
-                </div>
-            `;
-            wrapperRow.appendChild(wrapperCell);
-            accordionRow.insertAdjacentElement('afterend', wrapperRow);
-            return; // Stop here for travel rows
-        }
-            
-            accordionRow.classList.toggle('bg-blue-50');
-            const arrow = accordionRow.querySelector('svg');
-            if (arrow) arrow.classList.toggle('rotate-180');
-    
-            if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
-                nextElement.classList.toggle('hidden');
-                return;
+
+            // Now, create the new expanded row based on the type of data.
+            if (accordionRow.dataset.travelDetails) {
+                // --- Handle Travel Row Expansion ---
+                const details = JSON.parse(accordionRow.dataset.travelDetails);
+                const wrapperRow = document.createElement('tr');
+                wrapperRow.className = 'details-wrapper-row bg-gray-50';
+                const wrapperCell = document.createElement('td');
+                wrapperCell.colSpan = accordionRow.cells.length;
+                wrapperCell.className = 'p-3 text-sm text-gray-700';
+                wrapperCell.innerHTML = `
+                    <div class="flex space-x-6">
+                        <span><strong>Departed from:</strong> ${details.departing}</span>
+                        <span><strong>Arrived at:</strong> ${details.arriving}</span>
+                    </div>
+                `;
+                wrapperRow.appendChild(wrapperCell);
+                accordionRow.insertAdjacentElement('afterend', wrapperRow);
+
+            } else if (accordionRow.dataset.records) {
+                // --- Handle Attendance/Trends Row Expansion ---
+                const records = JSON.parse(accordionRow.dataset.records || '[]');
+                if (records.length === 0) return;
+
+                const wrapperRow = document.createElement('tr');
+                wrapperRow.className = 'details-wrapper-row';
+                const wrapperCell = document.createElement('td');
+                wrapperCell.colSpan = accordionRow.cells.length;
+                wrapperCell.className = 'p-2';
+                const detailsTable = document.createElement('table');
+                detailsTable.className = 'min-w-full';
+                const detailsHead = document.createElement('thead');
+                detailsHead.innerHTML = `
+                    <tr class="bg-gray-200 text-sm">
+                        <th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th>
+                        <th class="py-1 px-2 border-b text-left">Class</th><th class="py-1 px-2 border-b text-left">Name</th>
+                        <th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th>
+                        <th class="py-1 px-2 border-b text-right w-12">Edit</th>
+                    </tr>`;
+                detailsTable.appendChild(detailsHead);
+                const detailsBody = document.createElement('tbody');
+                records.forEach(row => {
+                    const detailTr = document.createElement('tr');
+                    let typeDisplay = "Bathroom", durationDisplay = "N/A";
+                    
+                    if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
+
+                    if (row.Type === 'late') {
+                        typeDisplay = "Late Sign In";
+                        detailTr.classList.add(COLORS.late.moderate);
+                    } else if (row.Type === 'travel') {
+                        typeDisplay = "Travel";
+                        detailTr.classList.add('bg-cyan-100');
+                    } else if (row.Type === 'bathroom') {
+                        if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                            typeDisplay = "Long Sign Out";
+                            if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.long.veryHigh);
+                            else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.long.high);
+                            else detailTr.classList.add(COLORS.long.moderate);
+                        } else {
+                            typeDisplay = "Normal Sign Out";
+                            detailTr.classList.add(COLORS.normal);
+                        }
+                    }
+        
+                    const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
+                    detailTr.innerHTML = `
+                        <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
+                        <td class="py-2 px-2 border-b">${getShortClassName(row.Class)}</td><td class="py-2 px-2 border-b">${normalizeName(row.Name)}</td>
+                        <td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td>
+                        <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
+                    detailsBody.appendChild(detailTr);
+                });
+                detailsTable.appendChild(detailsBody);
+                wrapperCell.appendChild(detailsTable);
+                wrapperRow.appendChild(wrapperCell);
+                accordionRow.insertAdjacentElement('afterend', wrapperRow);
             }
-    
-            const records = JSON.parse(accordionRow.dataset.records || '[]');
-            if (records.length === 0) return;
-    
-            const wrapperRow = document.createElement('tr');
-            wrapperRow.className = 'details-wrapper-row';
-            const wrapperCell = document.createElement('td');
-            wrapperCell.colSpan = accordionRow.cells.length;
-            wrapperCell.className = 'p-2';
-            const detailsTable = document.createElement('table');
-            detailsTable.className = 'min-w-full';
-            const detailsHead = document.createElement('thead');
-            detailsHead.innerHTML = `
-                <tr class="bg-gray-200 text-sm">
-                    <th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th>
-                    <th class="py-1 px-2 border-b text-left">Class</th><th class="py-1 px-2 border-b text-left">Name</th>
-                    <th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th>
-                    <th class="py-1 px-2 border-b text-right w-12">Edit</th>
-                </tr>`;
-            detailsTable.appendChild(detailsHead);
-            const detailsBody = document.createElement('tbody');
-            records.forEach(row => {
-                const detailTr = document.createElement('tr');
-                let typeDisplay = "Bathroom", durationDisplay = "N/A";
-                
-                if (typeof row.Seconds === 'number') {
-                    durationDisplay = formatSecondsToMMSS(row.Seconds);
-                }
-    
-                if (row.Type === 'late') {
-                    typeDisplay = "Late Sign In";
-                    if (typeof row.Seconds === 'number') {
-                        if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.late.veryHigh);
-                        else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.late.high);
-                        else detailTr.classList.add(COLORS.late.moderate);
-                    } else {
-                         detailTr.classList.add(COLORS.late.moderate);
-                    }
-                } else if (typeof row.Seconds === 'number') {
-                    if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                        typeDisplay = "Long Sign Out";
-                        if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) detailTr.classList.add(COLORS.long.veryHigh);
-                        else if (row.Seconds >= DURATION_THRESHOLDS.high) detailTr.classList.add(COLORS.long.high);
-                        else detailTr.classList.add(COLORS.long.moderate);
-                    } else {
-                        typeDisplay = "Normal Sign Out";
-                        detailTr.classList.add(COLORS.normal);
-                    }
-                }
-    
-                const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-                detailTr.innerHTML = `
-                    <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
-                    <td class="py-2 px-2 border-b">${getShortClassName(row.Class)}</td><td class="py-2 px-2 border-b">${normalizeName(row.Name)}</td>
-                    <td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td>
-                    <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
-                detailsBody.appendChild(detailTr);
-            });
-            detailsTable.appendChild(detailsBody);
-            wrapperCell.appendChild(detailsTable);
-            wrapperRow.appendChild(wrapperCell);
-            accordionRow.insertAdjacentElement('afterend', wrapperRow);
+            // ** END: CORRECTED LOGIC **
         }
     });
 
