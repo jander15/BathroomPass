@@ -690,20 +690,25 @@ async function initializePageSpecificApp() {
 
         // --- Handle Info Icon Click ---
         if (infoIcon) {
-            event.stopPropagation(); // Stop the click from propagating to the row
-            const { departing, arriving } = infoIcon.dataset;
-            popover.innerHTML = `
-                <div class="font-bold text-gray-700">Travel Details</div>
-                <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
-                <div class="text-sm"><strong>To:</strong> ${arriving}</div>
-            `;
-            
-            const rect = infoIcon.getBoundingClientRect();
-            popover.style.top = `${rect.top + window.scrollY}px`;
-            popover.style.left = `${rect.right + window.scrollX + 10}px`;
-            popover.classList.toggle('visible');
-            return; // Exit after handling popover
-        }
+        event.stopPropagation(); // Stop the click from propagating to the row
+        const { departing, arriving } = infoIcon.dataset;
+        popover.innerHTML = `
+            <div class="font-bold text-gray-700">Travel Details</div>
+            <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
+            <div class="text-sm"><strong>To:</strong> ${arriving}</div>
+        `;
+        
+        const rect = infoIcon.getBoundingClientRect();
+
+        // ** START: CORRECTED POSITION LOGIC **
+        // Add window.scrollY and window.scrollX to account for page scrolling.
+        popover.style.top = `${rect.top + window.scrollY}px`;
+        popover.style.left = `${rect.right + window.scrollX + 10}px`;
+        // ** END: CORRECTED POSITION LOGIC **
+        
+        popover.classList.toggle('visible');
+        return; // Exit after handling popover
+    }
 
         // --- Handle Edit Button Click ---
         if (editButton) {
