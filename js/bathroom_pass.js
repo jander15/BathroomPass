@@ -8,7 +8,7 @@ const headerStatusSpan = document.getElementById('headerStatus');
 const emojiRight = document.getElementById('emojiRight'); 
 const mainForm = document.getElementById('form');
 const passLabel = document.getElementById('passLabel'); 
-// ** REMOVED: const courseDropdown = document.getElementById('courseDropdown'); **
+
 const nameDropdown = document.getElementById('nameDropdown');
 const emojiDropdown = document.getElementById('emojiDropdown');
 const signOutButton = document.getElementById('signOutButton');
@@ -17,6 +17,13 @@ const minutesSpan = document.getElementById('minutes');
 const secondsSpan = document.getElementById('seconds');
 const queueViewBtn = document.getElementById('queueViewBtn');
 const lateSignInViewBtn = document.getElementById('lateSignInViewBtn');
+const travelPassViewBtn = document.getElementById('travelPassViewBtn');
+const travelPassArea = document.getElementById('travelPassArea');
+
+const travelSignOutDropdown = document.getElementById('travelSignOutDropdown');
+const travelSignOutBtn = document.getElementById('travelSignOutBtn');
+const travelSignInDropdown = document.getElementById('travelSignInDropdown');
+const travelSignInBtn = document.getElementById('travelSignInBtn');
 const queueArea = document.getElementById('queueArea');
 const nameQueueDropdown = document.getElementById('nameQueue');
 const addToQueueButton = document.getElementById('add-to-queue');
@@ -586,32 +593,43 @@ function handleLateNameSelectionChange() {
 }
 
 
-/**
- * Displays the queue view and updates button styles.
- */
 function showQueueView() {
-    queueArea.classList.remove('hidden');
+    // Hide other views
     lateSignInView.classList.add('hidden');
-    appState.ui.currentRightView = 'queue';
+    travelPassArea.classList.add('hidden');
+    // Show this view
+    queueArea.classList.remove('hidden');
 
-    queueViewBtn.classList.add('bg-purple-400', 'text-white');
-    queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
-    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-    lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
+    // Update button styles
+    queueViewBtn.className = 'px-6 py-3 w-1/3 rounded-tl-lg font-semibold bg-blue-500 text-white transition-colors duration-200';
+    travelPassViewBtn.className = 'px-6 py-3 w-1/3 font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
+    lateSignInViewBtn.className = 'px-6 py-3 w-1/3 rounded-tr-lg font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
 }
 
-/**
- * Displays the late sign-in view and updates button styles.
- */
-function showLateSignInView() {
+function showTravelPassView() {
+    // Hide other views
     queueArea.classList.add('hidden');
-    lateSignInView.classList.remove('hidden');
-    appState.ui.currentRightView = 'lateSignIn';
+    lateSignInView.classList.add('hidden');
+    // Show this view
+    travelPassArea.classList.remove('hidden');
 
-    lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
-    lateSignInViewBtn.classList.remove('bg-purple-400', 'text-white');
-    queueViewBtn.classList.add('bg-purple-400', 'text-white');
-    queueViewBtn.classList.remove('bg-yellow-200', 'text-gray-800');
+    // Update button styles
+    queueViewBtn.className = 'px-6 py-3 w-1/3 rounded-tl-lg font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
+    travelPassViewBtn.className = 'px-6 py-3 w-1/3 font-semibold bg-purple-500 text-white transition-colors duration-200';
+    lateSignInViewBtn.className = 'px-6 py-3 w-1/3 rounded-tr-lg font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
+}
+
+function showLateSignInView() {
+    // Hide other views
+    queueArea.classList.add('hidden');
+    travelPassArea.classList.add('hidden');
+    // Show this view
+    lateSignInView.classList.remove('hidden');
+
+    // Update button styles
+    queueViewBtn.className = 'px-6 py-3 w-1/3 rounded-tl-lg font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
+    travelPassViewBtn.className = 'px-6 py-3 w-1/3 font-semibold bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors duration-200';
+    lateSignInViewBtn.className = 'px-6 py-3 w-1/3 rounded-tr-lg font-semibold bg-yellow-400 text-gray-800 transition-colors duration-200';
 }
 
 /**
@@ -792,3 +810,4 @@ addToQueueButton.addEventListener('click', handleAddToQueueClick);
 removeFromQueueButton.addEventListener('click', handleRemoveFromQueueClick);
 queueViewBtn.addEventListener('click', showQueueView);
 lateSignInViewBtn.addEventListener('click', showLateSignInView);
+travelPassViewBtn.addEventListener('click', showTravelPassView);

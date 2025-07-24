@@ -122,55 +122,46 @@
 
             <div id="rightSideFormsContainer" class="w-full lg:w-1/3 flex flex-col rounded-lg shadow-xl">
                 <div class="flex w-full justify-center">
-                    <button id="queueViewBtn" class="px-6 py-3 w-1/2 rounded-tl-lg rounded-tr-none font-semibold text-white bg-purple-400 hover:bg-purple-500 focus:outline-none transition-colors duration-200">
-                        View Queue
+                    <button id="queueViewBtn" class="px-6 py-3 w-1/3 rounded-tl-lg font-semibold transition-colors duration-200">
+                        Queue
                     </button>
-                    <button id="lateSignInViewBtn" class="px-6 py-3 w-1/2 rounded-tl-none rounded-tr-lg font-semibold text-gray-800 bg-yellow-200 hover:bg-yellow-300 focus:outline-none transition-colors duration-200">
+                    <button id="travelPassViewBtn" class="px-6 py-3 w-1/3 font-semibold transition-colors duration-200">
+                        Travel
+                    </button>
+                    <button id="lateSignInViewBtn" class="px-6 py-3 w-1/3 rounded-tr-lg font-semibold transition-colors duration-200">
                         Late Sign In
                     </button>
                 </div>
 
-                <div id="queueArea" class="bg-purple-400 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow hidden">
-                    <h2 class="text-2xl font-bold text-black-900 text-center mb-5">Queue for Bathroom</h2>
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                        <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="nameQueue">Name:</label>
-                        <select id="nameQueue"
-                            class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                        </select>
+                <div id="queueArea" class="bg-blue-400 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow hidden">
                     </div>
-                    <button id="add-to-queue"
-                        class="mt-4 px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none transition-colors duration-200 text-base hidden">
-                        Add to Queue
-                    </button>
 
-                    <div id="message-area" class="bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800 mt-4">
-                        <p id="message-text" class="hidden text-center text-base font-medium">Please select your name and click 'Add to Queue'.</p>
-                        <ol id="queue-list" class="list-decimal list-inside mt-3 text-left text-gray-800 text-base">
-                        </ol>
-                        <button id="remove-from-queue"
-                            class="mt-4 px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none transition-colors duration-200 text-base hidden">
-                            Remove Selected from Queue
-                        </button>
-                    </div>
-                </div>
-
-                <div id="lateSignInView" class="flex flex-col items-center justify-start w-full p-6 rounded-b-lg bg-yellow-200 flex-grow">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Late Sign In</h2>
-                    <form id="lateSignInForm" class="w-full space-y-4"> 
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                            <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
-                            <select id="lateNameDropdown"
-                                class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
-                                
+                <div id="travelPassArea" class="bg-purple-400 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow hidden">
+                    <h2 class="text-2xl font-bold text-white text-center mb-5">Travel Pass</h2>
+                    
+                    <div class="mb-6">
+                        <label class="font-medium text-white block mb-1" for="travelSignOutDropdown">Sign Out to Travel:</label>
+                        <div class="flex items-center space-x-2">
+                            <select id="travelSignOutDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm">
+                                <option>Select Student...</option>
                             </select>
+                            <button id="travelSignOutBtn" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">Go</button>
                         </div>
-                        <div class="flex justify-center mt-6">
-                            <button type="submit" id="lateSignInSubmitBtn" class=" hidden px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base">
-                                Sign In Late
-                            </button>
+                    </div>
+
+                    <div>
+                        <label class="font-medium text-white block mb-1" for="travelSignInDropdown">Sign In from Travel:</label>
+                        <div class="flex items-center space-x-2">
+                            <select id="travelSignInDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm">
+                                <option>Select Student...</option>
+                            </select>
+                            <button id="travelSignInBtn" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">In</button>
                         </div>
-                    </form>
+                    </div>
                 </div>
+
+                <div id="lateSignInView" class="bg-yellow-200 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow">
+                    </div>
             </div>
             
         </div>
