@@ -358,8 +358,5 @@ function handleGoogleSignOut() {
 // This ensures common DOM elements are cached and GSI is initialized after the DOM is ready.
 document.addEventListener('DOMContentLoaded', () => {
     cacheCommonDOMElements(); // Cache all common DOM elements first
-    if (typeof cacheBathroomPassDOMElements === 'function') {
-        cacheBathroomPassDOMElements();
-    }
     initGoogleSignIn();        // Then initialize GSI and render button
 });
