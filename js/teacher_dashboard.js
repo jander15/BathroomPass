@@ -257,22 +257,23 @@ function renderSignOutReport() {
         reportTable.classList.remove('hidden');
         filteredData.forEach(row => {
             const tr = document.createElement('tr');
-            let typeDisplay = "Bathroom", durationDisplay = "N/A";
+            let typeDisplay = "N/A", durationDisplay = "N/A", classDisplay = getShortClassName(row.Class);
 
             if (typeof row.Seconds === 'number') {
                 durationDisplay = formatSecondsToMMSS(row.Seconds);
             }
 
+            // ** START: MODIFIED LOGIC BLOCK **
             if (row.Type === 'late') {
                 typeDisplay = "Late Sign In";
-                if (typeof row.Seconds === 'number') {
-                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.late.veryHigh);
-                    else if (row.Seconds >= DURATION_THRESHOLDS.high) tr.classList.add(COLORS.late.high);
-                    else tr.classList.add(COLORS.late.moderate);
-                } else {
-                     tr.classList.add(COLORS.late.moderate);
-                }
-            } else if (typeof row.Seconds === 'number') {
+                tr.classList.add(COLORS.late.moderate);
+            } else if (row.Type === 'travel') {
+                typeDisplay = "Travel";
+                // Add a unique style for travel, e.g., a light cyan
+                tr.classList.add('bg-cyan-100'); 
+                // Display where the student came from and went to
+                classDisplay = `${getShortClassName(row.DepartingTeacher)} → ${getShortClassName(row.ArrivingTeacher)}`;
+            } else if (row.Type === 'bathroom') {
                 if (row.Seconds > DURATION_THRESHOLDS.moderate) {
                     typeDisplay = "Long Sign Out";
                     if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.long.veryHigh);
@@ -283,10 +284,10 @@ function renderSignOutReport() {
                     tr.classList.add(COLORS.normal);
                 }
             }
+            // ** END: MODIFIED LOGIC BLOCK **
 
-            const shortClassName = getShortClassName(row.Class);
             const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${shortClassName}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
+            tr.innerHTML = `<td class="p-2 border-b">${formatDate(row.Date)}</td><td class="p-2 border-b">${formatTime(row.Date)}</td><td class="p-2 border-b">${classDisplay}</td><td class="p-2 border-b">${normalizeName(row.Name)}</td><td class="p-2 border-b">${typeDisplay}</td><td class="p-2 border-b">${durationDisplay}</td><td class="p-2 border-b text-right">${editButton}</td>`;
             reportTableBody.appendChild(tr);
         });
     }
