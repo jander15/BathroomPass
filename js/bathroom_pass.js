@@ -695,6 +695,9 @@ async function initializePageSpecificApp() {
                     alertMessage += `${studentToSignIn} was automatically signed in. `;
                     studentWasSignedOut = true;
                 }
+                if (classHasChanged) {
+                    updateStudentDropdownsForClass(latestState.currentClass);
+                }
 
                 if (appState.queue.length > 0) {
                     appState.queue = [];
