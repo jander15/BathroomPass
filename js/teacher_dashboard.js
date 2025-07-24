@@ -704,6 +704,28 @@ async function initializePageSpecificApp() {
             const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
             event.stopPropagation();
             const nextElement = accordionRow.nextElementSibling;
+
+             if (accordionRow.dataset.travelDetails) {
+            if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
+                nextElement.remove(); // Toggle by removing
+                return;
+            }
+            const details = JSON.parse(accordionRow.dataset.travelDetails);
+            const wrapperRow = document.createElement('tr');
+            wrapperRow.className = 'details-wrapper-row bg-gray-50';
+            const wrapperCell = document.createElement('td');
+            wrapperCell.colSpan = accordionRow.cells.length;
+            wrapperCell.className = 'p-3 text-sm text-gray-700';
+            wrapperCell.innerHTML = `
+                <div class="flex space-x-6">
+                    <span><strong>Departed from:</strong> ${details.departing}</span>
+                    <span><strong>Arrived at:</strong> ${details.arriving}</span>
+                </div>
+            `;
+            wrapperRow.appendChild(wrapperCell);
+            accordionRow.insertAdjacentElement('afterend', wrapperRow);
+            return; // Stop here for travel rows
+        }
             
             accordionRow.classList.toggle('bg-blue-50');
             const arrow = accordionRow.querySelector('svg');
@@ -777,6 +799,8 @@ async function initializePageSpecificApp() {
             accordionRow.insertAdjacentElement('afterend', wrapperRow);
         }
     });
+
+
 
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', () => {
