@@ -5,13 +5,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Pass System by Jander</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Google Identity Services (GSI) library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script type="text/javascript">
@@ -44,12 +40,15 @@
                 <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
                 <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
                 <hr class="my-1">
-
                 <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                     Sign Out of Google
                 </button>
             </div>
         </div>
+        
+        <h1 id="studentOutHeader" class="font-bold text-center mb-4 p-2 w-full flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
+            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
+        </h1>
 
         <div id="infoBar" class="w-full bg-gray-800 text-white p-2 text-center text-sm shadow-md mb-6 flex justify-around items-center flex-wrap">
             <span id="infoBarDateTime" class="mx-2">Loading time...</span>
@@ -59,11 +58,6 @@
             <span id="infoBarClass" class="mx-2">Class: Not Selected</span>
         </div>
 
-        <h1 id="studentOutHeader" class="font-bold text-center mb-4 p-2 w-full rounded-lg flex items-center justify-center whitespace-nowrap overflow-hidden text-overflow-ellipsis">
-            <span id="emojiLeft" class="mr-2"></span><span id="studentOutName"></span><span></span>&nbsp;<span id="headerStatus">PASS IS AVAILABLE</span><span id="emojiRight" class="ml-2"></span>
-        </h1>
-
-        <!-- Success Alert -->
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="alertDiv" role="alert">
             <strong class="font-bold">Success!</strong>
             <span class="block sm:inline" id="alertMessage"></span>
@@ -72,7 +66,6 @@
             </span>
         </div>
 
-        <!-- Error Alert -->
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm hidden mb-2 w-2/3" id="errorAlertDiv" role="alert">
             <strong class="font-bold">Error!</strong>
             <span class="block sm:inline" id="errorAlertMessage"></span>
@@ -82,7 +75,7 @@
         </div>
 
         <div id="mainContentContainer" class="flex flex-col lg:flex-row items-start lg:items-stretch justify-center w-full max-w-6xl gap-6">
-            <div class="w-full lg:w-2/3 flex-shrink-0 relative">
+            <div class="w-full lg:w-2/3 flex-shrink-0">
                 <form
                     id="form"
                     class="relative rounded-lg shadow-xl p-6 w-full space-y-4"
@@ -95,11 +88,11 @@
                     <h2 id="passLabel" class="text-2xl font-bold text-gray-800 mb-6 text-center">Bathroom Pass</h2>
 
                     <div class="flex flex-col sm:flex-row items-start sm:items-center">
-                        <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="name">Name:</label>
+                        <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="nameDropdown">Name:</label>
                         <select id="nameDropdown" class="block w-3/4 mr-4 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
                         </select>
                         <select id="emojiDropdown" class="block w-1/8 flex-shrink-0 p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none ml-4">
-                            </select>
+                        </select>
                     </div>
                     
                     <div class="flex justify-center space-x-3 mt-4">
@@ -143,7 +136,6 @@
                     <button id="add-to-queue" class="mt-4 px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">
                         Add to Queue
                     </button>
-
                     <div id="message-area" class="bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800 mt-4">
                         <p id="message-text" class="text-center text-base font-medium">Please select your name and click 'Add to Queue'.</p>
                         <ol id="queue-list" class="list-decimal list-inside mt-3 text-left text-gray-800 text-base">
@@ -156,7 +148,6 @@
 
                 <div id="travelPassArea" class="bg-purple-400 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow hidden">
                     <h2 class="text-2xl font-bold text-white text-center mb-5">Travel Pass</h2>
-                    
                     <div class="mb-6">
                         <label class="font-medium text-white block mb-1" for="travelSignOutDropdown">Sign Out to Travel:</label>
                         <div class="flex items-center space-x-2">
@@ -166,7 +157,6 @@
                             <button id="travelSignOutBtn" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">Go</button>
                         </div>
                     </div>
-
                     <div>
                         <label class="font-medium text-white block mb-1" for="travelSignInDropdown">Sign In from Travel:</label>
                         <div class="flex items-center space-x-2">
@@ -178,15 +168,27 @@
                     </div>
                 </div>
 
-                <div id="lateSignInView" class="bg-yellow-200 p-6 w-full text-center flex-shrink-0 rounded-b-lg flex-grow">
-                    </div>
+                <div id="lateSignInView" class="flex flex-col items-center justify-start w-full p-6 rounded-b-lg bg-yellow-200 flex-grow">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Late Sign In</h2>
+                    <form id="lateSignInForm" class="w-full space-y-4"> 
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                            <label class="font-medium text-gray-700 w-24 mb-1 sm:mb-0" for="lateNameDropdown">Name:</label>
+                            <select id="lateNameDropdown" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                            </select>
+                        </div>
+                        <div class="flex justify-center mt-6">
+                            <button type="submit" id="lateSignInSubmitBtn" class=" hidden px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base">
+                                Sign In Late
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
             
         </div>
 
     </div>
 
-    <!-- External JavaScript Files -->
     <script src="js/common.js"></script>
     <script src="js/bathroom_pass.js"></script>
 </body>
