@@ -681,7 +681,9 @@ async function initializePageSpecificApp() {
                         infoBarClass.textContent = "Class Hasn't Started Yet";
                     }
                     
-                    if (appState.ui.currentClassPeriod && latestState.currentClass !== appState.ui.currentClassPeriod) {
+                    const classHasChanged = appState.ui.currentClassPeriod !== latestState.currentClass;
+
+                    if (appState.ui.currentClassPeriod && classHasChanged) {
                         let alertMessage = "Class period changed. ";
                         let studentWasSignedOut = false;
                         let queueWasCleared = false;
@@ -704,12 +706,14 @@ async function initializePageSpecificApp() {
                         if (studentWasSignedOut || queueWasCleared) {
                             showSuccessAlert(alertMessage.trim());
                         }
+                        
+                        // ** FIX: Only update dropdowns when the class has actually changed **
+                        updateStudentDropdownsForClass(latestState.currentClass);
                     }
                     
                     appState.ui.currentClassPeriod = latestState.currentClass;
                     
-                    // ** Update student lists if the class has changed **
-                    updateStudentDropdownsForClass(latestState.currentClass);
+                    // This call updates the disabled/enabled overlay
                     updatePassAvailability(latestState.isEnabled);
 
                 } catch (error) {
