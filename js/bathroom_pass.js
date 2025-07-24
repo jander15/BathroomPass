@@ -818,6 +818,11 @@ async function initializePageSpecificApp() {
             updatePassAvailability(liveState.isEnabled);
             travelSignInName.removeAttribute("disabled");
 
+            const initialTravelState = await sendAuthenticatedRequest({ action: 'getTravelingStudents' });
+            if (initialTravelState.result === 'success' && initialTravelState.students) {
+                populateDropdown('travelSignInName', initialTravelState.students, DEFAULT_NAME_OPTION);
+            }
+
             // --- Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             
