@@ -272,7 +272,15 @@ function renderSignOutReport() {
                 // Add a unique style for travel, e.g., a light cyan
                 tr.classList.add('bg-cyan-100'); 
                 // Display where the student came from and went to
-                classDisplay = `${getShortClassName(row.DepartingTeacher)} → ${getShortClassName(row.ArrivingTeacher)}`;
+                //classDisplay = getShortClassName(row.Class);
+
+                // Add data attributes to store details for the click event
+                tr.dataset.accordionToggle = "true";
+                tr.dataset.travelDetails = JSON.stringify({
+                    departing: row.DepartingTeacher,
+                    arriving: row.ArrivingTeacher            
+                 });
+            
             } else if (row.Type === 'bathroom') {
                 if (row.Seconds > DURATION_THRESHOLDS.moderate) {
                     typeDisplay = "Long Sign Out";
