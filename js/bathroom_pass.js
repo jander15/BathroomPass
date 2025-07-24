@@ -672,54 +672,54 @@ async function initializePageSpecificApp() {
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             
             appState.ui.pollingIntervalId = setInterval(async () => {
-                try {
-                    const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+        try {
+            const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
 
-                    if (latestState.currentClass) {
-                        infoBarClass.textContent = `Class: ${latestState.currentClass}`;
-                    } else {
-                        infoBarClass.textContent = "Class Hasn't Started Yet";
-                    }
-                    
-                    const classHasChanged = appState.ui.currentClassPeriod !== latestState.currentClass;
+            if (latestState.currentClass) {
+                infoBarClass.textContent = `Class: ${latestState.currentClass}`;
+            } else {
+                infoBarClass.textContent = "Class Hasn't Started Yet";
+            }
+            
+            const classHasChanged = appState.ui.currentClassPeriod !== latestState.currentClass;
 
-                    if (appState.ui.currentClassPeriod && classHasChanged) {
-                        let alertMessage = "Class period changed. ";
-                        let studentWasSignedOut = false;
-                        let queueWasCleared = false;
+            if (appState.ui.currentClassPeriod && classHasChanged) {
+                let alertMessage = "Class period changed. ";
+                let studentWasSignedOut = false;
+                let queueWasCleared = false;
 
-                        if (appState.passHolder) {
-                            const studentToSignIn = appState.passHolder;
-                            const classOfSignOut = appState.ui.currentClassPeriod;
-                            await autoSignInStudent(studentToSignIn, classOfSignOut);
-                            alertMessage += `${studentToSignIn} was automatically signed in. `;
-                            studentWasSignedOut = true;
-                        }
-
-                        if (appState.queue.length > 0) {
-                            appState.queue = [];
-                            updateQueueDisplay();
-                            alertMessage += "The queue has been cleared.";
-                            queueWasCleared = true;
-                        }
-
-                        if (studentWasSignedOut || queueWasCleared) {
-                            showSuccessAlert(alertMessage.trim());
-                        }
-                        
-                        // ** FIX: Only update dropdowns when the class has actually changed **
-                        updateStudentDropdownsForClass(latestState.currentClass);
-                    }
-                    
-                    appState.ui.currentClassPeriod = latestState.currentClass;
-                    
-                    // This call updates the disabled/enabled overlay
-                    updatePassAvailability(latestState.isEnabled);
-
-                } catch (error) {
-                    console.error("Polling error:", error);
+                if (appState.passHolder) {
+                    const studentToSignIn = appState.passHolder;
+                    const classOfSignOut = appState.ui.currentClassPeriod;
+                    await autoSignInStudent(studentToSignIn, classOfSignOut);
+                    alertMessage += `${studentToSignIn} was automatically signed in. `;
+                    studentWasSignedOut = true;
                 }
-            }, 20000);
+
+                if (appState.queue.length > 0) {
+                    appState.queue = [];
+                    updateQueueDisplay();
+                    alertMessage += "The queue has been cleared.";
+                    queueWasCleared = true;
+                }
+
+                if (studentWasSignedOut || queueWasCleared) {
+                    showSuccessAlert(alertMessage.trim());
+                }
+                
+                // ** FIX: Only update dropdowns when the class has actually changed **
+                updateStudentDropdownsForClass(latestState.currentClass);
+            }
+            
+            appState.ui.currentClassPeriod = latestState.currentClass;
+            
+            // This call updates the disabled/enabled overlay
+            updatePassAvailability(latestState.isEnabled);
+
+        } catch (error) {
+            console.error("Polling error:", error);
+        }
+    }, 20000);
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
