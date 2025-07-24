@@ -404,7 +404,17 @@ function renderAttendanceReport() {
 
 function renderClassTrendsReport() {
     const getSeverity = (record) => {
-        // ... (getSeverity function remains the same)
+        if (record.Type === 'late') {
+            if (typeof record.Seconds !== 'number') return 5; 
+            if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 7;
+            if (record.Seconds >= DURATION_THRESHOLDS.high) return 6;
+            return 5;
+        }
+        if (typeof record.Seconds !== 'number') return 0;
+        if (record.Seconds >= DURATION_THRESHOLDS.veryHigh) return 4;
+        if (record.Seconds >= DURATION_THRESHOLDS.high) return 3;
+        if (record.Seconds >= DURATION_THRESHOLDS.moderate) return 2;
+        return 1;
     };
 
     if (!appState.data.allSignOuts) { trendsReportMessage.textContent = "Data is loading..."; return; }
@@ -415,19 +425,53 @@ function renderClassTrendsReport() {
     trendsReportTable.classList.remove('hidden');
     trendsReportTableBody.innerHTML = '';
 
-    // ... (filtering logic remains the same) ...
-
+    // ** START: THIS IS THE MISSING DATE LOGIC **
+    const filterType = trendsDateFilterType.value;
+    let startDate, endDate;
+    if (filterType !== 'all_time') {
+        if (filterType === 'this_week') { const r = getWeekRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
+        else if (filterType === 'this_month') { const r = getMonthRange(); startDate = new Date(r.start); endDate = new Date(r.end); }
+        else if (filterType === 'dateRange' && trendsStartDate.value && trendsEndDate.value) {
+            startDate = new Date(trendsStartDate.value);
+            endDate = new Date(trendsEndDate.value);
+        }
+    }
+    // ** END: THIS IS THE MISSING DATE LOGIC **
+    
     let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
     if (startDate && endDate) {
         endDate.setHours(23, 59, 59);
         classPeriodData = classPeriodData.filter(r => new Date(r.Date) >= startDate && new Date(r.Date) <= endDate);
     }
+
+    const allStudentsInClass = appState.data.allNamesFromSheet
+        .filter(s => s.Class === selectedClass)
+        .map(s => normalizeName(s.Name));
     
-    // ... (logic for getting students and totals remains the same) ...
-    
+    const studentTotals = {};
+    const studentDataForSorting = [];
+
+    allStudentsInClass.forEach(name => {
+        const records = classPeriodData.filter(r => normalizeName(r.Name) === name);
+        if (records.length > 0) {
+            const totalSeconds = records.filter(r => typeof r.Seconds === 'number').reduce((acc, r) => acc + r.Seconds, 0);
+            studentTotals[name] = totalSeconds;
+            studentDataForSorting.push({ name: name, records: records });
+        }
+    });
+
+    const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
+
+    const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
+
     sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
         studentRecords.sort((a, b) => {
-            // ... (sorting logic remains the same) ...
+            const severityA = getSeverity(a);
+            const severityB = getSeverity(b);
+            if (severityA !== severityB) {
+                return severityB - severityA;
+            }
+            return (b.Seconds || 0) - (a.Seconds || 0);
         });
 
         const totalSecondsOut = studentTotals[normalizedStudentName] || 0;
@@ -439,14 +483,13 @@ function renderClassTrendsReport() {
             let colorClass = COLORS.normal;
             let typeText = "Sign Out";
             const durationInSeconds = record.Seconds;
-
-            // ** START: MODIFIED LOGIC **
+            
             if (record.Type === 'late') {
                 typeText = "Late";
                 colorClass = COLORS.late.moderate;
             } else if (record.Type === 'travel') {
                 typeText = "Travel";
-                colorClass = 'bg-cyan-200'; // Assign a color for travel
+                colorClass = 'bg-cyan-200';
             } else if (record.Type === 'bathroom') {
                  if (durationInSeconds > DURATION_THRESHOLDS.moderate) {
                     typeText = "Long Sign Out";
@@ -455,7 +498,6 @@ function renderClassTrendsReport() {
                     else colorClass = COLORS.long.moderate;
                 }
             }
-            // ** END: MODIFIED LOGIC **
 
             const segmentWidthPercent = (totalSecondsOut > 0) ? (durationInSeconds / totalSecondsOut) * 100 : 0;
             const tooltipText = `${typeText}: ${formatSecondsToMMSS(durationInSeconds)} on ${formatDate(record.Date)}`;
@@ -463,7 +505,29 @@ function renderClassTrendsReport() {
         });
         
         const tr = document.createElement('tr');
-        // ... (rest of the table row creation remains the same) ...
+        tr.className = 'border-t hover:bg-gray-100 cursor-pointer';
+        tr.dataset.accordionToggle = "true";
+        tr.dataset.records = JSON.stringify(studentRecords);
+
+        const totalBarWidthPercent = (totalSecondsOut / maxTotalSeconds) * 100;
+        const arrowSvg = `<svg class="w-4 h-4 inline-block ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+
+        tr.innerHTML = `
+            <td class="py-2 px-3 border-b font-medium">${normalizedStudentName}${arrowSvg}</td>
+            <td class="py-2 px-3 border-b text-center">${studentRecords.length}</td>
+            <td class="py-2 px-3 border-b align-middle">
+                <div class="flex items-center w-full">
+                    <div class="flex-grow h-5 bg-white">
+                        <div class="flex h-full border border-black" style="width: ${totalBarWidthPercent}%;">
+                           ${barSegmentsHtml}
+                        </div>
+                    </div>
+                    <div class="w-20 text-right pl-2 font-semibold text-gray-700 text-sm">
+                        ${formatSecondsToHHMM(totalSecondsOut)}
+                    </div>
+                </div>
+            </td>
+        `;
         trendsReportTableBody.appendChild(tr);
     });
     updateSortIndicators();
