@@ -838,7 +838,7 @@ async function initializePageSpecificApp() {
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            const statusPayload = await sendAuthenticatedRequest({ action: 'getPassStatus' });
+            const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
             passStatusToggle.checked = statusPayload.isEnabled;
             passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
             
