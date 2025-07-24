@@ -699,8 +699,8 @@ async function initializePageSpecificApp() {
             `;
             
             const rect = infoIcon.getBoundingClientRect();
-            popover.style.top = `${rect.top}px`;
-            popover.style.left = `${rect.right + 10}px`; // position to the right of the icon
+            popover.style.top = `${rect.top + window.scrollY}px`;
+            popover.style.left = `${rect.right + window.scrollX + 10}px`;
             popover.classList.toggle('visible');
             return; // Exit after handling popover
         }
