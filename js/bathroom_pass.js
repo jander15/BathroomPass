@@ -449,6 +449,43 @@ async function handleTravelSignOutSubmit() {
     }
 }
 
+/**
+ * Handles submitting a student's arrival from a Travel Pass.
+ */
+async function handleTravelSignInSubmit() {
+    const selectedName = travelSignInName.value;
+    if (selectedName === "" || selectedName === DEFAULT_NAME_OPTION) {
+        showErrorAlert("Please select a student who is arriving.");
+        return;
+    }
+
+    travelSignInSubmitBtn.disabled = true;
+    travelSignInSubmitBtn.textContent = "Processing...";
+
+    const payload = {
+        action: ACTION_LOG_TRAVEL_SIGN_IN,
+        Name: selectedName.includes("(") ? selectedName.substring(0, selectedName.indexOf("(")-1).trim() : selectedName.trim(),
+    };
+
+    try {
+        const data = await sendAuthenticatedRequest(payload);
+        if (data.result === 'success') {
+            showSuccessAlert(data.message);
+            // Reset the arriving section
+            travelSignInName.value = DEFAULT_NAME_OPTION;
+            handleTravelSignInChange(); // This will hide the submit button again
+        } else {
+            throw new Error(data.error || 'Unknown error from server.');
+        }
+    } catch (error) {
+        console.error('Error submitting travel sign in:', error);
+        showErrorAlert(`Failed to sign in from travel: ${error.message}`);
+    } finally {
+        travelSignInSubmitBtn.disabled = false;
+        travelSignInSubmitBtn.textContent = "Sign In from Travel";
+    }
+}
+
 
 /**
  * Extracts a number from a name string (e.g., for sorting queue).
