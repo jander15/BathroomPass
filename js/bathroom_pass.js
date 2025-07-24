@@ -824,53 +824,71 @@ async function initializePageSpecificApp() {
             }
 
             // --- Polling for Real-time Updates ---
-            if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
+if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
+
+appState.ui.pollingIntervalId = setInterval(async () => {
+    try {
+        // Fetch all live state data in parallel for efficiency
+        const [liveState, travelState] = await Promise.all([
+            sendAuthenticatedRequest({ action: 'getLiveState' }),
+            sendAuthenticatedRequest({ action: 'getTravelingStudents' }) // This now gets all travel data
+        ]);
+
+        // --- Handle Class Changes and Pass Availability ---
+        if (liveState.currentClass) {
+            infoBarClass.textContent = `Class: ${liveState.currentClass}`;
+        } else {
+            infoBarClass.textContent = "Class Hasn't Started Yet";
+        }
+        
+        const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
+        if (classHasChanged) {
+            // Only auto-sign out if there was a previous class
+            if (appState.ui.currentClassPeriod) {
+                let alertMessage = "Class period changed. ";
+                if (appState.passHolder) {
+                    await autoSignInStudent(appState.passHolder, appState.ui.currentClassPeriod);
+                    alertMessage += `${appState.passHolder} was automatically signed in. `;
+                }
+                if (appState.queue.length > 0) {
+                    appState.queue = [];
+                    updateQueueDisplay();
+                    alertMessage += "The queue has been cleared.";
+                }
+                showSuccessAlert(alertMessage.trim());
+            }
+            // Update class-specific dropdowns
+            updateStudentDropdownsForClass(liveState.currentClass);
+        }
+    
+        appState.ui.currentClassPeriod = liveState.currentClass;
+        updatePassAvailability(liveState.isEnabled);
+
+        // --- Handle Travel Pass Dropdowns ---
+        if (travelState.result === 'success') {
+            const allTravelers = travelState.students || [];
+
+            // Filter for students who are actively traveling (timestamp is not "arrived")
+            const arrivingStudents = allTravelers
+                .filter(student => student.Timestamp !== "arrived")
+                .map(student => student.Name);
+            populateDropdown('travelSignInName', arrivingStudents, DEFAULT_NAME_OPTION);
+
+            // Filter for students who are visiting this teacher (timestamp is "arrived" AND teacher matches)
+            const visitingStudents = allTravelers
+                .filter(student => student.Timestamp === "arrived" && student.DepartingTeacher === appState.currentUser.email)
+                .map(student => student.Name);
             
-            appState.ui.pollingIntervalId = setInterval(async () => {
-                try {
-                    const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
-
-                    const travelState = await sendAuthenticatedRequest({ action: 'getTravelingStudents' });
-        console.log("Received travelState from server:", travelState); // <-- ADD THIS
-
-        if (travelState.result === 'success' && travelState.students) {
-            populateDropdown('travelSignInName', travelState.students, DEFAULT_NAME_OPTION);
+            // Combine the current class roster with any visiting students for the "Departing" dropdown
+            const classRoster = appState.data.namesForSelectedCourse || [];
+            const combinedDepartingList = [...new Set([...classRoster, ...visitingStudents])].sort();
+            populateDropdown('travelSignOutName', combinedDepartingList, DEFAULT_NAME_OPTION);
         }
 
-                    if (latestState.currentClass) {
-                        infoBarClass.textContent = `Class: ${latestState.currentClass}`;
-                    } else {
-                        infoBarClass.textContent = "Class Hasn't Started Yet";
-                    }
-                    
-                    const classHasChanged = appState.ui.currentClassPeriod !== latestState.currentClass;
-
-                    if (appState.ui.currentClassPeriod && classHasChanged) {
-                        let alertMessage = "Class period changed. ";
-                        if (appState.passHolder) {
-                            await autoSignInStudent(appState.passHolder, appState.ui.currentClassPeriod);
-                            alertMessage += `${appState.passHolder} was automatically signed in. `;
-                        }
-                        
-                        if (appState.queue.length > 0) {
-                            appState.queue = [];
-                            updateQueueDisplay();
-                            alertMessage += "The queue has been cleared.";
-                        }
-                        showSuccessAlert(alertMessage.trim());
-                    }
-
-                    if (classHasChanged) {
-                        updateStudentDropdownsForClass(latestState.currentClass);
-                    }
-                
-                    appState.ui.currentClassPeriod = latestState.currentClass;
-                    updatePassAvailability(latestState.isEnabled);
-
-                } catch (error) {
-                    console.error("Polling error:", error);
-                }
-            }, 15000);
+    } catch (error) {
+        console.error("Polling error:", error);
+    }
+}, 15000); 
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
