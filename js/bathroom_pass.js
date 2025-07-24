@@ -788,6 +788,12 @@ async function initializePageSpecificApp() {
                 try {
                     const latestState = await sendAuthenticatedRequest({ action: 'getLiveState' });
 
+                    const travelState = await sendAuthenticatedRequest({ action: 'getTravelingStudents' });
+                    if (travelState.result === 'success' && travelState.students) {
+                        // Populate the "Arriving" dropdown with the fetched list
+                        populateDropdown('travelSignInName', travelState.students, DEFAULT_NAME_OPTION);
+        }
+
                     if (latestState.currentClass) {
                         infoBarClass.textContent = `Class: ${latestState.currentClass}`;
                     } else {
