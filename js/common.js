@@ -12,6 +12,7 @@ const STATUS_IS_OUT = "IS OUT";
 const STATUS_IS_NEXT = "IS NEXT";
 const ACTION_LOG_SIGN_IN = 'logSignIn';
 const ACTION_LOG_LATE_SIGN_IN = 'logLateSignIn';
+const ACTION_LOG_TRAVEL_SIGN_OUT = 'logTravelSignOut'; 
 const ACTION_GET_ALL_DATA = 'getAllData';
 const ACTION_GET_REPORT_DATA = 'getReportData'; // Added for dashboard
 const TARDY_THRESHOLD_MINUTES = 5;

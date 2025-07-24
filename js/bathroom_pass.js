@@ -415,6 +415,41 @@ async function handleLateSignInFormSubmit(event) {
     }
 }
 
+async function handleTravelSignOutSubmit() {
+    const selectedName = travelSignOutName.value;
+    if (selectedName === "" || selectedName === DEFAULT_NAME_OPTION) {
+        showErrorAlert("Please select a student to sign out for travel.");
+        return;
+    }
+
+    travelSignOutSubmitBtn.disabled = true;
+    travelSignOutSubmitBtn.textContent = "Processing...";
+
+    const payload = {
+        action: ACTION_LOG_TRAVEL_SIGN_OUT,
+        Name: selectedName.includes("(") ? selectedName.substring(0, selectedName.indexOf("(")-1).trim() : selectedName.trim(),
+    };
+
+    try {
+        const data = await sendAuthenticatedRequest(payload);
+        if (data.result === 'success') {
+            showSuccessAlert(data.message);
+            // Reset the departing section
+            travelSignOutName.value = DEFAULT_NAME_OPTION;
+            handleTravelSignOutChange(); // This will hide the submit button
+        } else {
+            throw new Error(data.error || 'Unknown error from server.');
+        }
+    } catch (error) {
+        console.error('Error submitting travel sign out:', error);
+        showErrorAlert(`Failed to sign out for travel: ${error.message}`);
+    } finally {
+        travelSignOutSubmitBtn.disabled = false;
+        travelSignOutSubmitBtn.textContent = "Sign Out to Travel";
+    }
+}
+
+
 /**
  * Extracts a number from a name string (e.g., for sorting queue).
  */
@@ -872,4 +907,6 @@ travelDepartingBtn.addEventListener('click', handleTravelDepartingClick);
 travelArrivingBtn.addEventListener('click', handleTravelArrivingClick);
 travelSignOutName.addEventListener('change', handleTravelSignOutChange);
 travelSignInName.addEventListener('change', handleTravelSignInChange);
+travelSignOutSubmitBtn.addEventListener('click', handleTravelSignOutSubmit); // <-- ADD THIS LINE
+
 // ** END: New Travel Pass Event Listeners **
