@@ -126,21 +126,31 @@
                         Late Sign In
                     </button>
                 </div>
+
                 <div id="travelPassArea" class="bg-cyan-500 p-6 w-full flex-shrink-0 rounded-b-lg flex-grow hidden">
                     <h2 class="text-2xl font-bold text-white text-center mb-5">Travel Pass</h2>
-                    <div class="bg-cyan-600 p-4 rounded-lg mb-4">
-                        <h3 class="text-lg font-semibold text-white mb-2">Sign Out</h3>
-                        <label class="font-medium text-white mb-1" for="travelSignOutName">Student Name:</label>
+                    
+                    <div class="flex justify-center space-x-4 mb-4">
+                        <button id="travelDepartingBtn" class="px-6 py-2 w-1/2 rounded-md font-semibold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none transition-all duration-200 border-2 border-transparent">
+                            Departing
+                        </button>
+                        <button id="travelArrivingBtn" class="px-6 py-2 w-1/2 rounded-md font-semibold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none transition-all duration-200 border-2 border-transparent">
+                            Arriving
+                        </button>
+                    </div>
+
+                    <div id="travelDepartingSection" class="hidden mt-4 space-y-2">
+                        <label class="font-medium text-white" for="travelSignOutName">Student to Depart:</label>
                         <select id="travelSignOutName" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
-                        <button id="travelSignOutBtn" class="mt-3 w-full px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 text-base hidden">
+                        <button id="travelSignOutSubmitBtn" class="hidden mt-2 w-full px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200">
                             Sign Out to Travel
                         </button>
                     </div>
-                    <div class="bg-cyan-600 p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold text-white mb-2">Sign In</h3>
-                        <label class="font-medium text-white mb-1" for="travelSignInName">Student Arriving:</label>
+
+                    <div id="travelArrivingSection" class="hidden mt-4 space-y-2">
+                        <label class="font-medium text-white" for="travelSignInName">Student Arriving:</label>
                         <select id="travelSignInName" class="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none"></select>
-                        <button id="travelSignInBtn" class="mt-3 w-full px-5 py-2.5 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none transition-colors duration-200 text-base hidden">
+                        <button id="travelSignInSubmitBtn" class="hidden mt-2 w-full px-5 py-2.5 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none transition-colors duration-200">
                             Sign In from Travel
                         </button>
                     </div>
