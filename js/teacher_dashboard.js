@@ -606,7 +606,7 @@ async function initializePageSpecificApp() {
             console.error("Failed to set pass status:", error);
             showErrorAlert("Could not update pass status. Please try again.");
             // Revert UI on failure
-            passStatusToggle.checked = !isEnabled;
+            passStatusToggle.checked = isEnabled;
             passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
         }
     });
