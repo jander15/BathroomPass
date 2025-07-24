@@ -428,15 +428,18 @@ async function handleTravelSignOutSubmit() {
     const payload = {
         action: ACTION_LOG_TRAVEL_SIGN_OUT,
         Name: selectedName.includes("(") ? selectedName.substring(0, selectedName.indexOf("(")-1).trim() : selectedName.trim(),
+        // ** START: Add current class and teacher info **
+        Class: appState.ui.currentClassPeriod,
+        TeacherEmail: appState.currentUser.email
+        // ** END: Add current class and teacher info **
     };
 
     try {
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success') {
             showSuccessAlert(data.message);
-            // Reset the departing section
             travelSignOutName.value = DEFAULT_NAME_OPTION;
-            handleTravelSignOutChange(); // This will hide the submit button
+            handleTravelSignOutChange();
         } else {
             throw new Error(data.error || 'Unknown error from server.');
         }
