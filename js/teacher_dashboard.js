@@ -425,7 +425,7 @@ function renderClassTrendsReport() {
     trendsReportTable.classList.remove('hidden');
     trendsReportTableBody.innerHTML = '';
 
-    // ** START: THIS IS THE MISSING DATE LOGIC **
+    // ** THIS IS THE CRUCIAL DATE-DEFINING LOGIC THAT WAS MISSING **
     const filterType = trendsDateFilterType.value;
     let startDate, endDate;
     if (filterType !== 'all_time') {
@@ -436,11 +436,10 @@ function renderClassTrendsReport() {
             endDate = new Date(trendsEndDate.value);
         }
     }
-    // ** END: THIS IS THE MISSING DATE LOGIC **
     
     let classPeriodData = appState.data.allSignOuts.filter(r => !r.Deleted && r.Class === selectedClass);
     if (startDate && endDate) {
-        endDate.setHours(23, 59, 59);
+        endDate.setHours(23, 59, 59); // This will now work correctly
         classPeriodData = classPeriodData.filter(r => new Date(r.Date) >= startDate && new Date(r.Date) <= endDate);
     }
 
@@ -461,7 +460,6 @@ function renderClassTrendsReport() {
     });
 
     const maxTotalSeconds = Math.max(...Object.values(studentTotals), 300);
-
     const sortedStudentData = sortClassTrendsData(studentDataForSorting, studentTotals);
 
     sortedStudentData.forEach(({ name: normalizedStudentName, records: studentRecords }) => {
