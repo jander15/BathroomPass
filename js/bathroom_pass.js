@@ -695,9 +695,7 @@ async function initializePageSpecificApp() {
                     alertMessage += `${studentToSignIn} was automatically signed in. `;
                     studentWasSignedOut = true;
                 }
-                if (classHasChanged) {
-                    updateStudentDropdownsForClass(latestState.currentClass);
-                }
+                
 
                 if (appState.queue.length > 0) {
                     appState.queue = [];
@@ -710,9 +708,10 @@ async function initializePageSpecificApp() {
                     showSuccessAlert(alertMessage.trim());
                 }
                 
-                // ** FIX: Only update dropdowns when the class has actually changed **
-                updateStudentDropdownsForClass(latestState.currentClass);
             }
+            if (classHasChanged) {
+                    updateStudentDropdownsForClass(latestState.currentClass);
+                }
             
             appState.ui.currentClassPeriod = latestState.currentClass;
             
