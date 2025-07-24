@@ -670,7 +670,6 @@ async function initializePageSpecificApp() {
     attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
     classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
-
     dashboardContent.addEventListener('click', (event) => {
         // --- Create or find the popover element ---
         let popover = document.getElementById('travelPopover');
@@ -691,22 +690,25 @@ async function initializePageSpecificApp() {
 
         // --- Handle Info Icon Click ---
         if (infoIcon) {
-            event.stopPropagation(); // Stop the click from propagating to the row
-            const { departing, arriving } = infoIcon.dataset;
-            popover.innerHTML = `
-                <div class="font-bold text-gray-700">Travel Details</div>
-                <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
-                <div class="text-sm"><strong>To:</strong> ${arriving}</div>
-            `;
-            
-            const rect = infoIcon.getBoundingClientRect();
-            // Add window.scrollY and window.scrollX to account for page scrolling.
-            popover.style.top = `${rect.top + window.scrollY}px`;
-            popover.style.left = `${rect.right + window.scrollX + 10}px`;
-            
-            popover.classList.toggle('visible');
-            return; // Exit after handling popover
-        }
+        event.stopPropagation(); // Stop the click from propagating to the row
+        const { departing, arriving } = infoIcon.dataset;
+        popover.innerHTML = `
+            <div class="font-bold text-gray-700">Travel Details</div>
+            <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
+            <div class="text-sm"><strong>To:</strong> ${arriving}</div>
+        `;
+        
+        const rect = infoIcon.getBoundingClientRect();
+
+        // ** START: CORRECTED POSITION LOGIC **
+        // Add window.scrollY and window.scrollX to account for page scrolling.
+        popover.style.top = `${rect.top + window.scrollY}px`;
+        popover.style.left = `${rect.right + window.scrollX + 10}px`;
+        // ** END: CORRECTED POSITION LOGIC **
+        
+        popover.classList.toggle('visible');
+        return; // Exit after handling popover
+    }
 
         // --- Handle Edit Button Click ---
         if (editButton) {
@@ -748,12 +750,15 @@ async function initializePageSpecificApp() {
             event.stopPropagation();
             const nextElement = accordionRow.nextElementSibling;
 
+            // If an expanded row already exists, just remove it to "close" the accordion.
             if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
                 nextElement.remove();
                 return;
             }
 
+            // --- Create and expand the new row ---
             if (accordionRow.dataset.records) {
+                // This is for the detailed tables in the Attendance and Trends reports.
                 const records = JSON.parse(accordionRow.dataset.records || '[]');
                 if (records.length === 0) return;
 
@@ -765,18 +770,13 @@ async function initializePageSpecificApp() {
                 const detailsTable = document.createElement('table');
                 detailsTable.className = 'min-w-full';
                 const detailsHead = document.createElement('thead');
-                
-                // ** START: MODIFIED HEADERS **
                 detailsHead.innerHTML = `
                     <tr class="bg-gray-200 text-sm">
-                        <th class="py-1 px-2 border-b text-left">Date</th>
                         <th class="py-1 px-2 border-b text-left">Time</th>
                         <th class="py-1 px-2 border-b text-left">Type</th>
                         <th class="py-1 px-2 border-b text-left">Duration</th>
                         <th class="py-1 px-2 border-b text-right w-12">Edit</th>
                     </tr>`;
-                // ** END: MODIFIED HEADERS **
-
                 detailsTable.appendChild(detailsHead);
                 const detailsBody = document.createElement('tbody');
                 records.forEach(row => {
@@ -803,16 +803,11 @@ async function initializePageSpecificApp() {
                     }
         
                     const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-                    
-                    // ** START: MODIFIED ROW **
                     detailTr.innerHTML = `
-                        <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td>
                         <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
                         <td class="py-2 px-2 border-b">${typeDisplay}</td>
                         <td class="py-2 px-2 border-b">${durationDisplay}</td>
                         <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
-                    // ** END: MODIFIED ROW **
-
                     detailsBody.appendChild(detailTr);
                 });
                 detailsTable.appendChild(detailsBody);
