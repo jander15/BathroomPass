@@ -207,6 +207,26 @@ function sortClassTrendsData(data, studentTotals) {
 
 // --- Report Generation & UI Functions ---
 
+function switchTab(tab) {
+    appState.ui.currentDashboardTab = tab;
+    const isSignOut = tab === 'signOut';
+    const isAttendance = tab === 'attendance';
+    const isTrends = tab === 'classTrends';
+
+    signOutReportContent.classList.toggle('hidden', !isSignOut);
+    attendanceReportContent.classList.toggle('hidden', !isAttendance);
+    classTrendsContent.classList.toggle('hidden', !isTrends);
+
+    [signOutReportTab, attendanceReportTab, classTrendsTab].forEach(t => {
+        t.classList.remove('border-indigo-500', 'text-indigo-600');
+        t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+    });
+
+    if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
+    else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
+}
+
 function renderSignOutReport() {
     if (!appState.data.allSignOuts) {
         reportMessageP.textContent = "Data is loading or failed to load.";
@@ -248,9 +268,11 @@ function renderSignOutReport() {
 
     filteredData = sortSignOutData(filteredData);
 
-     reportTableBody.innerHTML = '';
+    reportTableBody.innerHTML = '';
     if (filteredData.length === 0) {
-        // ... (empty report logic)
+        reportMessageP.textContent = `No sign-out data found for the selected criteria.`;
+        reportMessageP.classList.remove('hidden');
+        reportTable.classList.add('hidden');
     } else {
         reportTable.classList.remove('hidden');
         filteredData.forEach(row => {
@@ -267,12 +289,19 @@ function renderSignOutReport() {
             } else if (row.Type === 'travel') {
                 tr.classList.add('bg-cyan-100');
                 classDisplay = getShortClassName(row.Class);
-                // ** CHANGE: Add the info icon directly to the type display **
                 typeDisplay = `Travel <span class="info-icon" 
                                 data-departing="${row.DepartingTeacher}" 
                                 data-arriving="${row.ArrivingTeacher}">i</span>`;
             } else if (row.Type === 'bathroom') {
-                // ... (bathroom logic is unchanged)
+                if (typeof row.Seconds === 'number' && row.Seconds > DURATION_THRESHOLDS.moderate) {
+                    typeDisplay = "Long Sign Out";
+                    if (row.Seconds >= DURATION_THRESHOLDS.veryHigh) tr.classList.add(COLORS.long.veryHigh);
+                    else if (row.Seconds >= DURATION_THRESHOLDS.high) tr.classList.add(COLORS.long.high);
+                    else tr.classList.add(COLORS.long.moderate);
+                } else {
+                    typeDisplay = "Normal Sign Out";
+                    tr.classList.add(COLORS.normal);
+                }
             }
 
             const editButton = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
@@ -281,27 +310,6 @@ function renderSignOutReport() {
         });
     }
     updateSortIndicators();
-}
-
-
-function switchTab(tab) {
-    appState.ui.currentDashboardTab = tab;
-    const isSignOut = tab === 'signOut';
-    const isAttendance = tab === 'attendance';
-    const isTrends = tab === 'classTrends';
-
-    signOutReportContent.classList.toggle('hidden', !isSignOut);
-    attendanceReportContent.classList.toggle('hidden', !isAttendance);
-    classTrendsContent.classList.toggle('hidden', !isTrends);
-
-    [signOutReportTab, attendanceReportTab, classTrendsTab].forEach(t => {
-        t.classList.remove('border-indigo-500', 'text-indigo-600');
-        t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
-    });
-
-    if (isSignOut) signOutReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-    else if (isAttendance) attendanceReportTab.classList.add('border-indigo-500', 'text-indigo-600');
-    else if (isTrends) classTrendsTab.classList.add('border-indigo-500', 'text-indigo-600');
 }
 
 function renderAttendanceReport() {
@@ -671,7 +679,6 @@ async function initializePageSpecificApp() {
     classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
     dashboardContent.addEventListener('click', (event) => {
-        // --- Create or find the popover element ---
         let popover = document.getElementById('travelPopover');
         if (!popover) {
             popover = document.createElement('div');
@@ -683,34 +690,25 @@ async function initializePageSpecificApp() {
         const editButton = event.target.closest('.edit-btn');
         const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
 
-        // --- Hide popover if clicking anywhere that is not an info icon ---
         if (!infoIcon) {
             popover.classList.remove('visible');
         }
 
-        // --- Handle Info Icon Click ---
         if (infoIcon) {
-        event.stopPropagation(); // Stop the click from propagating to the row
-        const { departing, arriving } = infoIcon.dataset;
-        popover.innerHTML = `
-            <div class="font-bold text-gray-700">Travel Details</div>
-            <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
-            <div class="text-sm"><strong>To:</strong> ${arriving}</div>
-        `;
-        
-        const rect = infoIcon.getBoundingClientRect();
+            event.stopPropagation();
+            const { departing, arriving } = infoIcon.dataset;
+            popover.innerHTML = `
+                <div class="font-bold text-gray-700">Travel Details</div>
+                <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
+                <div class="text-sm"><strong>To:</strong> ${arriving}</div>
+            `;
+            const rect = infoIcon.getBoundingClientRect();
+            popover.style.top = `${rect.top + window.scrollY}px`;
+            popover.style.left = `${rect.right + window.scrollX + 10}px`;
+            popover.classList.toggle('visible');
+            return;
+        }
 
-        // ** START: CORRECTED POSITION LOGIC **
-        // Add window.scrollY and window.scrollX to account for page scrolling.
-        popover.style.top = `${rect.top + window.scrollY}px`;
-        popover.style.left = `${rect.right + window.scrollX + 10}px`;
-        // ** END: CORRECTED POSITION LOGIC **
-        
-        popover.classList.toggle('visible');
-        return; // Exit after handling popover
-    }
-
-        // --- Handle Edit Button Click ---
         if (editButton) {
             event.stopPropagation();
             const timestamp = editButton.dataset.timestamp;
@@ -736,29 +734,26 @@ async function initializePageSpecificApp() {
                     editMinutes.value = Math.floor(record.Seconds / 60);
                     editSeconds.value = record.Seconds % 60;
                 } else {
-                    editMinutes.value = ''; editSeconds.value = '';
+                    editMinutes.value = '';
+                    editSeconds.value = '';
                 }
                 editModal.classList.remove('hidden');
                 saveEditBtn.dataset.timestamp = timestamp;
                 deleteEntryBtn.dataset.timestamp = timestamp;
             }
-            return; // Exit after handling edit
+            return;
         }
 
-        // --- Handle Accordion Row Click ---
         if (accordionRow) {
             event.stopPropagation();
             const nextElement = accordionRow.nextElementSibling;
 
-            // If an expanded row already exists, just remove it to "close" the accordion.
             if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
                 nextElement.remove();
                 return;
             }
 
-            // --- Create and expand the new row ---
             if (accordionRow.dataset.records) {
-                // This is for the detailed tables in the Attendance and Trends reports.
                 const records = JSON.parse(accordionRow.dataset.records || '[]');
                 if (records.length === 0) return;
 
@@ -772,6 +767,7 @@ async function initializePageSpecificApp() {
                 const detailsHead = document.createElement('thead');
                 detailsHead.innerHTML = `
                     <tr class="bg-gray-200 text-sm">
+                        <th class="py-1 px-2 border-b text-left">Date</th>
                         <th class="py-1 px-2 border-b text-left">Time</th>
                         <th class="py-1 px-2 border-b text-left">Type</th>
                         <th class="py-1 px-2 border-b text-left">Duration</th>
@@ -781,10 +777,11 @@ async function initializePageSpecificApp() {
                 const detailsBody = document.createElement('tbody');
                 records.forEach(row => {
                     const detailTr = document.createElement('tr');
-                    let typeDisplay = "N/A", durationDisplay = "N/A";
-                    
+                    let typeDisplay = "N/A",
+                        durationDisplay = "N/A";
+
                     if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
-                    
+
                     if (row.Type === 'late') {
                         typeDisplay = "Late Sign In";
                         detailTr.classList.add(COLORS.late.moderate);
@@ -801,9 +798,10 @@ async function initializePageSpecificApp() {
                             detailTr.classList.add(COLORS.normal);
                         }
                     }
-        
+
                     const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
                     detailTr.innerHTML = `
+                        <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td>
                         <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
                         <td class="py-2 px-2 border-b">${typeDisplay}</td>
                         <td class="py-2 px-2 border-b">${durationDisplay}</td>
