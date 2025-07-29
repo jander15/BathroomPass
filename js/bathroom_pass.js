@@ -974,15 +974,15 @@ travelSignInSubmitBtn.addEventListener('click', handleTravelSignInSubmit);
 // ** END: New Travel Pass Event Listeners **
 
 manualSyncBtn.addEventListener('click', async () => {
-    const svg = manualSyncBtn.querySelector('svg');
-    svg.classList.add('spinning');
+    // Change button text to show it's working
+    manualSyncBtn.textContent = 'Syncing...';
     manualSyncBtn.disabled = true;
 
-    await syncAppState(); // Call the same reusable sync function
+    await syncAppState(); // Call the reusable sync function
 
-    // A short delay provides better visual feedback that the sync is complete
+    // A short delay provides better visual feedback
     setTimeout(() => {
-        svg.classList.remove('spinning');
+        manualSyncBtn.textContent = 'Sync';
         manualSyncBtn.disabled = false;
     }, 500);
 });
