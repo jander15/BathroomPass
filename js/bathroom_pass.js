@@ -882,7 +882,7 @@ if (appState.currentUser.email && appState.currentUser.idToken) {
 
             // --- Set up Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
-            appState.ui.pollingIntervalId = setInterval(syncAppState, 15000);
+            appState.ui.pollingIntervalId = setInterval(syncAppState, 9915000);
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
@@ -973,16 +973,18 @@ travelSignInSubmitBtn.addEventListener('click', handleTravelSignInSubmit);
 
 // ** END: New Travel Pass Event Listeners **
 
-manualSyncBtn.addEventListener('click', async () => {
-    // Change button text to show it's working
+manualSyncBtn.addEventListener('click', () => {
     manualSyncBtn.textContent = 'Syncing...';
     manualSyncBtn.disabled = true;
 
-    await syncAppState(); // Call the reusable sync function
+    // Use a setTimeout to allow the UI to update before the async task starts
+    setTimeout(async () => {
+        await syncAppState(); // Call the reusable sync function
 
-    // A short delay provides better visual feedback
-    setTimeout(() => {
-        manualSyncBtn.textContent = 'Sync';
-        manualSyncBtn.disabled = false;
-    }, 500);
+        // A short delay provides better visual feedback
+        setTimeout(() => {
+            manualSyncBtn.textContent = 'Sync';
+            manualSyncBtn.disabled = false;
+        }, 500);
+    }, 0); // A 0ms delay is all that's needed to push this to the next event cycle
 });
