@@ -694,7 +694,6 @@ function populateNameDropdownsForCourse(selectedCourseName) {
     populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
     populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
     populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
-    populateDropdown('travelSignOutName', sortedNames, DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
 }
 
 /**
