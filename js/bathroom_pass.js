@@ -63,17 +63,18 @@ function startInfoBarClock() {
 
 async function syncAppState() {
     try {
-        // Fetch all live state data in parallel for efficiency
-        const [liveState, travelState] = await Promise.all([
+        // Fetch all live state data in parallel
+        const [liveState, travelState, departingList] = await Promise.all([
             sendAuthenticatedRequest({ action: 'getLiveState' }),
-            sendAuthenticatedRequest({ action: 'getTravelingStudents' })
+            sendAuthenticatedRequest({ action: 'getTravelingStudents' }),
+            sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
         ]);
 
         // --- Handle Class Changes and Pass Availability ---
         if (liveState.currentClass) {
             infoBarClass.textContent = `Class: ${liveState.currentClass}`;
         } else {
-            infoBarClass.textContent = "Class Hasn't Started Yet";
+            infoBarClass.textContent = "Class: No Active Class";
         }
         
         const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
@@ -97,29 +98,26 @@ async function syncAppState() {
         appState.ui.currentClassPeriod = liveState.currentClass;
         updatePassAvailability(liveState.isEnabled);
 
-        // --- Handle Travel Pass Dropdowns ---
-        if (travelState.result === 'success') {
+        // --- Process Traveling and Departing Students ---
+        let travelingStudentNames = [];
+        if (travelState.result === 'success' && travelState.students) {
             const allTravelers = travelState.students || [];
+            travelingStudentNames = allTravelers.map(student => student.Name);
+
             const arrivingStudents = allTravelers
                 .filter(student => student.Timestamp !== "arrived")
                 .map(student => student.Name);
             populateDropdown('travelSignInName', arrivingStudents, DEFAULT_NAME_OPTION);
-
-            const visitingStudents = allTravelers
-                .filter(student => student.Timestamp === "arrived" && student.DepartingTeacher === appState.currentUser.email)
-                .map(student => student.Name);
-            
-            const classRoster = [];
-            if (appState.ui.currentClassPeriod) {
-                appState.data.allNamesFromSheet.forEach(item => {
-                    if (item && item.Class === appState.ui.currentClassPeriod && item.Name) {
-                        classRoster.push(item.Name);
-                    }
-                });
-            }
-            const combinedDepartingList = [...new Set([...classRoster, ...visitingStudents])].sort();
-            populateDropdown('travelSignOutName', combinedDepartingList, DEFAULT_NAME_OPTION);
         }
+        
+        if (departingList.result === 'success' && departingList.students) {
+            // Filter out students who are actively traveling from the departing list
+            const finalDepartingList = departingList.students.filter(student => !travelingStudentNames.includes(student));
+            populateDropdown('travelSignOutName', finalDepartingList, DEFAULT_NAME_OPTION);
+        }
+
+        // --- Update Main Dropdowns (and filter out traveling students) ---
+        updateStudentDropdownsForClass(liveState.currentClass, travelingStudentNames);
 
     } catch (error) {
         console.error("Sync Error:", error);
@@ -129,20 +127,42 @@ async function syncAppState() {
 
 
 
+
 /**
  * It populates all student-related dropdowns based on the current class.
  * @param {string | null} currentClassName - The name of the class to populate students for.
  */
-function updateStudentDropdownsForClass(currentClassName) {
+function updateStudentDropdownsForClass(currentClassName, travelingStudents = []) {
+    // ** ALWAYS keep travel dropdowns enabled **
+    travelSignOutName.removeAttribute("disabled");
+    travelSignInName.removeAttribute("disabled");
+
     if (currentClassName) {
-        populateNameDropdownsForCourse(currentClassName);
+        // Get the roster for the current class
+        const namesForCourseSet = new Set();
+        appState.data.allNamesFromSheet.forEach(item => {
+            if (item && item.Class === currentClassName && item.Name) {
+                namesForCourseSet.add(item.Name);
+            }
+        });
+        let sortedNames = Array.from(namesForCourseSet).sort();
+
+        // ** Filter out students who are currently on the travel sheet **
+        sortedNames = sortedNames.filter(name => !travelingStudents.includes(name));
+
+        // Populate class-specific dropdowns
+        populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION);
+        populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION);
+        populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION);
+
+        // Enable the dropdowns
         nameDropdown.removeAttribute("disabled");
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
         emojiDropdown.removeAttribute("disabled");
-        travelSignOutName.removeAttribute("disabled");
     } else {
-        const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName'];
+        // If there's no class, disable the class-specific dropdowns
+        const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
         dropdownsToDisable.forEach(id => {
             const dd = document.getElementById(id);
             populateDropdown(id, [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION);
@@ -150,6 +170,7 @@ function updateStudentDropdownsForClass(currentClassName) {
         });
         emojiDropdown.setAttribute("disabled", "disabled");
     }
+    
     handleNameSelectionChange();
     handleLateNameSelectionChange();
     handleTravelSignOutChange();
