@@ -124,3 +124,13 @@ iframe[name="iframe"] {
     border-style: solid;
     border-color: transparent #e5e7eb transparent transparent;
 }
+
+/* --- Animation for Manual Sync Button --- */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
