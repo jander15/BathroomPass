@@ -194,11 +194,18 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
  * @returns {Promise<object>} The JSON response from the backend.
  */
 async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
+    // --- START: Temporary test code ---
+    // This forces a session expired error for any action that isn't a refresh or initial auth.
+    if (payload.action !== ACTION_REFRESH_TOKEN && !isInitialAuth) {
+        console.log("TEST: Simulating a SESSION_EXPIRED error.");
+        throw new Error("SESSION_EXPIRED");
+    }
+    // --- END: Temporary test code ---
+
     if (!appState.currentUser.idToken && !isInitialAuth) {
         throw new Error("User not authenticated. Missing ID token.");
     }
 
-    // On initial auth, the payload already contains the necessary tokens.
     if (!isInitialAuth) {
         payload.userEmail = appState.currentUser.email;
         payload.idToken = appState.currentUser.idToken;
@@ -213,7 +220,6 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            // Check for specific backend errors that indicate an expired token
             if (errorText.includes("Token-Email mismatch") || errorText.includes("Invalid token")) {
                 throw new Error("SESSION_EXPIRED");
             }
@@ -233,29 +239,24 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         if (error.message === "SESSION_EXPIRED") {
             console.warn("Session expired. Attempting silent refresh...");
             try {
-                // Call the new refreshToken action
                 const refreshPayload = {
                     action: ACTION_REFRESH_TOKEN,
                     userEmail: appState.currentUser.email,
-                    idToken: appState.currentUser.idToken
+                    idToken: appState.currentUser.idToken 
                 };
-                const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true); // Use `true` to avoid infinite loop
+                const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true);
 
                 if (refreshResponse.result === 'success' && refreshResponse.idToken) {
                     console.log("Token successfully refreshed. Retrying original request.");
-                    // Update the global token with the new one
                     appState.currentUser.idToken = refreshResponse.idToken;
-                    // Retry the original request with the new token
                     payload.idToken = appState.currentUser.idToken;
                     return await sendAuthenticatedRequest(payload);
                 }
             } catch (refreshError) {
                 console.error("Silent refresh failed.", refreshError);
-                // If the refresh itself fails, the session is truly dead.
                 throw new Error("SESSION_EXPIRED");
             }
         }
-        // Re-throw any other errors
         throw error;
     }
 }
