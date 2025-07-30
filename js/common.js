@@ -24,6 +24,7 @@ const FORM_COLOR_TARDY = "#ef4444"; // Red
 const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
+let refreshTokenPromise = null;
 
 
 // --- Global State Management ---
@@ -196,18 +197,6 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
  * @returns {Promise<object>} The JSON response from the backend.
  */
 async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
-    if (appState.ui.isRefreshingToken) {
-        // If a refresh is already happening, wait a moment and retry.
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return sendAuthenticatedRequest(payload, isInitialAuth);
-    }
-    
-    // --- Temporary test code ---
-    if (payload.action !== ACTION_REFRESH_TOKEN && !isInitialAuth) {
-        console.log(`TEST: Simulating a SESSION_EXPIRED error for action: ${payload.action}`);
-        throw new Error("SESSION_EXPIRED");
-    }
-
     if (!appState.currentUser.idToken && !isInitialAuth) {
         throw new Error("User not authenticated. Missing ID token.");
     }
@@ -233,32 +222,56 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         }
 
         const data = await response.json();
-        if (data.result === 'error' && data.error.includes("SESSION_EXPIRED")) {
+        if (data.result === 'error' && data.error && data.error.includes("SESSION_EXPIRED")) {
             throw new Error("SESSION_EXPIRED");
         }
         return data;
 
     } catch (error) {
         if (error.message === "SESSION_EXPIRED" && !isInitialAuth) {
-            console.warn("Session expired. Attempting silent refresh...");
-            appState.ui.isRefreshingToken = true;
-            try {
-                const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
-                const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true);
+            // This is the core of the fix. We ensure only one refresh happens at a time.
+            if (!refreshTokenPromise) {
+                console.warn("Session expired. Initiating a single silent refresh...");
+                refreshTokenPromise = (async () => {
+                    try {
+                        const refreshPayload = {
+                            action: ACTION_REFRESH_TOKEN,
+                            userEmail: appState.currentUser.email,
+                            idToken: appState.currentUser.idToken
+                        };
+                        // Note: We don't call sendAuthenticatedRequest here to avoid recursion issues.
+                        const refreshResponse = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(refreshPayload)
+                        });
+                        const refreshData = await refreshResponse.json();
 
-                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
-                    console.log("Token successfully refreshed. Retrying original request.");
-                    appState.currentUser.idToken = refreshResponse.idToken;
-                    payload.idToken = appState.currentUser.idToken;
-                    appState.ui.isRefreshingToken = false;
-                    return await sendAuthenticatedRequest(payload);
-                }
-            } catch (refreshError) {
-                appState.ui.isRefreshingToken = false;
-                console.error("Silent refresh failed.", refreshError);
-                throw new Error("SESSION_EXPIRED");
+                        if (refreshData.result === 'success' && refreshData.idToken) {
+                            console.log("Token successfully refreshed.");
+                            appState.currentUser.idToken = refreshData.idToken;
+                        } else {
+                            throw new Error("Refresh attempt failed on the server.");
+                        }
+                    } catch (refreshError) {
+                        console.error("Silent refresh failed.", refreshError);
+                        // Clear the promise on failure to allow another attempt later.
+                        refreshTokenPromise = null;
+                        throw new Error("SESSION_EXPIRED"); // Re-throw the original error
+                    }
+                    refreshTokenPromise = null; // Clear the promise on success
+                })();
             }
+
+            // Wait for the single refresh attempt to complete.
+            await refreshTokenPromise;
+            
+            // Retry the original request with the new token.
+            console.log(`Retrying original request for action: ${payload.action}`);
+            payload.idToken = appState.currentUser.idToken;
+            return await sendAuthenticatedRequest(payload); // Recursive call to retry
         }
+        // Re-throw any other errors
         throw error;
     }
 }
