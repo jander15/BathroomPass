@@ -42,7 +42,9 @@ const appState = {
         pollingIntervalId: null,
         isDataLoaded: false, 
         isPassEnabled: true,
-        currentClassPeriod: null
+        currentClassPeriod: null,
+        isRefreshingToken: false // <-- ADD THIS NEW FLAG
+
 
     },
     sortState: {
@@ -194,13 +196,17 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
  * @returns {Promise<object>} The JSON response from the backend.
  */
 async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
-    // --- START: Temporary test code ---
-    // This forces a session expired error for any action that isn't a refresh or initial auth.
+    if (appState.ui.isRefreshingToken) {
+        // If a refresh is already happening, wait a moment and retry.
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return sendAuthenticatedRequest(payload, isInitialAuth);
+    }
+    
+    // --- Temporary test code ---
     if (payload.action !== ACTION_REFRESH_TOKEN && !isInitialAuth) {
-        console.log("TEST: Simulating a SESSION_EXPIRED error.");
+        console.log(`TEST: Simulating a SESSION_EXPIRED error for action: ${payload.action}`);
         throw new Error("SESSION_EXPIRED");
     }
-    // --- END: Temporary test code ---
 
     if (!appState.currentUser.idToken && !isInitialAuth) {
         throw new Error("User not authenticated. Missing ID token.");
@@ -227,32 +233,28 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         }
 
         const data = await response.json();
-        if (data.result === 'error') {
-            if (data.error && (data.error.includes("SESSION_EXPIRED"))) {
-                throw new Error("SESSION_EXPIRED");
-            }
-            throw new Error(data.error || 'An unknown error occurred on the server.');
+        if (data.result === 'error' && data.error.includes("SESSION_EXPIRED")) {
+            throw new Error("SESSION_EXPIRED");
         }
         return data;
 
     } catch (error) {
-        if (error.message === "SESSION_EXPIRED") {
+        if (error.message === "SESSION_EXPIRED" && !isInitialAuth) {
             console.warn("Session expired. Attempting silent refresh...");
+            appState.ui.isRefreshingToken = true;
             try {
-                const refreshPayload = {
-                    action: ACTION_REFRESH_TOKEN,
-                    userEmail: appState.currentUser.email,
-                    idToken: appState.currentUser.idToken 
-                };
+                const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
                 const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true);
 
                 if (refreshResponse.result === 'success' && refreshResponse.idToken) {
                     console.log("Token successfully refreshed. Retrying original request.");
                     appState.currentUser.idToken = refreshResponse.idToken;
                     payload.idToken = appState.currentUser.idToken;
+                    appState.ui.isRefreshingToken = false;
                     return await sendAuthenticatedRequest(payload);
                 }
             } catch (refreshError) {
+                appState.ui.isRefreshingToken = false;
                 console.error("Silent refresh failed.", refreshError);
                 throw new Error("SESSION_EXPIRED");
             }
@@ -260,7 +262,6 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         throw error;
     }
 }
-
 /**
  * Fetches all student data for the current teacher from the backend.
  * This is a common utility for both Bathroom Pass and Teacher Dashboard.
