@@ -80,12 +80,6 @@ function formatSecondsToHHMM(totalSeconds) {
     return result.trim();
 }
 
-function normalizeName(name) {
-    if (typeof name !== 'string') return '';
-    const idx = name.indexOf('(');
-    return idx > -1 ? name.substring(0, idx).trim() : name.trim();
-}
-
 function getShortClassName(fullClassName) {
     if (typeof fullClassName !== 'string') return 'N/A';
     const match = fullClassName.match(/Period (\d+)/);

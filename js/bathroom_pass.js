@@ -104,7 +104,7 @@ async function syncAppState() {
         appState.ui.currentClassPeriod = liveState.currentClass;
         updatePassAvailability(liveState.isEnabled);
 
-        // --- Process Traveling and Departing Students ---
+         // --- Process Traveling and Departing Students ---
         let travelingStudentNames = [];
         if (travelState.result === 'success' && travelState.students) {
             const allTravelers = travelState.students || [];
@@ -113,13 +113,18 @@ async function syncAppState() {
             const arrivingStudents = allTravelers
                 .filter(student => student.Timestamp !== "arrived")
                 .map(student => student.Name);
-            populateDropdown('travelSignInName', arrivingStudents, DEFAULT_NAME_OPTION);
+            
+            // ** NORMALIZE only the arriving students list for its dropdown **
+            const normalizedArriving = arrivingStudents.map(name => normalizeName(name));
+            populateDropdown('travelSignInName', normalizedArriving, DEFAULT_NAME_OPTION);
         }
         
         if (departingList.result === 'success' && departingList.students) {
-            // Filter out students who are actively traveling from the departing list
             const finalDepartingList = departingList.students.filter(student => !travelingStudentNames.includes(student));
-            populateDropdown('travelSignOutName', finalDepartingList, DEFAULT_NAME_OPTION);
+
+            // ** NORMALIZE only the departing students list for its dropdown **
+            const normalizedDeparting = finalDepartingList.map(name => normalizeName(name));
+            populateDropdown('travelSignOutName', normalizedDeparting, DEFAULT_NAME_OPTION);
         }
 
         // --- Update Main Dropdowns (and filter out traveling students) ---

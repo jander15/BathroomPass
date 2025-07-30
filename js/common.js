@@ -95,6 +95,18 @@ function cacheCommonDOMElements() {
 // --- Utility Functions ---
 
 /**
+ * Normalizes a student name by removing any parenthetical additions (e.g., "(30)").
+ * @param {string} name - The full name string.
+ * @returns {string} The normalized base name.
+ */
+function normalizeName(name) {
+    if (typeof name !== 'string') return '';
+    const idx = name.indexOf('(');
+    return idx > -1 ? name.substring(0, idx).trim() : name.trim();
+}
+
+
+/**
  * Decodes a JWT (JSON Web Token) to extract its payload.
  * Used for decoding Google's ID Tokens.
  * @param {string} token - The JWT string.
