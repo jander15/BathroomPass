@@ -911,7 +911,7 @@ if (appState.currentUser.email && appState.currentUser.idToken) {
 
             // --- Set up Polling for Real-time Updates ---
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
-            appState.ui.pollingIntervalId = setInterval(syncAppState, 9915000);
+            appState.ui.pollingIntervalId = setInterval(syncAppState, 15000);
 
         } catch (error) {
             console.error("Failed to initialize Bathroom Pass with data:", error);
