@@ -23,6 +23,7 @@ const FORM_COLOR_OUT = "#f6b26b"; // Orange
 const FORM_COLOR_TARDY = "#ef4444"; // Red
 const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
+const ACTION_REFRESH_TOKEN = 'refreshToken';
 
 
 // --- Global State Management ---
@@ -180,27 +181,71 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
  * @param {object} payload - The data payload to send to the backend.
  * @returns {Promise<object>} The JSON response from the backend.
  */
-async function sendAuthenticatedRequest(payload) {
-    if (!appState.currentUser.idToken) {
+async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
+    if (!appState.currentUser.idToken && !isInitialAuth) {
         throw new Error("User not authenticated. Missing ID token.");
     }
-    
-    // Add common authentication parameters
-    payload.userEmail = appState.currentUser.email;
-    payload.idToken = appState.currentUser.idToken;
 
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+    // On initial auth, the payload already contains the necessary tokens.
+    if (!isInitialAuth) {
+        payload.userEmail = appState.currentUser.email;
+        payload.idToken = appState.currentUser.idToken;
     }
 
-    return response.json();
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            // Check for specific backend errors that indicate an expired token
+            if (errorText.includes("Token-Email mismatch") || errorText.includes("Invalid token")) {
+                throw new Error("SESSION_EXPIRED");
+            }
+            throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+        }
+
+        const data = await response.json();
+        if (data.result === 'error') {
+            if (data.error && (data.error.includes("SESSION_EXPIRED"))) {
+                throw new Error("SESSION_EXPIRED");
+            }
+            throw new Error(data.error || 'An unknown error occurred on the server.');
+        }
+        return data;
+
+    } catch (error) {
+        if (error.message === "SESSION_EXPIRED") {
+            console.warn("Session expired. Attempting silent refresh...");
+            try {
+                // Call the new refreshToken action
+                const refreshPayload = {
+                    action: ACTION_REFRESH_TOKEN,
+                    userEmail: appState.currentUser.email,
+                    idToken: appState.currentUser.idToken
+                };
+                const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true); // Use `true` to avoid infinite loop
+
+                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
+                    console.log("Token successfully refreshed. Retrying original request.");
+                    // Update the global token with the new one
+                    appState.currentUser.idToken = refreshResponse.idToken;
+                    // Retry the original request with the new token
+                    payload.idToken = appState.currentUser.idToken;
+                    return await sendAuthenticatedRequest(payload);
+                }
+            } catch (refreshError) {
+                console.error("Silent refresh failed.", refreshError);
+                // If the refresh itself fails, the session is truly dead.
+                throw new Error("SESSION_EXPIRED");
+            }
+        }
+        // Re-throw any other errors
+        throw error;
+    }
 }
 
 /**
@@ -261,37 +306,115 @@ function initGoogleSignIn() {
         return;
     }
 
+    // --- Initialize the Google Sign-In client ---
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleSignInResponse 
     });
 
-    // Only render button if the element exists on the page
+    // --- Render the Sign-In button on the page ---
     if (googleSignInButton) { 
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
         );
     } else {
-        console.warn("Google Sign-In button element (googleSignInButton) not found on this page. If this is not the sign-in page, this is expected.");
+        console.warn("Google Sign-In button not found on this page.");
     }
 
-    // Add profile menu listeners only if elements exist
+    // --- Set up the Authorization Code Flow client ---
+    const codeClient = google.accounts.oauth2.initCodeClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid', // Standard scopes to get user info
+        ux_mode: 'popup',
+        callback: (response) => {
+            // This callback receives the Authorization Code
+            if (response.code) {
+                // Now, call our handler to exchange the code
+                exchangeAuthCodeForTokens(response.code);
+            }
+        },
+    });
+
+    // Attach the code flow to our sign-in button
+    if (googleSignInButton) {
+        googleSignInButton.onclick = () => codeClient.requestCode();
+    }
+
+
+    // --- Set up profile menu and sign-out functionality ---
     if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
         profilePicture.addEventListener('click', (event) => {
             event.stopPropagation(); 
             profileDropdown.classList.toggle('hidden');
         });
-
         dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-
         bodyElement.addEventListener('click', (event) => { 
             if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
                 profileDropdown.classList.add('hidden');
             }
         });
-    } else {
-        console.warn("Common UI elements for profile menu not found on this page. If this is not the main app content page, this is expected.");
+    }
+}
+
+
+/**
+ * Exchanges the one-time authorization code for long-term tokens from our backend.
+ * This is the new core function for the secure sign-in flow.
+ * @param {string} authCode - The authorization code from Google.
+ */
+async function exchangeAuthCodeForTokens(authCode) {
+    try {
+        // We still need an initial ID token to verify the user's email on the backend
+        const initialCredential = await new Promise((resolve, reject) => {
+             google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    reject(new Error("Google prompt was not displayed or was skipped."));
+                }
+             });
+             google.accounts.id.requestVerifiedIdToken({
+                nonce: Math.random().toString(36).substring(2, 15) // A random nonce for security
+             }).then(resolve).catch(reject);
+        });
+
+        const profile = decodeJwtResponse(initialCredential.credential);
+        
+        const payload = {
+            action: 'exchangeCodeForTokens',
+            code: authCode,
+            idToken: initialCredential.credential, // Send the initial token for verification
+            userEmail: profile.email
+        };
+
+        // Call the new backend action
+        const tokenData = await sendAuthenticatedRequest(payload, true); // `true` to bypass normal token check
+
+        if (tokenData.result === 'success' && tokenData.idToken) {
+            // Update the app state with the user's profile and the NEW, longer-lasting ID token
+            appState.currentUser.email = profile.email;
+            appState.currentUser.name = profile.name;
+            appState.currentUser.profilePic = profile.picture;
+            appState.currentUser.idToken = tokenData.idToken;
+
+            // Transition UI to the main application
+            if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+            if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+            if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+            if (signInPage) signInPage.classList.add('hidden');
+            if (appContent) appContent.classList.remove('hidden');
+            if (bodyElement) bodyElement.classList.remove('justify-center');
+            if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+
+            if (typeof initializePageSpecificApp === 'function') {
+                initializePageSpecificApp();
+            }
+        } else {
+            throw new Error("Failed to get a valid ID token from the server.");
+        }
+
+    } catch (error) {
+        console.error("Authorization code exchange failed:", error);
+        showErrorAlert("Could not complete the sign-in process. Please try again.");
     }
 }
 
