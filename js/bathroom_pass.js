@@ -70,6 +70,12 @@ async function syncAppState() {
             sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
         ]);
 
+        if (departingList.debug) {
+            console.log("--- Backend Debug Log ---");
+            departingList.debug.forEach(log => console.log(log));
+            console.log("-------------------------");
+        }
+
         // --- Handle Class Changes and Pass Availability ---
         if (liveState.currentClass) {
             infoBarClass.textContent = `Class: ${liveState.currentClass}`;
