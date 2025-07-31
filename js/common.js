@@ -333,44 +333,41 @@ function initGoogleSignIn() {
         return;
     }
 
-    // This is the correct way to initialize the client for the Authorization Code Flow.
-    const client = google.accounts.oauth2.initCodeClient({
+    // This is the core sign-in logic.
+    // When the user signs in, Google provides a credential.
+    // We decode it to get the user's profile information.
+    google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'email profile openid',
-        ux_mode: 'popup',
-        // This callback is the ONLY thing that should fire after a successful pop-up sign-in.
-        callback: (response) => {
-            if (response.code) {
-                handleAuthCodeResponse(response.code);
-            } else {
-                console.error("Authorization code not received from Google.", response);
-                showErrorAlert("Sign-in failed. Please try again.");
-            }
-        },
+        callback: (credentialResponse) => {
+            const profile = decodeJwtResponse(credentialResponse.credential);
+            
+            // Now, we ask for the one-time authorization code.
+            const client = google.accounts.oauth2.initCodeClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: 'email profile openid',
+                ux_mode: 'popup',
+                callback: (codeResponse) => {
+                    if (codeResponse.code) {
+                        // We have everything we need: the profile and the code.
+                        // Now we send it to our backend to be exchanged for tokens.
+                        exchangeAuthCodeForTokens(codeResponse.code, credentialResponse.credential, profile);
+                    }
+                },
+            });
+            client.requestCode();
+        }
     });
 
-    // Render the sign-in button.
+    // This renders the button on the page.
     if (googleSignInButton) {
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
         );
-        
-        // Find the button's internal iframe and attach our secure code flow to its click event.
-        // This is a more robust way to ensure our flow is triggered.
-        const parent = document.getElementById('googleSignInButton');
-        setTimeout(() => { // We need a slight delay for the Google button to render.
-            const btn = parent.querySelector('div[role="button"]');
-            if (btn) {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    client.requestCode();
-                });
-            }
-        }, 500);
+        google.accounts.id.prompt(); // This displays the one-tap sign-in prompt.
     }
 
-    // Setup for profile menu and sign out button (no changes here)
+    // Setup for profile menu and sign out button
     if (profilePicture && dropdownSignOutButton) {
         profilePicture.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -388,95 +385,18 @@ function initGoogleSignIn() {
  * This is the new core function for the secure sign-in flow.
  * @param {string} authCode - The authorization code from Google.
  */
-async function exchangeAuthCodeForTokens(authCode) {
+async function exchangeAuthCodeForTokens(authCode, initialIdToken, profile) {
     try {
-        // We still need an initial ID token to verify the user's email on the backend
-        const initialCredential = await new Promise((resolve, reject) => {
-             google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    reject(new Error("Google prompt was not displayed or was skipped."));
-                }
-             });
-             google.accounts.id.requestVerifiedIdToken({
-                nonce: Math.random().toString(36).substring(2, 15) // A random nonce for security
-             }).then(resolve).catch(reject);
-        });
-
-        const profile = decodeJwtResponse(initialCredential.credential);
-        
         const payload = {
             action: 'exchangeCodeForTokens',
             code: authCode,
-            idToken: initialCredential.credential, // Send the initial token for verification
+            idToken: initialIdToken,
             userEmail: profile.email
         };
 
-        // Call the new backend action
-        const tokenData = await sendAuthenticatedRequest(payload, true); // `true` to bypass normal token check
-
-        if (tokenData.result === 'success' && tokenData.idToken) {
-            // Update the app state with the user's profile and the NEW, longer-lasting ID token
-            appState.currentUser.email = profile.email;
-            appState.currentUser.name = profile.name;
-            appState.currentUser.profilePic = profile.picture;
-            appState.currentUser.idToken = tokenData.idToken;
-
-            // Transition UI to the main application
-            if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-            if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-            if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-            if (signInPage) signInPage.classList.add('hidden');
-            if (appContent) appContent.classList.remove('hidden');
-            if (bodyElement) bodyElement.classList.remove('justify-center');
-            if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
-
-            if (typeof initializePageSpecificApp === 'function') {
-                initializePageSpecificApp();
-            }
-        } else {
-            throw new Error("Failed to get a valid ID token from the server.");
-        }
-
-    } catch (error) {
-        console.error("Authorization code exchange failed:", error);
-        showErrorAlert("Could not complete the sign-in process. Please try again.");
-    }
-}
-
-/**
- * Handles the authorization code response from Google.
- * It sends the code to our backend to be exchanged for tokens.
- */
-async function handleAuthCodeResponse(authCode) {
-    try {
-        // First, get an initial ID token to prove the user's identity to our backend.
-        const credentialResponse = await new Promise((resolve, reject) => {
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: (res) => resolve(res) // A simple resolver for the promise
-            });
-            google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed()) {
-                    reject(new Error("Google one-tap prompt was not displayed."));
-                }
-            });
-        });
-
-        const profile = decodeJwtResponse(credentialResponse.credential);
-        
-        // This payload contains everything our backend needs for the secure exchange.
-        const payload = {
-            action: 'exchangeCodeForTokens',
-            code: authCode,
-            idToken: credentialResponse.credential,
-            userEmail: profile.email
-        };
-
-        // Call the backend. We use `isInitialAuth: true` to bypass the normal token check.
         const tokenData = await sendAuthenticatedRequest(payload, true);
 
         if (tokenData.result === 'success' && tokenData.idToken) {
-            // Update the app state with the user's info and the new ID token.
             appState.currentUser.email = profile.email;
             appState.currentUser.name = profile.name;
             appState.currentUser.profilePic = profile.picture;
@@ -500,6 +420,14 @@ async function handleAuthCodeResponse(authCode) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
     }
+}
+
+/**
+ * Handles the authorization code response from Google.
+ * It sends the code to our backend to be exchanged for tokens.
+ */
+async function handleAuthCodeResponse(authCode) {
+   
 }
 
 /**
