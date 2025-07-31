@@ -24,9 +24,6 @@ const FORM_COLOR_TARDY = "#ef4444"; // Red
 const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
-let refreshTokenPromise = null;
-let isRefreshingToken = false;
-
 
 
 // --- Global State Management ---
@@ -45,9 +42,7 @@ const appState = {
         pollingIntervalId: null,
         isDataLoaded: false, 
         isPassEnabled: true,
-        currentClassPeriod: null,
-        isRefreshingToken: false // <-- ADD THIS NEW FLAG
-
+        currentClassPeriod: null
 
     },
     sortState: {
@@ -203,6 +198,7 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         throw new Error("User not authenticated. Missing ID token.");
     }
 
+    // On initial auth, the payload already contains the necessary tokens.
     if (!isInitialAuth) {
         payload.userEmail = appState.currentUser.email;
         payload.idToken = appState.currentUser.idToken;
@@ -217,6 +213,7 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
 
         if (!response.ok) {
             const errorText = await response.text();
+            // Check for specific backend errors that indicate an expired token
             if (errorText.includes("Token-Email mismatch") || errorText.includes("Invalid token")) {
                 throw new Error("SESSION_EXPIRED");
             }
@@ -224,59 +221,45 @@ async function sendAuthenticatedRequest(payload, isInitialAuth = false) {
         }
 
         const data = await response.json();
-        if (data.result === 'error' && data.error && data.error.includes("SESSION_EXPIRED")) {
-            throw new Error("SESSION_EXPIRED");
+        if (data.result === 'error') {
+            if (data.error && (data.error.includes("SESSION_EXPIRED"))) {
+                throw new Error("SESSION_EXPIRED");
+            }
+            throw new Error(data.error || 'An unknown error occurred on the server.');
         }
         return data;
 
     } catch (error) {
-        if (error.message === "SESSION_EXPIRED" && !isInitialAuth) {
-            // This is the core of the fix. We ensure only one refresh happens at a time.
-            if (!refreshTokenPromise) {
-                console.warn("Session expired. Initiating a single silent refresh...");
-                refreshTokenPromise = (async () => {
-                    try {
-                        const refreshPayload = {
-                            action: ACTION_REFRESH_TOKEN,
-                            userEmail: appState.currentUser.email,
-                            idToken: appState.currentUser.idToken
-                        };
-                        // Note: We don't call sendAuthenticatedRequest here to avoid recursion issues.
-                        const refreshResponse = await fetch(API_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(refreshPayload)
-                        });
-                        const refreshData = await refreshResponse.json();
+        if (error.message === "SESSION_EXPIRED") {
+            console.warn("Session expired. Attempting silent refresh...");
+            try {
+                // Call the new refreshToken action
+                const refreshPayload = {
+                    action: ACTION_REFRESH_TOKEN,
+                    userEmail: appState.currentUser.email,
+                    idToken: appState.currentUser.idToken
+                };
+                const refreshResponse = await sendAuthenticatedRequest(refreshPayload, true); // Use `true` to avoid infinite loop
 
-                        if (refreshData.result === 'success' && refreshData.idToken) {
-                            console.log("Token successfully refreshed.");
-                            appState.currentUser.idToken = refreshData.idToken;
-                        } else {
-                            throw new Error("Refresh attempt failed on the server.");
-                        }
-                    } catch (refreshError) {
-                        console.error("Silent refresh failed.", refreshError);
-                        // Clear the promise on failure to allow another attempt later.
-                        refreshTokenPromise = null;
-                        throw new Error("SESSION_EXPIRED"); // Re-throw the original error
-                    }
-                    refreshTokenPromise = null; // Clear the promise on success
-                })();
+                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
+                    console.log("Token successfully refreshed. Retrying original request.");
+                    // Update the global token with the new one
+                    appState.currentUser.idToken = refreshResponse.idToken;
+                    // Retry the original request with the new token
+                    payload.idToken = appState.currentUser.idToken;
+                    return await sendAuthenticatedRequest(payload);
+                }
+            } catch (refreshError) {
+                console.error("Silent refresh failed.", refreshError);
+                // If the refresh itself fails, the session is truly dead.
+                throw new Error("SESSION_EXPIRED");
             }
-
-            // Wait for the single refresh attempt to complete.
-            await refreshTokenPromise;
-            
-            // Retry the original request with the new token.
-            console.log(`Retrying original request for action: ${payload.action}`);
-            payload.idToken = appState.currentUser.idToken;
-            return await sendAuthenticatedRequest(payload); // Recursive call to retry
         }
         // Re-throw any other errors
         throw error;
     }
 }
+
 /**
  * Fetches all student data for the current teacher from the backend.
  * This is a common utility for both Bathroom Pass and Teacher Dashboard.
@@ -325,59 +308,66 @@ function populateCourseDropdownFromData() {
 // --- Google Sign-In Initialization & Handlers ---
 
 /**
- * Initializes the Google Identity Services client for the Authorization Code Flow.
+ * Initializes the Google Identity Services client and renders the sign-in button.
+ * This is the primary entry point for GSI setup after common DOM elements are cached.
  */
 function initGoogleSignIn() {
-    if (typeof google === 'undefined' || !google.accounts) {
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
         console.error("Google Identity Services library not loaded.");
+        if (signInError) showErrorAlert("Google Sign-In library failed to load. Please check your internet connection.");
         return;
     }
 
-    // This is the core sign-in logic.
-    // When the user signs in, Google provides a credential.
-    // We decode it to get the user's profile information.
+    // --- Initialize the Google Sign-In client ---
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: (credentialResponse) => {
-            const profile = decodeJwtResponse(credentialResponse.credential);
-            
-            // Now, we ask for the one-time authorization code.
-            const client = google.accounts.oauth2.initCodeClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: 'email profile openid',
-                ux_mode: 'popup',
-                callback: (codeResponse) => {
-                    if (codeResponse.code) {
-                        // We have everything we need: the profile and the code.
-                        // Now we send it to our backend to be exchanged for tokens.
-                        exchangeAuthCodeForTokens(codeResponse.code, credentialResponse.credential, profile);
-                    }
-                },
-            });
-            client.requestCode();
-        }
+        callback: handleGoogleSignInResponse 
     });
 
-    // This renders the button on the page.
-    if (googleSignInButton) {
+    // --- Render the Sign-In button on the page ---
+    if (googleSignInButton) { 
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
         );
-        google.accounts.id.prompt(); // This displays the one-tap sign-in prompt.
+    } else {
+        console.warn("Google Sign-In button not found on this page.");
     }
 
-    // Setup for profile menu and sign out button
-    if (profilePicture && dropdownSignOutButton) {
+    // --- Set up the Authorization Code Flow client ---
+    const codeClient = google.accounts.oauth2.initCodeClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid', // Standard scopes to get user info
+        ux_mode: 'popup',
+        callback: (response) => {
+            // This callback receives the Authorization Code
+            if (response.code) {
+                // Now, call our handler to exchange the code
+                exchangeAuthCodeForTokens(response.code);
+            }
+        },
+    });
+
+    // Attach the code flow to our sign-in button
+    if (googleSignInButton) {
+        googleSignInButton.onclick = () => codeClient.requestCode();
+    }
+
+
+    // --- Set up profile menu and sign-out functionality ---
+    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
         profilePicture.addEventListener('click', (event) => {
-            event.stopPropagation();
+            event.stopPropagation(); 
             profileDropdown.classList.toggle('hidden');
         });
         dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+        bodyElement.addEventListener('click', (event) => { 
+            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
     }
 }
-
-
 
 
 /**
@@ -385,49 +375,59 @@ function initGoogleSignIn() {
  * This is the new core function for the secure sign-in flow.
  * @param {string} authCode - The authorization code from Google.
  */
-async function exchangeAuthCodeForTokens(authCode, initialIdToken, profile) {
+async function exchangeAuthCodeForTokens(authCode) {
     try {
+        // We still need an initial ID token to verify the user's email on the backend
+        const initialCredential = await new Promise((resolve, reject) => {
+             google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    reject(new Error("Google prompt was not displayed or was skipped."));
+                }
+             });
+             google.accounts.id.requestVerifiedIdToken({
+                nonce: Math.random().toString(36).substring(2, 15) // A random nonce for security
+             }).then(resolve).catch(reject);
+        });
+
+        const profile = decodeJwtResponse(initialCredential.credential);
+        
         const payload = {
             action: 'exchangeCodeForTokens',
             code: authCode,
-            idToken: initialIdToken,
+            idToken: initialCredential.credential, // Send the initial token for verification
             userEmail: profile.email
         };
 
-        const tokenData = await sendAuthenticatedRequest(payload, true);
+        // Call the new backend action
+        const tokenData = await sendAuthenticatedRequest(payload, true); // `true` to bypass normal token check
 
         if (tokenData.result === 'success' && tokenData.idToken) {
+            // Update the app state with the user's profile and the NEW, longer-lasting ID token
             appState.currentUser.email = profile.email;
             appState.currentUser.name = profile.name;
             appState.currentUser.profilePic = profile.picture;
             appState.currentUser.idToken = tokenData.idToken;
 
-            // Transition the UI to the main app view.
+            // Transition UI to the main application
             if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
             if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
             if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-            signInPage.classList.add('hidden');
-            appContent.classList.remove('hidden');
-            profileMenuContainer.classList.remove('hidden');
+            if (signInPage) signInPage.classList.add('hidden');
+            if (appContent) appContent.classList.remove('hidden');
+            if (bodyElement) bodyElement.classList.remove('justify-center');
+            if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
             if (typeof initializePageSpecificApp === 'function') {
                 initializePageSpecificApp();
             }
         } else {
-            throw new Error(tokenData.error || "Failed to get a valid ID token from the server.");
+            throw new Error("Failed to get a valid ID token from the server.");
         }
+
     } catch (error) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
     }
-}
-
-/**
- * Handles the authorization code response from Google.
- * It sends the code to our backend to be exchanged for tokens.
- */
-async function handleAuthCodeResponse(authCode) {
-   
 }
 
 /**
@@ -436,8 +436,34 @@ async function handleAuthCodeResponse(authCode) {
  * @param {CredentialResponse} response - The credential response from GSI.
  */
 function handleGoogleSignInResponse(response) {
-       // This can be left empty or used for other purposes if needed.
+    console.log('User signed in successfully with GSI!');
+    const profile = decodeJwtResponse(response.credential);
+    
+    appState.currentUser.email = profile.email;
+    appState.currentUser.name = profile.name;
+    appState.currentUser.profilePic = profile.picture;
+    appState.currentUser.idToken = response.credential;
 
+    // Update profile menu UI (common to all app pages)
+    if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+    if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+    if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+
+    // Transition UI (common to all app pages)
+    if (signInPage) signInPage.classList.add('hidden');
+    if (appContent) appContent.classList.remove('hidden');
+    if (bodyElement) bodyElement.classList.remove('justify-center');
+    if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+
+    // Call the page-specific initialization function.
+    // This function MUST be defined in the page-specific JS file (e.g., bathroom_pass.js, teacher_dashboard.js)
+    // and is expected to be globally available when common.js calls it.
+    if (typeof initializePageSpecificApp === 'function') {
+        initializePageSpecificApp();
+    } else {
+        console.error("initializePageSpecificApp not found. Page-specific initialization skipped. Ensure it's defined in the page's JS file and loaded.");
+        showErrorAlert("Application could not initialize. Please contact support.");
+    }
 }
 
 /**
