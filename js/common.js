@@ -333,35 +333,39 @@ function initGoogleSignIn() {
         return;
     }
 
-    // Initialize the code client, which is used for the secure auth flow.
+    // Step 1: Initialize the main Google library. This MUST come before rendering the button.
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleSignInResponse // This points to our empty legacy function
+    });
+
+    // Step 2: Initialize the client for the secure Authorization Code flow.
     const client = google.accounts.oauth2.initCodeClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid',
         ux_mode: 'popup',
         callback: (response) => {
-            // This callback receives the one-time authorization code.
-            // We pass it to our handler function to be exchanged for tokens.
             if (response.code) {
                 handleAuthCodeResponse(response.code);
             }
         },
     });
 
-    // Render the sign-in button and attach our new code client to its click event.
+    // Step 3: Now that the library is initialized, render the button.
     if (googleSignInButton) {
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
         );
-        // This is the critical part: we override the default button behavior
-        // to use our secure code flow instead of the simple callback.
+        
+        // Step 4: Attach our secure code flow to the button's click event.
         googleSignInButton.addEventListener('click', (e) => {
             e.preventDefault();
             client.requestCode();
         });
     }
 
-    // Setup for profile menu and sign out button (no changes here)
+    // Setup for profile menu and sign out button
     if (profilePicture && dropdownSignOutButton) {
         profilePicture.addEventListener('click', (event) => {
             event.stopPropagation();
