@@ -63,18 +63,19 @@ function startInfoBarClock() {
 
 async function syncAppState() {
     try {
-        // --- Step 1: Make the primary request first to validate the token ---
-        const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
-
-        // If the above line succeeds (or after a successful refresh), proceed.
-        
-        // --- Step 2: Make the remaining requests ---
-        const [travelState, departingList] = await Promise.all([
+        const [liveState, travelState, departingList] = await Promise.all([
+            sendAuthenticatedRequest({ action: 'getLiveState' }),
             sendAuthenticatedRequest({ action: 'getTravelingStudents' }),
             sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
         ]);
 
-        // --- Step 3: Process all the data (this logic remains the same) ---
+        if (departingList.debug) {
+            console.log("--- Backend Debug Log ---");
+            departingList.debug.forEach(log => console.log(log));
+            console.log("-------------------------");
+        }
+
+        // --- Handle Class Changes and Pass Availability ---
         if (liveState.currentClass) {
             infoBarClass.textContent = `Class: ${liveState.currentClass}`;
         } else {
@@ -101,34 +102,35 @@ async function syncAppState() {
         appState.ui.currentClassPeriod = liveState.currentClass;
         updatePassAvailability(liveState.isEnabled);
 
-        let travelingStudentNames = [];
+        // --- Process Traveling and Departing Students ---
+        let activelyTravelingStudents = [];
         if (travelState.result === 'success' && travelState.students) {
             const allTravelers = travelState.students || [];
-            travelingStudentNames = allTravelers.map(student => student.Name);
 
-            const arrivingStudents = allTravelers
+            // This list correctly contains only students who are actively traveling.
+            activelyTravelingStudents = allTravelers
                 .filter(student => student.Timestamp !== "arrived")
                 .map(student => student.Name);
             
-            const normalizedArriving = arrivingStudents.map(name => normalizeName(name));
+            const normalizedArriving = activelyTravelingStudents.map(name => normalizeName(name));
             populateDropdown('travelSignInName', normalizedArriving, DEFAULT_NAME_OPTION);
         }
         
         if (departingList.result === 'success' && departingList.students) {
-            const finalDepartingList = departingList.students.filter(student => !travelingStudentNames.includes(student));
+            // ** THIS IS THE CORRECTED LOGIC **
+            // Filter out students who are actively traveling from the departing list.
+            const finalDepartingList = departingList.students.filter(student => !activelyTravelingStudents.includes(student));
+            
             const normalizedDeparting = finalDepartingList.map(name => normalizeName(name));
             populateDropdown('travelSignOutName', normalizedDeparting, DEFAULT_NAME_OPTION);
         }
 
-        updateStudentDropdownsForClass(liveState.currentClass, travelingStudentNames);
+        // --- Update Main Dropdowns (and filter out traveling students) ---
+        updateStudentDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
 
     } catch (error) {
         console.error("Sync Error:", error);
-        if (error.message === "SESSION_EXPIRED") {
-            showErrorAlert("Your session has expired. Please reload the page to sign in again.");
-        } else {
-            showErrorAlert(`Failed to sync with server: ${error.message}`);
-        }
+        showErrorAlert("Failed to sync with server. Please check connection.");
     }
 }
 
