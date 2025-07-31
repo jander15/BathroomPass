@@ -333,39 +333,44 @@ function initGoogleSignIn() {
         return;
     }
 
-    // Step 1: Initialize the main Google library. This MUST come before rendering the button.
-    google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleSignInResponse // This points to our empty legacy function
-    });
-
-    // Step 2: Initialize the client for the secure Authorization Code flow.
+    // This is the correct way to initialize the client for the Authorization Code Flow.
     const client = google.accounts.oauth2.initCodeClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid',
         ux_mode: 'popup',
+        // This callback is the ONLY thing that should fire after a successful pop-up sign-in.
         callback: (response) => {
             if (response.code) {
                 handleAuthCodeResponse(response.code);
+            } else {
+                console.error("Authorization code not received from Google.", response);
+                showErrorAlert("Sign-in failed. Please try again.");
             }
         },
     });
 
-    // Step 3: Now that the library is initialized, render the button.
+    // Render the sign-in button.
     if (googleSignInButton) {
         google.accounts.id.renderButton(
             googleSignInButton,
             { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
         );
         
-        // Step 4: Attach our secure code flow to the button's click event.
-        googleSignInButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            client.requestCode();
-        });
+        // Find the button's internal iframe and attach our secure code flow to its click event.
+        // This is a more robust way to ensure our flow is triggered.
+        const parent = document.getElementById('googleSignInButton');
+        setTimeout(() => { // We need a slight delay for the Google button to render.
+            const btn = parent.querySelector('div[role="button"]');
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    client.requestCode();
+                });
+            }
+        }, 500);
     }
 
-    // Setup for profile menu and sign out button
+    // Setup for profile menu and sign out button (no changes here)
     if (profilePicture && dropdownSignOutButton) {
         profilePicture.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -374,6 +379,7 @@ function initGoogleSignIn() {
         dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
     }
 }
+
 
 
 
@@ -443,16 +449,22 @@ async function exchangeAuthCodeForTokens(authCode) {
  */
 async function handleAuthCodeResponse(authCode) {
     try {
-        // We still need an initial ID token to prove the user's identity on the backend.
-        const credentialResponse = await google.accounts.id.prompt(notification => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                throw new Error("Google prompt was not displayed or was skipped.");
-            }
+        // First, get an initial ID token to prove the user's identity to our backend.
+        const credentialResponse = await new Promise((resolve, reject) => {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: (res) => resolve(res) // A simple resolver for the promise
+            });
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed()) {
+                    reject(new Error("Google one-tap prompt was not displayed."));
+                }
+            });
         });
 
         const profile = decodeJwtResponse(credentialResponse.credential);
         
-        // This payload contains everything our backend needs.
+        // This payload contains everything our backend needs for the secure exchange.
         const payload = {
             action: 'exchangeCodeForTokens',
             code: authCode,
@@ -460,7 +472,7 @@ async function handleAuthCodeResponse(authCode) {
             userEmail: profile.email
         };
 
-        // Call the backend to exchange the code.
+        // Call the backend. We use `isInitialAuth: true` to bypass the normal token check.
         const tokenData = await sendAuthenticatedRequest(payload, true);
 
         if (tokenData.result === 'success' && tokenData.idToken) {
@@ -482,7 +494,7 @@ async function handleAuthCodeResponse(authCode) {
                 initializePageSpecificApp();
             }
         } else {
-            throw new Error("Failed to get a valid ID token from the server.");
+            throw new Error(tokenData.error || "Failed to get a valid ID token from the server.");
         }
     } catch (error) {
         console.error("Authorization code exchange failed:", error);
