@@ -237,38 +237,43 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
         return data;
 
     } catch (error) {
-        if (error.message === "SESSION_EXPIRED" && !isRetry) {
-            console.warn("Session expired. Attempting silent refresh...");
-            try {
-                const refreshPayload = {
-                    action: ACTION_REFRESH_TOKEN,
-                    userEmail: appState.currentUser.email
-                };
-                
-                const refreshResponse = await fetch(API_URL, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify(refreshPayload)
-                }).then(res => res.json());
+    if (error.message === "SESSION_EXPIRED" && !isRetry) {
+        console.warn("Session expired. Attempting silent refresh...");
+        try {
+            const refreshPayload = {
+                action: ACTION_REFRESH_TOKEN,
+                userEmail: appState.currentUser.email
+            };
+            
+            const refreshResponse = await fetch(API_URL, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify(refreshPayload)
+            }).then(res => res.json());
 
-                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
-                    console.log("Token successfully refreshed. Retrying original request.");
-                    appState.currentUser.idToken = refreshResponse.idToken;
-                    return await sendAuthenticatedRequest(payload, true);
-                } else {
-                    // ** NEW: Log the specific reason for the failure **
-                    console.error(`Token refresh failed. Reason: ${refreshResponse.details}`);
-                    throw new Error("SESSION_EXPIRED"); // Propagate the error to trigger sign-out
-                }
-            } catch (refreshError) {
-                console.error("Silent refresh failed.", refreshError);
+            if (refreshResponse.result === 'success' && refreshResponse.idToken) {
+                console.log("Token successfully refreshed. Retrying original request.");
+                appState.currentUser.idToken = refreshResponse.idToken;
+                return await sendAuthenticatedRequest(payload, true);
+            } else {
+                // ** IMPROVED LOGGING **
+                // This line now correctly logs the specific reason for the failure.
+                const failureReason = refreshResponse.details || 'unknown_error';
+                console.error(`Token refresh failed. Reason: ${failureReason}`);
+                // Trigger the sign-out process.
                 handleGoogleSignOut();
-                throw new Error("Your session has expired. Please sign in again.");
+                throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
             }
+        } catch (e) {
+             console.error("A critical error occurred during the refresh attempt:", e);
+             handleGoogleSignOut();
+             throw new Error("Your session has expired. Please sign in again.");
         }
-        
-        throw error;
     }
+    
+    // If it's a different error or a retry, just throw it.
+    throw error;
+}
 }
 
 /**
@@ -350,6 +355,8 @@ function initGoogleSignIn() {
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid', // Standard scopes to get user info
         ux_mode: 'popup',
+        access_type: 'offline', // This asks Google for a refresh token
+
         callback: (response) => {
             // This callback receives the Authorization Code
             if (response.code) {
