@@ -237,9 +237,6 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
         return data;
 
     } catch (error) {
-        // ** THIS IS THE MODIFIED LOGIC **
-        // Only attempt to refresh the token if it's the first time we've seen a session error
-        // for this request and the action is not a refresh itself.
         if (error.message === "SESSION_EXPIRED" && !isRetry) {
             console.warn("Session expired. Attempting silent refresh...");
             try {
@@ -248,7 +245,6 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
                     userEmail: appState.currentUser.email
                 };
                 
-                // The refresh action doesn't need a valid token to work.
                 const refreshResponse = await fetch(API_URL, {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json' },
@@ -258,21 +254,19 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
                 if (refreshResponse.result === 'success' && refreshResponse.idToken) {
                     console.log("Token successfully refreshed. Retrying original request.");
                     appState.currentUser.idToken = refreshResponse.idToken;
-                    // Retry the original request, but this time set 'isRetry' to true.
                     return await sendAuthenticatedRequest(payload, true);
                 } else {
-                    // If the refresh itself fails, throw the session expired error to stop the loop.
-                    throw new Error("SESSION_EXPIRED");
+                    // ** NEW: Log the specific reason for the failure **
+                    console.error(`Token refresh failed. Reason: ${refreshResponse.details}`);
+                    throw new Error("SESSION_EXPIRED"); // Propagate the error to trigger sign-out
                 }
             } catch (refreshError) {
                 console.error("Silent refresh failed.", refreshError);
-                // If the refresh attempt fails, log the user out as the session is unrecoverable.
                 handleGoogleSignOut();
                 throw new Error("Your session has expired. Please sign in again.");
             }
         }
         
-        // If it's already a retry or a different kind of error, just throw it.
         throw error;
     }
 }
