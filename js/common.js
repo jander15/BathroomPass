@@ -318,109 +318,37 @@ function populateCourseDropdownFromData() {
 // --- Google Sign-In Initialization & Handlers ---
 
 /**
- * Initializes the Google Identity Services client and renders the sign-in button.
- * This is the primary entry point for GSI setup after common DOM elements are cached.
- */
-function initGoogleSignIn() {
-    if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-        console.error("Google Identity Services library not loaded.");
-        if (signInError) showErrorAlert("Google Sign-In library failed to load. Please check your internet connection.");
-        return;
-    }
-
-    // --- Initialize the Google Sign-In client ---
-    google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleSignInResponse 
-    });
-
-    // --- Render the Sign-In button on the page ---
-    if (googleSignInButton) { 
-        google.accounts.id.renderButton(
-            googleSignInButton,
-            { theme: 'dark', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
-        );
-    } else {
-        console.warn("Google Sign-In button not found on this page.");
-    }
-
-    // --- Set up the Authorization Code Flow client ---
-    const codeClient = google.accounts.oauth2.initCodeClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'email profile openid', // Standard scopes to get user info
-        ux_mode: 'popup',
-        access_type: 'offline', // This asks Google for a refresh token
-
-        callback: (response) => {
-            // This callback receives the Authorization Code
-            if (response.code) {
-                // Now, call our handler to exchange the code
-                exchangeAuthCodeForTokens(response.code);
-            }
-        },
-    });
-
-    // Attach the code flow to our sign-in button
-    if (googleSignInButton) {
-        googleSignInButton.onclick = () => codeClient.requestCode();
-    }
-
-
-    // --- Set up profile menu and sign-out functionality ---
-    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
-        profilePicture.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            profileDropdown.classList.toggle('hidden');
-        });
-        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-        bodyElement.addEventListener('click', (event) => { 
-            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
-    }
-}
-
-
-/**
- * Exchanges the one-time authorization code for long-term tokens from our backend.
- * This is the new core function for the secure sign-in flow.
+ * NEW: This function is now the single entry point for handling a successful sign-in.
+ * It takes the authorization code, sends it to the backend, and initializes the app.
  * @param {string} authCode - The authorization code from Google.
  */
-async function exchangeAuthCodeForTokens(authCode) {
+async function handleSignIn(authCode) {
     try {
-        // We still need an initial ID token to verify the user's email on the backend
-        const initialCredential = await new Promise((resolve, reject) => {
-             google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    reject(new Error("Google prompt was not displayed or was skipped."));
-                }
-             });
-             google.accounts.id.requestVerifiedIdToken({
-                nonce: Math.random().toString(36).substring(2, 15) // A random nonce for security
-             }).then(resolve).catch(reject);
-        });
-
-        const profile = decodeJwtResponse(initialCredential.credential);
-        
         const payload = {
             action: 'exchangeCodeForTokens',
-            code: authCode,
-            idToken: initialCredential.credential, // Send the initial token for verification
-            userEmail: profile.email
+            code: authCode
         };
 
-        // Call the new backend action
-        const tokenData = await sendAuthenticatedRequest(payload, true); // `true` to bypass normal token check
+        // This initial request does not need an ID token.
+        const tokenData = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => res.json());
 
         if (tokenData.result === 'success' && tokenData.idToken) {
-            // Update the app state with the user's profile and the NEW, longer-lasting ID token
+            // The backend successfully exchanged the code and gives us our first ID token.
+            const profile = decodeJwtResponse(tokenData.idToken);
+            
+            // Set the global user state
             appState.currentUser.email = profile.email;
             appState.currentUser.name = profile.name;
             appState.currentUser.profilePic = profile.picture;
             appState.currentUser.idToken = tokenData.idToken;
 
-            // Transition UI to the main application
+            console.log("User signed in and tokens exchanged successfully!");
+
+            // Update UI
             if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
             if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
             if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
@@ -429,11 +357,13 @@ async function exchangeAuthCodeForTokens(authCode) {
             if (bodyElement) bodyElement.classList.remove('justify-center');
             if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
+            // Initialize the rest of the application
             if (typeof initializePageSpecificApp === 'function') {
                 initializePageSpecificApp();
             }
+
         } else {
-            throw new Error("Failed to get a valid ID token from the server.");
+            throw new Error(tokenData.error || "Failed to exchange authorization code.");
         }
 
     } catch (error) {
@@ -443,47 +373,63 @@ async function exchangeAuthCodeForTokens(authCode) {
 }
 
 /**
- * Callback function for successful Google Sign-In.
- * Updates global appState and transitions UI.
- * @param {CredentialResponse} response - The credential response from GSI.
+ * **UPDATED**: Initializes the Google Sign-In button to use ONLY the Authorization Code Flow.
  */
-function handleGoogleSignInResponse(response) {
-    console.log('User signed in successfully with GSI!');
-    const profile = decodeJwtResponse(response.credential);
-    
-    appState.currentUser.email = profile.email;
-    appState.currentUser.name = profile.name;
-    appState.currentUser.profilePic = profile.picture;
-    appState.currentUser.idToken = response.credential;
+function initGoogleSignIn() {
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+        console.error("Google Identity Services library not loaded.");
+        if(signInError) showErrorAlert("Google Sign-In library failed to load.");
+        return;
+    }
 
-    // Update profile menu UI (common to all app pages)
-    if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-    if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-    if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+    // This is the client that will request the authorization code.
+    const codeClient = google.accounts.oauth2.initCodeClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid',
+        ux_mode: 'popup',
+        access_type: 'offline', // Ask for a refresh token
+        prompt: 'consent',      // Force consent screen for debugging
+        callback: (response) => {
+            if (response.code) {
+                // When we get the code, pass it to our handler.
+                handleSignIn(response.code);
+            }
+        },
+    });
 
-    // Transition UI (common to all app pages)
-    if (signInPage) signInPage.classList.add('hidden');
-    if (appContent) appContent.classList.remove('hidden');
-    if (bodyElement) bodyElement.classList.remove('justify-center');
-    if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+    // --- Render a custom Sign-In button ---
+    // We create our own button to ensure it's only tied to our codeClient.
+    if (googleSignInButton) {
+        googleSignInButton.innerHTML = ''; // Clear any existing button
+        const customButton = document.createElement('button');
+        customButton.textContent = 'Sign in with Google';
+        customButton.className = 'bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors';
+        customButton.onclick = () => {
+            codeClient.requestCode();
+        };
+        googleSignInButton.appendChild(customButton);
+    }
 
-    // Call the page-specific initialization function.
-    // This function MUST be defined in the page-specific JS file (e.g., bathroom_pass.js, teacher_dashboard.js)
-    // and is expected to be globally available when common.js calls it.
-    if (typeof initializePageSpecificApp === 'function') {
-        initializePageSpecificApp();
-    } else {
-        console.error("initializePageSpecificApp not found. Page-specific initialization skipped. Ensure it's defined in the page's JS file and loaded.");
-        showErrorAlert("Application could not initialize. Please contact support.");
+    // --- Set up profile menu and sign-out functionality ---
+    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
+        profilePicture.addEventListener('click', (event) => {
+            event.stopPropagation();
+            profileDropdown.classList.toggle('hidden');
+        });
+        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+        bodyElement.addEventListener('click', (event) => {
+            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
     }
 }
 
 /**
  * Handles Google Sign-Out.
- * Resets global appState and transitions UI.
  */
 function handleGoogleSignOut() {
-    google.accounts.id.disableAutoSelect();
+    // No need to call google.accounts.id.disableAutoSelect() as we aren't using that flow.
     console.log('User signed out.');
     
     appState.currentUser = { email: '', name: '', profilePic: '', idToken: '' };
@@ -494,12 +440,8 @@ function handleGoogleSignOut() {
     if (profileMenuContainer) profileMenuContainer.classList.add('hidden');
     if (profileDropdown) profileDropdown.classList.add('hidden');
 
-    // Call the page-specific reset function.
-    // This function MUST be defined in the page-specific JS file.
     if (typeof resetPageSpecificAppState === 'function') {
         resetPageSpecificAppState();
-    } else {
-        console.warn("resetPageSpecificAppState not found. Page-specific reset skipped.");
     }
 }
 
