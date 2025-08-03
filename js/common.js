@@ -240,10 +240,7 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
     if (error.message === "SESSION_EXPIRED" && !isRetry) {
         console.warn("Session expired. Attempting silent refresh...");
         try {
-            const refreshPayload = {
-                action: ACTION_REFRESH_TOKEN,
-                userEmail: appState.currentUser.email
-            };
+            const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
             
             const refreshResponse = await fetch(API_URL, {
                  method: 'POST',
@@ -256,11 +253,9 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
                 appState.currentUser.idToken = refreshResponse.idToken;
                 return await sendAuthenticatedRequest(payload, true);
             } else {
-                // ** IMPROVED LOGGING **
-                // This line now correctly logs the specific reason for the failure.
-                const failureReason = refreshResponse.details || 'unknown_error';
+                // This now reliably logs the specific reason from the backend.
+                const failureReason = refreshResponse.details || 'unknown_frontend_error';
                 console.error(`Token refresh failed. Reason: ${failureReason}`);
-                // Trigger the sign-out process.
                 handleGoogleSignOut();
                 throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
             }
@@ -271,7 +266,6 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
         }
     }
     
-    // If it's a different error or a retry, just throw it.
     throw error;
 }
 }
