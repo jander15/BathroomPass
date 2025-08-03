@@ -61,21 +61,34 @@ function startInfoBarClock() {
     }, 1000);
 }
 
+/**
+ * Synchronizes the app's state with the server.
+ * This version uses a "gatekeeper" request to validate the session and refresh
+ * the token before making other concurrent data requests, preventing a race condition.
+ */
 async function syncAppState() {
     try {
-        const [liveState, travelState, departingList] = await Promise.all([
-            sendAuthenticatedRequest({ action: 'getLiveState' }),
+        // --- Step 1: The "Gatekeeper" Request ---
+        // Make one request first to validate the session and handle any needed token refresh.
+        const liveState = await sendAuthenticatedRequest({ action: 'getLiveState' });
+
+        // If the above line succeeds, the token is now valid.
+
+        // --- Step 2: Concurrent Data Fetching ---
+        // Now, fetch the rest of the data concurrently.
+        const [travelState, departingList] = await Promise.all([
             sendAuthenticatedRequest({ action: 'getTravelingStudents' }),
             sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
         ]);
 
+        // --- Step 3: Process All Data ---
+        // (The rest of your original function logic remains the same)
         if (departingList.debug) {
             console.log("--- Backend Debug Log ---");
             departingList.debug.forEach(log => console.log(log));
             console.log("-------------------------");
         }
 
-        // --- Handle Class Changes and Pass Availability ---
         if (liveState.currentClass) {
             infoBarClass.textContent = `Class: ${liveState.currentClass}`;
         } else {
@@ -102,12 +115,9 @@ async function syncAppState() {
         appState.ui.currentClassPeriod = liveState.currentClass;
         updatePassAvailability(liveState.isEnabled);
 
-        // --- Process Traveling and Departing Students ---
         let activelyTravelingStudents = [];
         if (travelState.result === 'success' && travelState.students) {
             const allTravelers = travelState.students || [];
-
-            // This list correctly contains only students who are actively traveling.
             activelyTravelingStudents = allTravelers
                 .filter(student => student.Timestamp !== "arrived")
                 .map(student => student.Name);
@@ -117,20 +127,17 @@ async function syncAppState() {
         }
         
         if (departingList.result === 'success' && departingList.students) {
-            // ** THIS IS THE CORRECTED LOGIC **
-            // Filter out students who are actively traveling from the departing list.
             const finalDepartingList = departingList.students.filter(student => !activelyTravelingStudents.includes(student));
-            
             const normalizedDeparting = finalDepartingList.map(name => normalizeName(name));
             populateDropdown('travelSignOutName', normalizedDeparting, DEFAULT_NAME_OPTION);
         }
 
-        // --- Update Main Dropdowns (and filter out traveling students) ---
         updateStudentDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
 
     } catch (error) {
         console.error("Sync Error:", error);
-        showErrorAlert("Failed to sync with server. Please check connection.");
+        // Display the error from the failed gatekeeper or subsequent requests
+        showErrorAlert(error.message || "Failed to sync with server. Please check connection.");
     }
 }
 
