@@ -573,317 +573,293 @@ async function fetchAllSignOutData() {
     }
 }
 
+/**
+ * UPDATED: Added detailed logging to debug the initialization process.
+ */
 async function initializePageSpecificApp() {
-    // --- 1. Initial UI State Setup ---
-    const dropdownsToInit = [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown, classOverrideDropdown];
-    dropdownsToInit.forEach(dd => {
-        if(dd) {
-            populateDropdown(dd.id, [], LOADING_OPTION, "");
-            dd.setAttribute("disabled", "disabled");
-        }
-    });
-    dateFilterType.value = 'today';
-    toggleDateInputs();
-    reportDateInput.value = getTodayDateString();
-    startDateInput.value = getTodayDateString();
-    endDateInput.value = getTodayDateString();
-    attendanceDateInput.value = getTodayDateString();
-    trendsDateFilterType.value = 'this_week';
-    toggleTrendsDateInputs();
-    switchTab('signOut'); // Default to the sign-out report tab
+    console.log("--- Dashboard Init: Starting ---");
 
-    // --- 2. Add All Event Listeners ---
-    classOverrideDropdown.addEventListener('change', async () => {
-        const selectedClass = classOverrideDropdown.value;
-        try {
-            await sendAuthenticatedRequest({ action: 'setClassOverride', className: selectedClass });
-            showSuccessAlert(`Pass page class override set to: ${selectedClass}`);
-        } catch (error) {
-            showErrorAlert("Could not save override setting.");
-        }
-    });
-
-    reloadDataBtn.addEventListener('click', async () => {
-        await fetchAllSignOutData();
-        const activeTab = appState.ui.currentDashboardTab;
-        if (activeTab === 'signOut') renderSignOutReport();
-        else if (activeTab === 'attendance') renderAttendanceReport();
-        else if (activeTab === 'classTrends') renderClassTrendsReport();
-    });
-
-    passStatusToggle.addEventListener('change', async () => {
-        const isEnabled = passStatusToggle.checked;
-        passStatusLabel.textContent = isEnabled ? 'Enabled' : 'Disabled';
-        try {
-            await sendAuthenticatedRequest({ action: 'setPassStatus', isEnabled: isEnabled });
-        } catch (error) {
-            showErrorAlert("Could not update pass status. Please try again.");
-            passStatusToggle.checked = !isEnabled; // Revert UI on failure
-            passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
-        }
-    });
-
-    [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
-        if(el) el.addEventListener('change', renderSignOutReport);
-    });
-    dateFilterType.addEventListener('change', toggleDateInputs);
-
-    reportTable.querySelector('thead').addEventListener('click', (event) => {
-        const header = event.target.closest('th[data-column]');
-        if (!header) return;
-        const newColumn = header.dataset.column;
-        const currentSort = appState.sortState.signOut;
-        if (currentSort.column === newColumn) {
-            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSort.column = newColumn;
-            currentSort.direction = 'desc';
-        }
-        renderSignOutReport();
-    });
-
-    trendsReportTable.querySelector('thead').addEventListener('click', (event) => {
-        const header = event.target.closest('[data-column]');
-        if (!header) return;
-        const newColumn = header.dataset.column;
-        const currentSort = appState.sortState.classTrends;
-        if (currentSort.column === newColumn) {
-            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSort.column = newColumn;
-            currentSort.direction = 'desc';
-        }
-        renderClassTrendsReport();
-    });
-
-    attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
-    attendanceDateInput.addEventListener('change', renderAttendanceReport);
-
-    trendsClassDropdown.addEventListener('change', renderClassTrendsReport);
-    trendsDateFilterType.addEventListener('change', () => {
-        toggleTrendsDateInputs();
-        renderClassTrendsReport();
-    });
-    [trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
-
-    signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
-    attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
-    classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
-
-    dashboardContent.addEventListener('click', (event) => {
-        let popover = document.getElementById('travelPopover');
-        if (!popover) {
-            popover = document.createElement('div');
-            popover.id = 'travelPopover';
-            document.body.appendChild(popover);
-        }
-
-        const infoIcon = event.target.closest('.info-icon');
-        const editButton = event.target.closest('.edit-btn');
-        const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
-
-        if (!infoIcon) {
-            popover.classList.remove('visible');
-        }
-
-        if (infoIcon) {
-            event.stopPropagation();
-            const { departing, arriving } = infoIcon.dataset;
-            popover.innerHTML = `
-                <div class="font-bold text-gray-700">Travel Details</div>
-                <div class="text-sm mt-1"><strong>From:</strong> ${departing}</div>
-                <div class="text-sm"><strong>To:</strong> ${arriving}</div>
-            `;
-            const rect = infoIcon.getBoundingClientRect();
-            popover.style.top = `${rect.top + window.scrollY}px`;
-            popover.style.left = `${rect.right + window.scrollX + 10}px`;
-            popover.classList.toggle('visible');
-            return;
-        }
-
-        if (editButton) {
-            event.stopPropagation();
-            const timestamp = editButton.dataset.timestamp;
-            const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
-            if (record) {
-                const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
-                const uniqueStudents = [...new Set(studentsInClass)];
-                editStudentName.innerHTML = '';
-                uniqueStudents.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = normalizeName(name);
-                    option.textContent = normalizeName(name);
-                    editStudentName.appendChild(option);
-                });
-                editStudentName.value = record.Name;
-                const isLateSignIn = record.Type === 'late';
-                editDurationDiv.classList.toggle('hidden', isLateSignIn);
-                editTimeDiv.classList.toggle('hidden', !isLateSignIn);
-                if (isLateSignIn) {
-                    const d = new Date(record.Date);
-                    editTimeInput.value = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-                } else if (typeof record.Seconds === 'number') {
-                    editMinutes.value = Math.floor(record.Seconds / 60);
-                    editSeconds.value = record.Seconds % 60;
-                } else {
-                    editMinutes.value = '';
-                    editSeconds.value = '';
-                }
-                editModal.classList.remove('hidden');
-                saveEditBtn.dataset.timestamp = timestamp;
-                deleteEntryBtn.dataset.timestamp = timestamp;
+    try {
+        // --- 1. Initial UI State Setup ---
+        console.log("Dashboard Init: 1. Setting up initial UI state.");
+        const dropdownsToInit = [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown, classOverrideDropdown];
+        dropdownsToInit.forEach(dd => {
+            if(dd) {
+                populateDropdown(dd.id, [], LOADING_OPTION, "");
+                dd.setAttribute("disabled", "disabled");
             }
-            return;
-        }
+        });
+        dateFilterType.value = 'today';
+        toggleDateInputs();
+        reportDateInput.value = getTodayDateString();
+        startDateInput.value = getTodayDateString();
+        endDateInput.value = getTodayDateString();
+        attendanceDateInput.value = getTodayDateString();
+        trendsDateFilterType.value = 'this_week';
+        toggleTrendsDateInputs();
+        switchTab('signOut');
 
-        if (accordionRow) {
-            event.stopPropagation();
-            const nextElement = accordionRow.nextElementSibling;
+        // --- 2. Add All Event Listeners ---
+        console.log("Dashboard Init: 2. Attaching event listeners.");
+        
+        classOverrideDropdown.addEventListener('change', async () => {
+            const selectedClass = classOverrideDropdown.value;
+            try {
+                await sendAuthenticatedRequest({ action: 'setClassOverride', className: selectedClass });
+                showSuccessAlert(`Pass page class override set to: ${selectedClass}`);
+            } catch (error) {
+                showErrorAlert("Could not save override setting.");
+            }
+        });
 
-            if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
-                nextElement.remove();
+        reloadDataBtn.addEventListener('click', async () => {
+            await fetchAllSignOutData();
+            const activeTab = appState.ui.currentDashboardTab;
+            if (activeTab === 'signOut') renderSignOutReport();
+            else if (activeTab === 'attendance') renderAttendanceReport();
+            else if (activeTab === 'classTrends') renderClassTrendsReport();
+        });
+
+        passStatusToggle.addEventListener('change', async () => {
+            const isEnabled = passStatusToggle.checked;
+            passStatusLabel.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            try {
+                await sendAuthenticatedRequest({ action: 'setPassStatus', isEnabled: isEnabled });
+            } catch (error) {
+                showErrorAlert("Could not update pass status. Please try again.");
+                passStatusToggle.checked = !isEnabled; // Revert UI on failure
+                passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
+            }
+        });
+
+        [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
+            if(el) el.addEventListener('change', renderSignOutReport);
+        });
+        dateFilterType.addEventListener('change', toggleDateInputs);
+
+        reportTable.querySelector('thead').addEventListener('click', (event) => {
+            const header = event.target.closest('th[data-column]');
+            if (!header) return;
+            const newColumn = header.dataset.column;
+            const currentSort = appState.sortState.signOut;
+            if (currentSort.column === newColumn) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = newColumn;
+                currentSort.direction = 'desc';
+            }
+            renderSignOutReport();
+        });
+
+        trendsReportTable.querySelector('thead').addEventListener('click', (event) => {
+            const header = event.target.closest('[data-column]');
+            if (!header) return;
+            const newColumn = header.dataset.column;
+            const currentSort = appState.sortState.classTrends;
+            if (currentSort.column === newColumn) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = newColumn;
+                currentSort.direction = 'desc';
+            }
+            renderClassTrendsReport();
+        });
+
+        attendanceClassDropdown.addEventListener('change', renderAttendanceReport);
+        attendanceDateInput.addEventListener('change', renderAttendanceReport);
+        trendsClassDropdown.addEventListener('change', renderClassTrendsReport);
+        trendsDateFilterType.addEventListener('change', () => {
+            toggleTrendsDateInputs();
+            renderClassTrendsReport();
+        });
+        [trendsStartDate, trendsEndDate].forEach(el => el.addEventListener('change', renderClassTrendsReport));
+        signOutReportTab.addEventListener('click', () => { switchTab('signOut'); renderSignOutReport(); });
+        attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
+        classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
+
+        dashboardContent.addEventListener('click', (event) => {
+            let popover = document.getElementById('travelPopover');
+            if (!popover) {
+                popover = document.createElement('div');
+                popover.id = 'travelPopover';
+                document.body.appendChild(popover);
+            }
+            const infoIcon = event.target.closest('.info-icon');
+            const editButton = event.target.closest('.edit-btn');
+            const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
+            if (!infoIcon) {
+                popover.classList.remove('visible');
+            }
+            if (infoIcon) {
+                event.stopPropagation();
+                const { departing, arriving } = infoIcon.dataset;
+                popover.innerHTML = `<div class="font-bold text-gray-700">Travel Details</div><div class="text-sm mt-1"><strong>From:</strong> ${departing}</div><div class="text-sm"><strong>To:</strong> ${arriving}</div>`;
+                const rect = infoIcon.getBoundingClientRect();
+                popover.style.top = `${rect.top + window.scrollY}px`;
+                popover.style.left = `${rect.right + window.scrollX + 10}px`;
+                popover.classList.toggle('visible');
                 return;
             }
-
-            if (accordionRow.dataset.records) {
-                const records = JSON.parse(accordionRow.dataset.records || '[]');
-                if (records.length === 0) return;
-
-                const wrapperRow = document.createElement('tr');
-                wrapperRow.className = 'details-wrapper-row';
-                const wrapperCell = document.createElement('td');
-                wrapperCell.colSpan = accordionRow.cells.length;
-                wrapperCell.className = 'p-2 bg-gray-50';
-                const detailsTable = document.createElement('table');
-                detailsTable.className = 'min-w-full';
-                const detailsHead = document.createElement('thead');
-                detailsHead.innerHTML = `
-                    <tr class="bg-gray-200 text-sm">
-                        <th class="py-1 px-2 border-b text-left">Date</th>
-                        <th class="py-1 px-2 border-b text-left">Time</th>
-                        <th class="py-1 px-2 border-b text-left">Type</th>
-                        <th class="py-1 px-2 border-b text-left">Duration</th>
-                        <th class="py-1 px-2 border-b text-right w-12">Edit</th>
-                    </tr>`;
-                detailsTable.appendChild(detailsHead);
-                const detailsBody = document.createElement('tbody');
-                records.forEach(row => {
-                    const detailTr = document.createElement('tr');
-                    let typeDisplay = "N/A",
-                        durationDisplay = "N/A";
-
-                    if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
-
-                    if (row.Type === 'late') {
-                        typeDisplay = "Late Sign In";
-                        detailTr.classList.add(COLORS.late.moderate);
-                    } else if (row.Type === 'travel') {
-                        typeDisplay = `Travel <span class="info-icon"
-                                        data-departing="${row.DepartingTeacher}" 
-                                        data-arriving="${row.ArrivingTeacher}">i</span>`;
-                        detailTr.classList.add('bg-cyan-100');
-                    } else if (row.Type === 'bathroom') {
-                        typeDisplay = "Bathroom";
-                        if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                            detailTr.classList.add(COLORS.long.moderate);
-                        } else {
-                            detailTr.classList.add(COLORS.normal);
-                        }
+            if (editButton) {
+                event.stopPropagation();
+                const timestamp = editButton.dataset.timestamp;
+                const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
+                if (record) {
+                    const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
+                    const uniqueStudents = [...new Set(studentsInClass)];
+                    editStudentName.innerHTML = '';
+                    uniqueStudents.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = normalizeName(name);
+                        option.textContent = normalizeName(name);
+                        editStudentName.appendChild(option);
+                    });
+                    editStudentName.value = record.Name;
+                    const isLateSignIn = record.Type === 'late';
+                    editDurationDiv.classList.toggle('hidden', isLateSignIn);
+                    editTimeDiv.classList.toggle('hidden', !isLateSignIn);
+                    if (isLateSignIn) {
+                        const d = new Date(record.Date);
+                        editTimeInput.value = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                    } else if (typeof record.Seconds === 'number') {
+                        editMinutes.value = Math.floor(record.Seconds / 60);
+                        editSeconds.value = record.Seconds % 60;
+                    } else {
+                        editMinutes.value = '';
+                        editSeconds.value = '';
                     }
+                    editModal.classList.remove('hidden');
+                    saveEditBtn.dataset.timestamp = timestamp;
+                    deleteEntryBtn.dataset.timestamp = timestamp;
+                }
+                return;
+            }
+            if (accordionRow) {
+                event.stopPropagation();
+                const nextElement = accordionRow.nextElementSibling;
+                if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
+                    nextElement.remove();
+                    return;
+                }
+                if (accordionRow.dataset.records) {
+                    const records = JSON.parse(accordionRow.dataset.records || '[]');
+                    if (records.length === 0) return;
+                    const wrapperRow = document.createElement('tr');
+                    wrapperRow.className = 'details-wrapper-row';
+                    const wrapperCell = document.createElement('td');
+                    wrapperCell.colSpan = accordionRow.cells.length;
+                    wrapperCell.className = 'p-2 bg-gray-50';
+                    const detailsTable = document.createElement('table');
+                    detailsTable.className = 'min-w-full';
+                    const detailsHead = document.createElement('thead');
+                    detailsHead.innerHTML = `<tr class="bg-gray-200 text-sm"><th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th><th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th><th class="py-1 px-2 border-b text-right w-12">Edit</th></tr>`;
+                    detailsTable.appendChild(detailsHead);
+                    const detailsBody = document.createElement('tbody');
+                    records.forEach(row => {
+                        const detailTr = document.createElement('tr');
+                        let typeDisplay = "N/A", durationDisplay = "N/A";
+                        if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
+                        if (row.Type === 'late') {
+                            typeDisplay = "Late Sign In";
+                            detailTr.classList.add(COLORS.late.moderate);
+                        } else if (row.Type === 'travel') {
+                            typeDisplay = `Travel <span class="info-icon" data-departing="${row.DepartingTeacher}" data-arriving="${row.ArrivingTeacher}">i</span>`;
+                            detailTr.classList.add('bg-cyan-100');
+                        } else if (row.Type === 'bathroom') {
+                            typeDisplay = "Bathroom";
+                            if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                                detailTr.classList.add(COLORS.long.moderate);
+                            } else {
+                                detailTr.classList.add(COLORS.normal);
+                            }
+                        }
+                        const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
+                        detailTr.innerHTML = `<td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td><td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td><td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
+                        detailsBody.appendChild(detailTr);
+                    });
+                    detailsTable.appendChild(detailsBody);
+                    wrapperCell.appendChild(detailsTable);
+                    wrapperRow.appendChild(wrapperCell);
+                    accordionRow.insertAdjacentElement('afterend', wrapperRow);
+                }
+            }
+        });
 
-                    const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-                    detailTr.innerHTML = `
-                        <td class="py-2 px-2 border-b">${formatDate(row.Date)}</td>
-                        <td class="py-2 px-2 border-b">${formatTime(row.Date)}</td>
-                        <td class="py-2 px-2 border-b">${typeDisplay}</td>
-                        <td class="py-2 px-2 border-b">${durationDisplay}</td>
-                        <td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
-                    detailsBody.appendChild(detailTr);
+        cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
+        deleteEntryBtn.addEventListener('click', () => {
+            const timestamp = deleteEntryBtn.dataset.timestamp;
+            if (timestamp && confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
+                handleDeleteEntry(timestamp);
+            }
+            editModal.classList.add('hidden');
+        });
+        saveEditBtn.addEventListener('click', () => {
+            const timestamp = saveEditBtn.dataset.timestamp;
+            const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
+            if (!record) { editModal.classList.add('hidden'); return; }
+            const payload = {
+                action: 'editEntry',
+                entryTimestamp: timestamp,
+                newName: editStudentName.value,
+                type: record.Type,
+                className: record.Class,
+            };
+            if (record.Type === 'late') {
+                const newTime = editTimeInput.value;
+                if (newTime) {
+                    const originalDate = new Date(record.Date);
+                    const [hours, minutes] = newTime.split(':');
+                    originalDate.setHours(parseInt(hours, 10));
+                    originalDate.setMinutes(parseInt(minutes, 10));
+                    originalDate.setSeconds(0);
+                    payload.newTimestamp = originalDate.toISOString();
+                }
+            } else {
+                payload.newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
+            }
+            handleEditEntry(payload);
+            editModal.classList.add('hidden');
+        });
+
+        signOutClassDropdown.addEventListener('change', () => {
+            const selectedClass = signOutClassDropdown.value;
+            if (selectedClass && selectedClass !== "All Classes") {
+                const studentsInClass = appState.data.allNamesFromSheet
+                    .filter(student => student.Class === selectedClass)
+                    .map(student => student.Name).sort();
+                const uniqueStudents = [...new Set(studentsInClass)];
+                studentFilterDropdown.innerHTML = '';
+                const allStudentsOption = document.createElement('option');
+                allStudentsOption.value = "All Students";
+                allStudentsOption.textContent = "All Students";
+                studentFilterDropdown.appendChild(allStudentsOption);
+                uniqueStudents.forEach(studentFullName => {
+                    const option = document.createElement('option');
+                    const cleanName = normalizeName(studentFullName);
+                    option.value = cleanName; 
+                    option.textContent = cleanName;
+                    studentFilterDropdown.appendChild(option);
                 });
-                detailsTable.appendChild(detailsBody);
-                wrapperCell.appendChild(detailsTable);
-                wrapperRow.appendChild(wrapperCell);
-                accordionRow.insertAdjacentElement('afterend', wrapperRow);
+                studentFilterDropdown.removeAttribute('disabled');
+                studentFilterDiv.classList.remove('hidden');
+            } else {
+                studentFilterDiv.classList.add('hidden');
             }
-        }
-    });
+            renderSignOutReport();
+        });
 
-
-
-    cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-    deleteEntryBtn.addEventListener('click', () => {
-        const timestamp = deleteEntryBtn.dataset.timestamp;
-        if (timestamp && confirm("Are you sure you want to delete this entry? This cannot be undone.")) {
-            handleDeleteEntry(timestamp);
-        }
-        editModal.classList.add('hidden');
-    });
-    saveEditBtn.addEventListener('click', () => {
-        const timestamp = saveEditBtn.dataset.timestamp;
-        const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
-        if (!record) { editModal.classList.add('hidden'); return; }
-
-        const payload = {
-            action: 'editEntry',
-            entryTimestamp: timestamp,
-            newName: editStudentName.value,
-            type: record.Type,
-            className: record.Class,
-        };
-
-        if (record.Type === 'late') {
-            const newTime = editTimeInput.value;
-            if (newTime) {
-                const originalDate = new Date(record.Date);
-                const [hours, minutes] = newTime.split(':');
-                originalDate.setHours(parseInt(hours, 10));
-                originalDate.setMinutes(parseInt(minutes, 10));
-                originalDate.setSeconds(0);
-                payload.newTimestamp = originalDate.toISOString();
-            }
-        } else {
-            payload.newSeconds = (parseInt(editMinutes.value) || 0) * 60 + (parseInt(editSeconds.value) || 0);
-        }
-        
-        handleEditEntry(payload);
-        editModal.classList.add('hidden');
-    });
-
-    signOutClassDropdown.addEventListener('change', () => {
-        const selectedClass = signOutClassDropdown.value;
-        if (selectedClass && selectedClass !== "All Classes") {
-            const studentsInClass = appState.data.allNamesFromSheet
-                .filter(student => student.Class === selectedClass)
-                .map(student => student.Name).sort();
-            const uniqueStudents = [...new Set(studentsInClass)];
-            studentFilterDropdown.innerHTML = '';
-            const allStudentsOption = document.createElement('option');
-            allStudentsOption.value = "All Students";
-            allStudentsOption.textContent = "All Students";
-            studentFilterDropdown.appendChild(allStudentsOption);
-            uniqueStudents.forEach(studentFullName => {
-                const option = document.createElement('option');
-                const cleanName = normalizeName(studentFullName);
-                option.value = cleanName; 
-                option.textContent = cleanName;
-                studentFilterDropdown.appendChild(option);
-            });
-            studentFilterDropdown.removeAttribute('disabled');
-            studentFilterDiv.classList.remove('hidden');
-        } else {
-            studentFilterDiv.classList.add('hidden');
-        }
-        renderSignOutReport();
-    });
-    
-    // --- Initial Data Load ---
-    if (appState.currentUser.email && appState.currentUser.idToken) {
-        try {
+        // --- 3. Initial Data Load ---
+        console.log("Dashboard Init: 3. Checking authentication.");
+        if (appState.currentUser.email && appState.currentUser.idToken) {
+            console.log("Dashboard Init: 3a. User is authenticated. Fetching data...");
+            
             const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
+            console.log("Dashboard Init: 3b. Fetched live state:", statusPayload);
             passStatusToggle.checked = statusPayload.isEnabled;
             passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
             
-            await fetchAllStudentData(); 
+            await fetchAllStudentData();
+            console.log("Dashboard Init: 3c. Fetched all student data.");
             populateCourseDropdownFromData();
 
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
@@ -896,19 +872,22 @@ async function initializePageSpecificApp() {
             classOverrideDropdown.removeAttribute("disabled");
 
             await fetchAllSignOutData();
+            console.log("Dashboard Init: 3d. Fetched all sign-out data.");
             
             // --- 4. Initial Renders ---
+            console.log("Dashboard Init: 4. Rendering reports.");
             renderSignOutReport();
             renderAttendanceReport();
             renderClassTrendsReport();
+            console.log("Dashboard Init: 5. Initialization complete.");
 
-        } catch (error) {
-            console.error("Failed to initialize dashboard with data:", error);
-            showErrorAlert("Could not initialize dashboard: " + error.message);
+        } else {
+            console.warn("Dashboard Init: 3a. User is NOT authenticated.");
+            showErrorAlert("Authentication error. Please sign in again.");
         }
-    } else {
-        console.warn("User not authenticated.");
-        showErrorAlert("Authentication error. Please sign in again.");
+    } catch (error) {
+        console.error("Dashboard Init: CRITICAL FAILURE during initialization.", error);
+        showErrorAlert("A critical error occurred while loading the dashboard: " + error.message);
     }
 }
 
