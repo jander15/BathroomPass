@@ -574,9 +574,9 @@ async function fetchAllSignOutData() {
 }
 
 async function initializePageSpecificApp() {
-// --- Initial UI State Setup ---
-    const dropdownsToDisable = [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown, classOverrideDropdown];
-    dropdownsToDisable.forEach(dd => {
+    // --- 1. Initial UI State Setup ---
+    const dropdownsToInit = [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown, classOverrideDropdown];
+    dropdownsToInit.forEach(dd => {
         if(dd) {
             populateDropdown(dd.id, [], LOADING_OPTION, "");
             dd.setAttribute("disabled", "disabled");
@@ -592,18 +592,13 @@ async function initializePageSpecificApp() {
     toggleTrendsDateInputs();
     switchTab('signOut'); // Default to the sign-out report tab
 
-    // Add All Event Listeners Here
-
+    // --- 2. Add All Event Listeners ---
     classOverrideDropdown.addEventListener('change', async () => {
         const selectedClass = classOverrideDropdown.value;
         try {
-            await sendAuthenticatedRequest({ 
-                action: 'setClassOverride', 
-                className: selectedClass 
-            });
+            await sendAuthenticatedRequest({ action: 'setClassOverride', className: selectedClass });
             showSuccessAlert(`Pass page class override set to: ${selectedClass}`);
         } catch (error) {
-            console.error("Failed to set class override:", error);
             showErrorAlert("Could not save override setting.");
         }
     });
@@ -616,17 +611,14 @@ async function initializePageSpecificApp() {
         else if (activeTab === 'classTrends') renderClassTrendsReport();
     });
 
-    // ** FIX: The missing event listener for the toggle is now here. **
     passStatusToggle.addEventListener('change', async () => {
         const isEnabled = passStatusToggle.checked;
         passStatusLabel.textContent = isEnabled ? 'Enabled' : 'Disabled';
         try {
             await sendAuthenticatedRequest({ action: 'setPassStatus', isEnabled: isEnabled });
         } catch (error) {
-            console.error("Failed to set pass status:", error);
             showErrorAlert("Could not update pass status. Please try again.");
-            // Revert UI on failure
-            passStatusToggle.checked = isEnabled;
+            passStatusToggle.checked = !isEnabled; // Revert UI on failure
             passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
         }
     });
@@ -887,16 +879,13 @@ async function initializePageSpecificApp() {
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            // Fetch the live state for the pass system toggle first
             const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
             passStatusToggle.checked = statusPayload.isEnabled;
             passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
             
-            // Now fetch all the student and sign-out data
-            await fetchAllStudentData();
-            populateCourseDropdownFromData(); // This populates the appState.data.courses array
+            await fetchAllStudentData(); 
+            populateCourseDropdownFromData();
 
-            // Populate all the class dropdowns with the fetched data
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
@@ -908,7 +897,7 @@ async function initializePageSpecificApp() {
 
             await fetchAllSignOutData();
             
-            // Initial renders after all data is loaded
+            // --- 4. Initial Renders ---
             renderSignOutReport();
             renderAttendanceReport();
             renderClassTrendsReport();
