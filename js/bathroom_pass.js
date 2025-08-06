@@ -46,6 +46,8 @@ const travelSignInSubmitBtn = document.getElementById('travelSignInSubmitBtn');
 // ** END: New Travel Pass DOM Elements **
 
 const manualSyncBtn = document.getElementById('manualSyncBtn');
+const ACTION_LOG_BATHROOM_SIGN_OUT = 'logBathroomSignOut';
+
 
 
 // --- Bathroom Pass Page Specific Functions ---
@@ -249,35 +251,68 @@ async function loadInitialPassData() {
     }
 }
 
-/**
- * Updates the timer display and applies tardy styling if needed.
+/* UPDATED: Now calculates elapsed time from a start time for accuracy.
  */
 function updateTimerDisplay() {
-    appState.timer.seconds++;
-    if (appState.timer.seconds >= 60) {
-        appState.timer.minutes++;
-        appState.timer.seconds = 0;
-    }
-    if (appState.timer.minutes >= TARDY_THRESHOLD_MINUTES && !appState.timer.isTardy) {
+    if (!appState.timer.startTime) return; // Don't run if startTime isn't set
+
+    const now = new Date().getTime();
+    const elapsedTime = Math.round((now - appState.timer.startTime) / 1000);
+
+    const minutes = Math.floor(elapsedTime / 60);
+    const seconds = elapsedTime % 60;
+
+    if (minutes >= TARDY_THRESHOLD_MINUTES && !appState.timer.isTardy) {
         mainForm.style.backgroundColor = FORM_COLOR_TARDY;
         studentOutHeader.style.backgroundColor = FORM_COLOR_TARDY;
         appState.timer.isTardy = true;
     }
-    minutesSpan.textContent = appState.timer.minutes;
-    secondsSpan.textContent = appState.timer.seconds < 10 ? "0" + appState.timer.seconds : appState.timer.seconds;
+
+    minutesSpan.textContent = minutes;
+    secondsSpan.textContent = seconds < 10 ? "0" + seconds : seconds;
+
+    // We no longer need to manage appState.timer.minutes/seconds directly
 }
 
 /**
  * Starts the bathroom pass timer and transitions UI for a signed-out student.
  */
-function startPassTimerAndTransitionUI() {
+async function startPassTimerAndTransitionUI() {
     if (!appState.ui.isPassEnabled) {
         showErrorAlert("The pass system is currently disabled by the teacher.");
         return;
     }
+
+    // --- START: New Backend Logging Logic ---
+    const studentName = nameDropdown.value;
+    const className = appState.ui.currentClassPeriod;
+    const nameOnly = studentName.includes("(") ? studentName.substring(0, studentName.indexOf("(") - 1).trim() : studentName.trim();
+
+    const payload = {
+        action: ACTION_LOG_BATHROOM_SIGN_OUT,
+        Name: nameOnly,
+        Class: className
+    };
+
+    try {
+        await sendAuthenticatedRequest(payload);
+        // Only proceed with the UI changes if the backend log was successful
+    } catch (error) {
+        console.error("Failed to log bathroom sign out:", error);
+        showErrorAlert("Could not log sign-out to server. Please try again.");
+        return; // Stop the function if backend fails
+    }
+    // --- END: New Backend Logging Logic ---
+
+
     if (!appState.timer.intervalId) {
+        // --- START: Robust Timer Logic ---
+        appState.timer.startTime = new Date().getTime(); // Store the precise start time
+        // --- END: Robust Timer Logic ---
+
         appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
-        appState.timer.isTardy = false; 
+        appState.timer.isTardy = false;
+
 
         signOutButton.style.display = "none";
         signInButton.style.display = "block";
