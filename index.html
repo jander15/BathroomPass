@@ -31,6 +31,12 @@
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
         <div id="googleSignInButton"></div>
         <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
+
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col items-center justify-center">
+        <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+        <p class="text-white text-lg mt-4">Authenticating...</p>
+    </div>
+
     </div>
 
     <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
@@ -52,7 +58,7 @@
     <span class="hidden md:inline mx-2">|</span>
     <span id="infoBarTeacher" class="mx-2">Teacher: Loading...</span>
     <span class="hidden md:inline mx-2">|</span>
-    <span id="infoBarClass" class="mx-2">Class: Not Selected</span>
+    <span id="infoBarClass" class="mx-2">Class: Loading...</span>
 
 <button id="manualSyncBtn" title="Refresh Status" class="ml-4 px-3 py-1 text-xs bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-500 transition-colors">
     Sync

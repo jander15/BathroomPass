@@ -54,6 +54,7 @@ const appState = {
 // --- Common DOM Element References (Declared, then assigned in cacheCommonDOMElements) ---
 // These are declared as 'let' so they can be assigned after DOMContentLoaded.
 let signInPage;
+let loadingOverlay;
 let googleSignInButton;
 let signInError;
 let appContent;
@@ -75,6 +76,7 @@ let errorAlertMessageSpan;
  */
 function cacheCommonDOMElements() {
     signInPage = document.getElementById('signInPage');
+    loadingOverlay = document.getElementById('loadingOverlay');
     googleSignInButton = document.getElementById('googleSignInButton');
     signInError = document.getElementById('signInError');
     appContent = document.getElementById('appContent');
@@ -364,11 +366,16 @@ async function handleSignIn(authCode) {
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
-        }
+        } 
+        
 
     } catch (error) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
+    }
+    finally {
+        // 4. Hide the overlay whether the sign-in succeeded or failed
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
 
@@ -405,6 +412,7 @@ function initGoogleSignIn() {
         customButton.textContent = 'Sign in with Google';
         customButton.className = 'bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors';
         customButton.onclick = () => {
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
             codeClient.requestCode();
         };
         googleSignInButton.appendChild(customButton);
