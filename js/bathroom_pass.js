@@ -914,9 +914,6 @@ function showLateSignInView() {
 /**
  * UPDATED: Added detailed logging to debug the state restoration process.
  */
-/**
- * UPDATED: Added detailed logging to debug the state restoration process.
- */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
@@ -932,34 +929,35 @@ async function initializePageSpecificApp() {
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
         try {
+            // Load the full student roster first, which we need for the dropdown
             await loadInitialPassData();
             
-            // --- START: Enhanced State Restoration Logic with Logging ---
-            console.log("--- Starting State Restoration ---");
-
             const [liveState, bathroomState] = await Promise.all([
                 sendAuthenticatedRequest({ action: 'getLiveState' }),
                 sendAuthenticatedRequest({ action: 'getBathroomState' })
             ]);
 
-            console.log("1. Fetched Live State:", liveState);
-            console.log("2. Fetched Bathroom State:", bathroomState);
-
             const currentClass = liveState.currentClass;
-            console.log("3. Current Class Period:", currentClass);
-
+            
             if (bathroomState.result === 'success' && bathroomState.passHolders.length > 0 && currentClass) {
-                console.log("4. Searching for a pass holder in the current class...");
+                const outStudent = bathroomState.passHolders.find(holder => 
+                    holder.Class && holder.Class.trim() === currentClass.trim()
+                );
                 
-                const outStudent = bathroomState.passHolders.find(holder => holder.Class === currentClass);
-                
-                console.log("5. Found Student:", outStudent); // This will be 'undefined' if no match is found
-
                 if (outStudent) {
-                    console.log("6. SUCCESS: Match found! Restoring UI for:", outStudent.Name);
+                    console.log("SUCCESS: Match found! Restoring UI for:", outStudent.Name);
+
+                    // --- START: THE FIX ---
+                    // Find the full name from the roster that matches the name from the bathroom log
+                    const fullStudentName = appState.data.allNamesFromSheet.find(student => 
+                        student.Class === currentClass && normalizeName(student.Name) === outStudent.Name
+                    )?.Name || outStudent.Name; // Fallback to the simple name if not found
+
+                    // Set the dropdown value to the full name
+                    nameDropdown.value = fullStudentName;
+                    appState.passHolder = fullStudentName; // Set the passHolder to the full name for consistency
+                    // --- END: THE FIX ---
                     
-                    // Manually set the state and UI
-                    appState.passHolder = outStudent.Name; 
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
                     
                     studentOutNameSpan.textContent = outStudent.Name;
@@ -974,15 +972,13 @@ async function initializePageSpecificApp() {
                     
                     if (appState.timer.intervalId) clearInterval(appState.timer.intervalId);
                     appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
-                } else {
-                    console.log("6. INFO: No student from the current class was found in the bathroom log.");
                 }
-            } else {
-                console.log("4. SKIPPING: No pass holders, no current class, or bathroom state fetch failed.");
             }
-            // --- END: Enhanced State Restoration Logic ---
 
+            // Perform the first full sync to populate other dropdowns etc.
             await syncAppState(); 
+
+            // Set up polling
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(syncAppState, 15000);
 
