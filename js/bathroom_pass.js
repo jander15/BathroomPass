@@ -357,7 +357,7 @@ async function startPassTimerAndTransitionUI() {
         updateQueueDisplay(); 
         showQueueView();
         
-        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
+        nameQueueDropdown.value = ""; 
         updateQueueControls();
     }
 }
@@ -409,7 +409,7 @@ function preparePassForNextInQueue(nextPerson) {
  * Sets the pass system to the "PASS IS AVAILABLE" state.
  */
 function setPassToAvailableState() {
-    nameDropdown.value = DEFAULT_NAME_OPTION;
+    nameDropdown.value = ""; 
     nameDropdown.removeAttribute("disabled");
     signOutButton.style.display = "none"; 
     updateQueueMessage('The queue is empty. No one is currently signed out.');
@@ -422,7 +422,7 @@ function setPassToAvailableState() {
     emojiRight.textContent = ""; 
     emojiDropdown.value = NO_EMOJI_OPTION; 
     
-    nameQueueDropdown.value = DEFAULT_NAME_OPTION;
+    nameQueueDropdown.value = ""; // Also corrected here for consistency
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
     updateQueueControls();
@@ -524,7 +524,7 @@ async function handleLateSignInFormSubmit(event) {
     event.preventDefault();
     const selectedLateName = lateNameDropdown.value;
 
-    if (selectedLateName === "" || selectedLateName === DEFAULT_NAME_OPTION ) { 
+    if (selectedLateName === "" || selectedLateName === DEFAULT_NAME_OPTION ) {
         showErrorAlert(`Please select a valid name to sign in late.`);
         return;
     }
@@ -538,15 +538,15 @@ async function handleLateSignInFormSubmit(event) {
 
     const payload = {
         action: ACTION_LOG_LATE_SIGN_IN,
-        Name: nameOnly, 
+        Name: nameOnly,
         Class: classValue,
     };
 
     try {
-        const data = await sendAuthenticatedRequest(payload); 
+        const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success') {
             showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
-            lateNameDropdown.value = DEFAULT_NAME_OPTION; 
+            lateNameDropdown.value = ""; // THE FIX IS HERE
             handleLateNameSelectionChange();
         } else {
             throw new Error(data.error || 'Unknown error from server.');
