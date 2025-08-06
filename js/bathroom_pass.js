@@ -275,7 +275,7 @@ function updateTimerDisplay() {
 }
 
 /**
- * Starts the bathroom pass timer and transitions UI for a signed-out student.
+ * UPDATED: Adds "Processing..." state and success alert for bathroom sign-outs.
  */
 async function startPassTimerAndTransitionUI() {
     if (!appState.ui.isPassEnabled) {
@@ -283,7 +283,11 @@ async function startPassTimerAndTransitionUI() {
         return;
     }
 
-    // --- START: New Backend Logging Logic ---
+    // --- START: UI Feedback Logic ---
+    signOutButton.disabled = true;
+    signOutButton.textContent = "Processing...";
+    // --- END: UI Feedback Logic ---
+
     const studentName = nameDropdown.value;
     const className = appState.ui.currentClassPeriod;
     const nameOnly = studentName.includes("(") ? studentName.substring(0, studentName.indexOf("(") - 1).trim() : studentName.trim();
@@ -296,36 +300,32 @@ async function startPassTimerAndTransitionUI() {
 
     try {
         await sendAuthenticatedRequest(payload);
-        // Only proceed with the UI changes if the backend log was successful
+        // --- START: Add Success Alert ---
+        showSuccessAlert(`${nameOnly} has been signed out successfully!`);
+        // --- END: Add Success Alert ---
     } catch (error) {
         console.error("Failed to log bathroom sign out:", error);
         showErrorAlert("Could not log sign-out to server. Please try again.");
+        
+        // --- START: Reset Button on Failure ---
+        signOutButton.disabled = false;
+        signOutButton.textContent = "Sign Out";
+        // --- END: Reset Button on Failure ---
         return; // Stop the function if backend fails
     }
-    // --- END: New Backend Logging Logic ---
-
-
+    
+    // --- UI Transition and Timer Logic (runs only on success) ---
     if (!appState.timer.intervalId) {
-        // --- START: Robust Timer Logic ---
-        appState.timer.startTime = new Date().getTime(); // Store the precise start time
-        // --- END: Robust Timer Logic ---
-
+        appState.timer.startTime = new Date().getTime();
         appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
         appState.timer.isTardy = false;
 
-
         signOutButton.style.display = "none";
         signInButton.style.display = "block";
-        signInButton.disabled = false;
-        signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
-        signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT;
-
+        
         nameDropdown.setAttribute("disabled", "disabled");
         emojiDropdown.setAttribute("disabled", "disabled");
         mainForm.style.backgroundColor = FORM_COLOR_OUT;
-
-        const fullString = nameDropdown.value;
-        const nameOnly = fullString.includes("(") ? fullString.substring(0, fullString.indexOf("(")-1).trim() : fullString.trim();
         
         studentOutNameSpan.textContent = nameOnly;
         headerStatusSpan.textContent = STATUS_IS_OUT;
@@ -340,7 +340,7 @@ async function startPassTimerAndTransitionUI() {
             emojiRight.textContent = "";
         }
 
-        appState.passHolder = fullString;
+        appState.passHolder = studentName;
         
         updateQueueDisplay(); 
         showQueueView();
