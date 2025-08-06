@@ -1,7 +1,7 @@
 // js/common.js
 
 // --- Constants ---
-const GOOGLE_CLIENT_ID = '793583956284-3bnmlmr42c18s79mfj8fkcrci3a197j3.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '181314531748-nalf8lp7tpghuimjb6h9t5avujbau3bd.apps.googleusercontent.com';
 const API_URL = "https://snazzy-stroopwafel-4cf3a5.netlify.app/.netlify/functions/proxy";
 const DEFAULT_NAME_OPTION = "Select Your Name";
 const DEFAULT_CLASS_OPTION = "Select Class";
