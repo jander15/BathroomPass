@@ -574,17 +574,23 @@ async function fetchAllSignOutData() {
 }
 
 async function initializePageSpecificApp() {
-    [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown].forEach(dd => {
-        if(dd) { populateDropdown(dd.id, [], LOADING_OPTION, ""); dd.setAttribute("disabled", "disabled"); }
+// --- Initial UI State Setup ---
+    const dropdownsToDisable = [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown, studentFilterDropdown, classOverrideDropdown];
+    dropdownsToDisable.forEach(dd => {
+        if(dd) {
+            populateDropdown(dd.id, [], LOADING_OPTION, "");
+            dd.setAttribute("disabled", "disabled");
+        }
     });
     dateFilterType.value = 'today';
     toggleDateInputs();
-    reportDateInput.value = getTodayDateString(); 
+    reportDateInput.value = getTodayDateString();
     startDateInput.value = getTodayDateString();
     endDateInput.value = getTodayDateString();
     attendanceDateInput.value = getTodayDateString();
     trendsDateFilterType.value = 'this_week';
     toggleTrendsDateInputs();
+    switchTab('signOut'); // Default to the sign-out report tab
 
     // Add All Event Listeners Here
 
@@ -881,12 +887,16 @@ async function initializePageSpecificApp() {
     // --- Initial Data Load ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
+            // Fetch the live state for the pass system toggle first
             const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
             passStatusToggle.checked = statusPayload.isEnabled;
             passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
             
-            await fetchAllStudentData(); 
-            await populateCourseDropdownFromData();
+            // Now fetch all the student and sign-out data
+            await fetchAllStudentData();
+            populateCourseDropdownFromData(); // This populates the appState.data.courses array
+
+            // Populate all the class dropdowns with the fetched data
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
             signOutClassDropdown.removeAttribute("disabled");
             populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
@@ -895,20 +905,22 @@ async function initializePageSpecificApp() {
             trendsClassDropdown.removeAttribute("disabled");
             populateDropdown('classOverrideDropdown', appState.data.courses, "Auto", "AUTO");
             classOverrideDropdown.removeAttribute("disabled");
+
             await fetchAllSignOutData();
-            // Initial renders after data is loaded
+            
+            // Initial renders after all data is loaded
             renderSignOutReport();
             renderAttendanceReport();
             renderClassTrendsReport();
+
         } catch (error) {
             console.error("Failed to initialize dashboard with data:", error);
-            [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Error loading classes", ""));
+            showErrorAlert("Could not initialize dashboard: " + error.message);
         }
     } else {
         console.warn("User not authenticated.");
-        [signOutClassDropdown, attendanceClassDropdown, trendsClassDropdown].forEach(dd => populateDropdown(dd.id, [], "Sign in to load classes", ""));
+        showErrorAlert("Authentication error. Please sign in again.");
     }
-    switchTab('signOut');
 }
 
 function resetPageSpecificAppState() {
@@ -929,4 +941,3 @@ function resetPageSpecificAppState() {
 }
 
 // --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', initGoogleSignIn);
