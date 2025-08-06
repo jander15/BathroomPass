@@ -914,6 +914,9 @@ function showLateSignInView() {
 /**
  * UPDATED: Added detailed logging to debug the state restoration process.
  */
+/**
+ * UPDATED: Added detailed logging to debug the state restoration process.
+ */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
