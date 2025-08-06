@@ -921,7 +921,13 @@ async function initializePageSpecificApp() {
     studentOutNameSpan.textContent = '';
     headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
     studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-    // ... (rest of initial setup)
+    const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
+    nameDropdownsToInit.forEach(id => {
+        populateDropdown(id, [], DEFAULT_NAME_OPTION, "");
+        if(document.getElementById(id)) document.getElementById(id).setAttribute("disabled", "disabled");
+    });
+    signOutButton.style.display = "none";
+    signInButton.style.display = "none";
 
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
@@ -929,7 +935,7 @@ async function initializePageSpecificApp() {
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
         try {
-            // Load the full student roster first, which we need for the dropdown
+            // Load the full student roster first; it's needed for the dropdown lookup.
             await loadInitialPassData();
             
             const [liveState, bathroomState] = await Promise.all([
@@ -945,17 +951,15 @@ async function initializePageSpecificApp() {
                 );
                 
                 if (outStudent) {
-                    console.log("SUCCESS: Match found! Restoring UI for:", outStudent.Name);
-
                     // --- START: THE FIX ---
-                    // Find the full name from the roster that matches the name from the bathroom log
+                    // Find the full student name from the roster that matches the simple name from the bathroom log.
                     const fullStudentName = appState.data.allNamesFromSheet.find(student => 
                         student.Class === currentClass && normalizeName(student.Name) === outStudent.Name
-                    )?.Name || outStudent.Name; // Fallback to the simple name if not found
+                    )?.Name || outStudent.Name; // Fallback to the simple name if not found in the roster.
 
-                    // Set the dropdown value to the full name
+                    // Set the dropdown value AND the passHolder to the full name.
                     nameDropdown.value = fullStudentName;
-                    appState.passHolder = fullStudentName; // Set the passHolder to the full name for consistency
+                    appState.passHolder = fullStudentName;
                     // --- END: THE FIX ---
                     
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
