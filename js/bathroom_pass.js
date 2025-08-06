@@ -912,7 +912,7 @@ function showLateSignInView() {
 
 
 /**
- * UPDATED: Correctly checks for and restores the pass state without client-side errors.
+ * UPDATED: Added detailed logging to debug the state restoration process.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
@@ -921,7 +921,7 @@ async function initializePageSpecificApp() {
     studentOutNameSpan.textContent = '';
     headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
     studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-    // ... (rest of initial setup is correct)
+    // ... (rest of initial setup)
 
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
