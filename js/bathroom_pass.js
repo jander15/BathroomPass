@@ -47,7 +47,8 @@ const travelSignInSubmitBtn = document.getElementById('travelSignInSubmitBtn');
 
 const manualSyncBtn = document.getElementById('manualSyncBtn');
 const ACTION_LOG_BATHROOM_SIGN_OUT = 'logBathroomSignOut';
-
+const pageRefreshTimeSpan = document.getElementById('pageRefreshTime');
+const lastPollTimeSpan = document.getElementById('lastPollTime');
 
 
 // --- Bathroom Pass Page Specific Functions ---
@@ -73,6 +74,13 @@ async function syncAppState() {
             sendAuthenticatedRequest({ action: 'getTravelingStudents' }),
             sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
         ]);
+
+        // --- START: New Timestamp Logic ---
+        appState.ui.lastPoll = new Date();
+        if (lastPollTimeSpan) {
+            lastPollTimeSpan.textContent = appState.ui.lastPoll.toLocaleTimeString();
+        }
+        // --- END: New Timestamp Logic ---
 
         if (departingList.debug) {
             console.log("--- Backend Debug Log ---");
@@ -130,6 +138,9 @@ async function syncAppState() {
     } catch (error) {
         console.error("Sync Error:", error);
         showErrorAlert("Failed to sync with server. Please check connection.");
+        if (lastPollTimeSpan) {
+            lastPollTimeSpan.textContent = "Error!"; // Update on failure
+        }
     }
 }
 
@@ -275,7 +286,7 @@ function updateTimerDisplay() {
 }
 
 /**
- * UPDATED: Adds "Processing..." state and success alert for bathroom sign-outs.
+ * UPDATED: Adds disabled appearance (opacity and cursor) to the sign-out button.
  */
 async function startPassTimerAndTransitionUI() {
     if (!appState.ui.isPassEnabled) {
@@ -286,6 +297,7 @@ async function startPassTimerAndTransitionUI() {
     // --- START: UI Feedback Logic ---
     signOutButton.disabled = true;
     signOutButton.textContent = "Processing...";
+    signOutButton.classList.add('opacity-50', 'cursor-not-allowed'); // Add disabled styles
     // --- END: UI Feedback Logic ---
 
     const studentName = nameDropdown.value;
@@ -300,9 +312,7 @@ async function startPassTimerAndTransitionUI() {
 
     try {
         await sendAuthenticatedRequest(payload);
-        // --- START: Add Success Alert ---
         showSuccessAlert(`${nameOnly} has been signed out successfully!`);
-        // --- END: Add Success Alert ---
     } catch (error) {
         console.error("Failed to log bathroom sign out:", error);
         showErrorAlert("Could not log sign-out to server. Please try again.");
@@ -310,6 +320,7 @@ async function startPassTimerAndTransitionUI() {
         // --- START: Reset Button on Failure ---
         signOutButton.disabled = false;
         signOutButton.textContent = "Sign Out";
+        signOutButton.classList.remove('opacity-50', 'cursor-not-allowed'); // Remove disabled styles
         // --- END: Reset Button on Failure ---
         return; // Stop the function if backend fails
     }
@@ -321,6 +332,7 @@ async function startPassTimerAndTransitionUI() {
         appState.timer.isTardy = false;
 
         signOutButton.style.display = "none";
+        // On success, we don't need to reset the button's text or styles because it's being hidden.
         signInButton.style.display = "block";
         
         nameDropdown.setAttribute("disabled", "disabled");
@@ -916,10 +928,20 @@ async function initializePageSpecificApp() {
     updateQueueDisplay(); 
     toggleAddToQueueButtonVisibility(); 
 
+    // --- START: New Timestamp Logic ---
+    appState.ui.lastPageRefresh = new Date();
+    if (pageRefreshTimeSpan) {
+        pageRefreshTimeSpan.textContent = appState.ui.lastPageRefresh.toLocaleTimeString();
+    }
+    if (lastPollTimeSpan) {
+        lastPollTimeSpan.textContent = "N/A";
+    }
+    // --- END: New Timestamp Logic ---
+
     // --- Dropdown Initialization ---
     const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
     nameDropdownsToInit.forEach(id => {
-        populateDropdown(id, [], DEFAULT_NAME_OPTION, DEFAULT_NAME_OPTION); 
+        populateDropdown(id, [], DEFAULT_NAME_OPTION, ""); // Correctly sets the default value
         document.getElementById(id).setAttribute("disabled", "disabled");
     });
     

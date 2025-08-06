@@ -42,7 +42,9 @@ const appState = {
         pollingIntervalId: null,
         isDataLoaded: false, 
         isPassEnabled: true,
-        currentClassPeriod: null
+        currentClassPeriod: null,
+        lastPageRefresh: null, // Add this
+        lastPoll: null         // Add this
 
     },
     sortState: {
