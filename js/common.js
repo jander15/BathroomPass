@@ -388,7 +388,7 @@ function initGoogleSignIn() {
         scope: 'email profile openid',
         ux_mode: 'popup',
         access_type: 'offline', // Ask for a refresh token
-        prompt: 'consent',      // Force consent screen for debugging
+        //prompt: 'consent',      // Force consent screen for debugging
         callback: (response) => {
             if (response.code) {
                 // When we get the code, pass it to our handler.
