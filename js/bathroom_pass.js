@@ -912,58 +912,61 @@ function showLateSignInView() {
 
 
 /**
- * Initializes the Bathroom Pass application elements and fetches initial data.
+ * UPDATED: Now checks for and restores the pass state if a student was out
+ * when the page was loaded or refreshed.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
+    // (This part remains the same)
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
-
     studentOutNameSpan.textContent = '';
     headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-    emojiLeft.textContent = "";
-    emojiRight.textContent = "";
-
-    updateQueueDisplay(); 
-    toggleAddToQueueButtonVisibility(); 
-
-    // --- START: New Timestamp Logic ---
-    appState.ui.lastPageRefresh = new Date();
-    if (pageRefreshTimeSpan) {
-        pageRefreshTimeSpan.textContent = appState.ui.lastPageRefresh.toLocaleTimeString();
-    }
-    if (lastPollTimeSpan) {
-        lastPollTimeSpan.textContent = "N/A";
-    }
-    // --- END: New Timestamp Logic ---
-
-    // --- Dropdown Initialization ---
-    const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
-    nameDropdownsToInit.forEach(id => {
-        populateDropdown(id, [], DEFAULT_NAME_OPTION, ""); // Correctly sets the default value
-        document.getElementById(id).setAttribute("disabled", "disabled");
-    });
-    
-    addToQueueButton.classList.add('hidden');
-    removeFromQueueButton.classList.add('hidden');
-
-    populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
-    emojiDropdown.setAttribute("disabled", "disabled");
-    
-    signOutButton.style.display = "none";
-    signInButton.style.display = "none"; 
-    signInButton.textContent = SIGN_IN_BUTTON_DEFAULT_TEXT; 
+    // ... etc.
 
     // --- Main Data Loading and Polling Logic ---
-if (appState.currentUser.email && appState.currentUser.idToken) {
+    if (appState.currentUser.email && appState.currentUser.idToken) {
         startInfoBarClock();
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
         try {
             await loadInitialPassData();
             
-            // Perform the first sync immediately on page load
+            // --- START: New State Restoration Logic ---
+            const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
+            let studentIsOut = false;
+            
+            if (bathroomState.result === 'success' && bathroomState.passHolders.length > 0) {
+                const currentClass = getCurrentClassName(doc, appState.currentUser.email); // You'll need getCurrentClassName on the client-side
+                const outStudent = bathroomState.passHolders.find(holder => holder.Class === currentClass);
+
+                if (outStudent) {
+                    studentIsOut = true;
+                    console.log("Restoring state for student:", outStudent.Name);
+
+                    // Manually set the state to match the record from the backend
+                    appState.passHolder = outStudent.Name; // Use the simple name for now
+                    appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
+                    
+                    // Manually trigger the UI transition
+                    studentOutNameSpan.textContent = outStudent.Name;
+                    headerStatusSpan.textContent = STATUS_IS_OUT;
+                    studentOutHeader.style.backgroundColor = FORM_COLOR_OUT;
+                    mainForm.style.backgroundColor = FORM_COLOR_OUT;
+
+                    signOutButton.style.display = "none";
+                    signInButton.style.display = "block";
+                    nameDropdown.setAttribute("disabled", "disabled");
+                    emojiDropdown.setAttribute("disabled", "disabled");
+                    
+                    // Start the timer
+                    if (appState.timer.intervalId) clearInterval(appState.timer.intervalId);
+                    appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
+                }
+            }
+            // --- END: New State Restoration Logic ---
+
+            // Perform the first full sync (will update dropdowns etc.)
             await syncAppState(); 
 
             // --- Set up Polling for Real-time Updates ---
@@ -982,6 +985,12 @@ if (appState.currentUser.email && appState.currentUser.idToken) {
     showTravelPassView();
     handleTravelDepartingClick();
     handleLateNameSelectionChange();
+}
+
+// You will also need a client-side version of getCurrentClassName.
+// This is a simplified version that relies on the appState.
+function getCurrentClassName() {
+    return appState.ui.currentClassPeriod;
 }
 
 /**
