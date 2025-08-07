@@ -355,7 +355,8 @@ async function handleSignIn(authCode) {
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 
-                if (signInPage) signInPage.style.display = 'none'; // More forceful way to hide
+                // Forcefully hide the entire sign-in page, including its overlay
+                if (signInPage) signInPage.style.display = 'none'; 
                 
                 if (appContent) {
                     appContent.classList.remove('hidden');
@@ -368,7 +369,7 @@ async function handleSignIn(authCode) {
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
                 }
-            }, 0); // A 0ms timeout is all that's needed.
+            }, 0);
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
@@ -377,6 +378,7 @@ async function handleSignIn(authCode) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
     } finally {
+        // This still runs, but the change above is the more robust solution.
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
