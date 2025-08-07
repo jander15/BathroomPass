@@ -357,7 +357,11 @@ async function handleSignIn(authCode) {
             if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
             if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
             if (signInPage) signInPage.classList.add('hidden');
-            if (appContent) appContent.classList.remove('hidden');
+            if (appContent) {
+                appContent.classList.remove('hidden');
+                appContent.style.display = 'flex'; // ** ADD THIS LINE **
+            }
+
             if (bodyElement) bodyElement.classList.remove('justify-center');
             if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
