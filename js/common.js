@@ -346,20 +346,20 @@ async function handleSignIn(authCode) {
             appState.currentUser.profilePic = profile.picture;
             appState.currentUser.idToken = tokenData.idToken;
 
-            // --- START: ALERT TEST ---
-            alert("Step 1: Sign-in successful. About to update UI.");
-            // --- END: ALERT TEST ---
+            console.log("User signed in and tokens exchanged successfully!");
 
-            // Use a timeout to ensure this runs after the browser has processed the sign-in.
+            // --- THE FIX IS HERE ---
+            // Use a 100ms timeout. This gives the browser ample time to settle
+            // before we attempt to change the visibility of major page elements.
             setTimeout(() => {
-                alert("Step 2: Inside setTimeout. Preparing to show content.");
-
                 if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 
+                // Forcefully hide the entire sign-in page
                 if (signInPage) signInPage.style.display = 'none'; 
                 
+                // Show the main application content
                 if (appContent) {
                     appContent.classList.remove('hidden');
                     appContent.style.display = 'flex';
@@ -368,14 +368,11 @@ async function handleSignIn(authCode) {
                 if (bodyElement) bodyElement.classList.remove('justify-center');
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
-                alert("Step 3: UI is updated. Calling page-specific initialization.");
-
+                // Initialize the page-specific JavaScript
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
                 }
-
-                alert("Step 4: Page-specific initialization has been called.");
-            }, 0);
+            }, 100); // Using 100ms for a more reliable rendering pause.
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
