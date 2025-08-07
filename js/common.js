@@ -346,32 +346,18 @@ async function handleSignIn(authCode) {
             appState.currentUser.profilePic = profile.picture;
             appState.currentUser.idToken = tokenData.idToken;
 
-            console.log("User signed in and tokens exchanged successfully!");
+            // --- START: ALERT TEST ---
+            alert("Step 1: Sign-in successful. About to update UI.");
+            // --- END: ALERT TEST ---
 
-            // --- START: VISIBILITY TEST CODE ---
-            // This will create a bright red bar at the top of the page to confirm rendering.
-            const testDiv = document.createElement('div');
-            testDiv.textContent = 'Render Test Successful';
-            testDiv.style.position = 'absolute';
-            testDiv.style.top = '0';
-            testDiv.style.left = '0';
-            testDiv.style.width = '100%';
-            testDiv.style.padding = '10px';
-            testDiv.style.backgroundColor = 'red';
-            testDiv.style.color = 'white';
-            testDiv.style.textAlign = 'center';
-            testDiv.style.zIndex = '9999';
-            document.body.appendChild(testDiv);
-            // --- END: VISIBILITY TEST CODE ---
-
-            // --- THE FIX IS HERE ---
-            // Use a timeout to ensure this code runs after the browser has finished processing the sign-in.
+            // Use a timeout to ensure this runs after the browser has processed the sign-in.
             setTimeout(() => {
+                alert("Step 2: Inside setTimeout. Preparing to show content.");
+
                 if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 
-                // Forcefully hide the entire sign-in page, including its overlay
                 if (signInPage) signInPage.style.display = 'none'; 
                 
                 if (appContent) {
@@ -382,9 +368,13 @@ async function handleSignIn(authCode) {
                 if (bodyElement) bodyElement.classList.remove('justify-center');
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
+                alert("Step 3: UI is updated. Calling page-specific initialization.");
+
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
                 }
+
+                alert("Step 4: Page-specific initialization has been called.");
             }, 0);
 
         } else {
@@ -394,7 +384,6 @@ async function handleSignIn(authCode) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
     } finally {
-        // This still runs, but the change above is the more robust solution.
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
