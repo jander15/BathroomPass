@@ -348,6 +348,22 @@ async function handleSignIn(authCode) {
 
             console.log("User signed in and tokens exchanged successfully!");
 
+            // --- START: VISIBILITY TEST CODE ---
+            // This will create a bright red bar at the top of the page to confirm rendering.
+            const testDiv = document.createElement('div');
+            testDiv.textContent = 'Render Test Successful';
+            testDiv.style.position = 'absolute';
+            testDiv.style.top = '0';
+            testDiv.style.left = '0';
+            testDiv.style.width = '100%';
+            testDiv.style.padding = '10px';
+            testDiv.style.backgroundColor = 'red';
+            testDiv.style.color = 'white';
+            testDiv.style.textAlign = 'center';
+            testDiv.style.zIndex = '9999';
+            document.body.appendChild(testDiv);
+            // --- END: VISIBILITY TEST CODE ---
+
             // --- THE FIX IS HERE ---
             // Use a timeout to ensure this code runs after the browser has finished processing the sign-in.
             setTimeout(() => {
