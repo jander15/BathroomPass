@@ -322,9 +322,8 @@ function populateCourseDropdownFromData() {
 // --- Google Sign-In Initialization & Handlers ---
 
 /**
- * NEW: This function is now the single entry point for handling a successful sign-in.
- * It takes the authorization code, sends it to the backend, and initializes the app.
- * @param {string} authCode - The authorization code from Google.
+ * FINAL VERSION: Uses a setTimeout to ensure the UI update happens after
+ * all other rendering, fixing the black screen issue.
  */
 async function handleSignIn(authCode) {
     try {
@@ -333,7 +332,6 @@ async function handleSignIn(authCode) {
             code: authCode
         };
 
-        // This initial request does not need an ID token.
         const tokenData = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -341,10 +339,8 @@ async function handleSignIn(authCode) {
         }).then(res => res.json());
 
         if (tokenData.result === 'success' && tokenData.idToken) {
-            // The backend successfully exchanged the code and gives us our first ID token.
             const profile = decodeJwtResponse(tokenData.idToken);
             
-            // Set the global user state
             appState.currentUser.email = profile.email;
             appState.currentUser.name = profile.name;
             appState.currentUser.profilePic = profile.picture;
@@ -352,35 +348,35 @@ async function handleSignIn(authCode) {
 
             console.log("User signed in and tokens exchanged successfully!");
 
-            // Update UI
-            if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-            if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-            if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-            if (signInPage) signInPage.classList.add('hidden');
-            if (appContent) {
-                appContent.classList.remove('hidden');
-                appContent.style.display = 'flex'; // ** ADD THIS LINE **
-            }
+            // --- THE FIX IS HERE ---
+            // Use a timeout to ensure this code runs after the browser has finished processing the sign-in.
+            setTimeout(() => {
+                if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+                if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+                if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+                
+                if (signInPage) signInPage.style.display = 'none'; // More forceful way to hide
+                
+                if (appContent) {
+                    appContent.classList.remove('hidden');
+                    appContent.style.display = 'flex';
+                }
 
-            if (bodyElement) bodyElement.classList.remove('justify-center');
-            if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+                if (bodyElement) bodyElement.classList.remove('justify-center');
+                if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
-            // Initialize the rest of the application
-            if (typeof initializePageSpecificApp === 'function') {
-                initializePageSpecificApp();
-            }
+                if (typeof initializePageSpecificApp === 'function') {
+                    initializePageSpecificApp();
+                }
+            }, 0); // A 0ms timeout is all that's needed.
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
         } 
-        
-
     } catch (error) {
         console.error("Authorization code exchange failed:", error);
         showErrorAlert("Could not complete the sign-in process. Please try again.");
-    }
-    finally {
-        // 4. Hide the overlay whether the sign-in succeeded or failed
+    } finally {
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
