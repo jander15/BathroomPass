@@ -24,38 +24,35 @@ const groupColors = [
 
 
 /**
- * UPDATED: Swaps student names and updates colors based on the destination group.
+ * UPDATED: Correctly swaps all properties of two seat elements,
+ * including a full swap of their background colors.
  */
 function swapTiles(tile1, tile2) {
-    // Only swap the text content (the student names)
+    // Swap text content (the student names)
     const tempText = tile1.textContent;
     tile1.textContent = tile2.textContent;
     tile2.textContent = tempText;
 
-    // --- START: New Color Logic ---
-    // If the second tile (the destination) has a group color,
-    // make the first tile adopt that color.
-    if (tile2.style.backgroundColor && tile2.style.backgroundColor !== 'white') {
-        tile1.style.backgroundColor = tile2.style.backgroundColor;
-    } else {
-        // If the destination is a neutral tile (like an empty individual seat),
-        // make the moved tile neutral as well.
-        tile1.style.backgroundColor = 'white';
-    }
-    // --- END: New Color Logic ---
+    // --- THE FIX IS HERE ---
+    // Perform a classic swap of the background color property
+    const tempColor = tile1.style.backgroundColor;
+    tile1.style.backgroundColor = tile2.style.backgroundColor;
+    tile2.style.backgroundColor = tempColor;
+    // --- END OF FIX ---
 
     // Swap classes for empty/non-empty status
-    const tile1IsEmpty = tile1.textContent === '(Empty)';
-    const tile2IsEmpty = tile2.textContent === '(Empty)';
+    const tile1IsEmpty = tile1.classList.contains('text-gray-400');
+    const tile2IsEmpty = tile2.classList.contains('text-gray-400');
 
-    // Update styling based on whether the tile is now empty or not
-    tile1.classList.toggle('text-gray-400', tile1IsEmpty);
-    tile1.classList.toggle('italic', tile1IsEmpty);
-    tile1.classList.toggle('font-semibold', !tile1IsEmpty);
-    
-    tile2.classList.toggle('text-gray-400', tile2IsEmpty);
-    tile2.classList.toggle('italic', tile2IsEmpty);
-    tile2.classList.toggle('font-semibold', !tile2IsEmpty);
+    if (tile1IsEmpty !== tile2IsEmpty) {
+        tile1.classList.toggle('text-gray-400');
+        tile1.classList.toggle('italic');
+        tile1.classList.toggle('font-semibold');
+        
+        tile2.classList.toggle('text-gray-400');
+        tile2.classList.toggle('italic');
+        tile2.classList.toggle('font-semibold');
+    }
 }
 
 // --- Event Handlers for Drag and Drop ---
