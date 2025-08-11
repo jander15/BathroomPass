@@ -2,14 +2,57 @@
 
 // --- DOM Element Caching ---
 const classDropdown = document.getElementById('classDropdown');
-const rowsInput = document.getElementById('rowsInput');
-const colsInput = document.getElementById('colsInput');
 const generateChartBtn = document.getElementById('generateChartBtn');
 const chartMessage = document.getElementById('chartMessage');
 const seatingChartGrid = document.getElementById('seatingChartGrid');
 
+// New controls
+const rowsDisplay = document.getElementById('rowsDisplay');
+const colsDisplay = document.getElementById('colsDisplay');
+const rowsMinusBtn = document.getElementById('rowsMinusBtn');
+const rowsPlusBtn = document.getElementById('rowsPlusBtn');
+const colsMinusBtn = document.getElementById('colsMinusBtn');
+const colsPlusBtn = document.getElementById('colsPlusBtn');
+
+
 // --- State for Click-to-Swap ---
 let firstSelectedTile = null;
+
+/**
+ * Updates the number of rows or columns and regenerates the chart.
+ * @param {HTMLElement} displayElement The span element showing the number.
+ * @param {number} change The amount to change the value by (+1 or -1).
+ */
+function updateGridDimension(displayElement, change) {
+    let currentValue = parseInt(displayElement.textContent, 10);
+    let newValue = currentValue + change;
+    if (newValue < 1) newValue = 1; // Prevent going below 1
+    if (newValue > 15) newValue = 15; // Set a reasonable max
+    displayElement.textContent = newValue;
+    generateSeatingChart(); // Regenerate the chart immediately
+}
+
+
+/**
+ * Calculates and sets the minimum number of rows needed for a class.
+ */
+function calculateAndSetRows() {
+    const selectedClass = classDropdown.value;
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
+
+    const students = appState.data.allNamesFromSheet
+        .filter(student => student.Class === selectedClass);
+    
+    const studentCount = students.length;
+    const cols = parseInt(colsDisplay.textContent, 10);
+    
+    if (studentCount > 0 && cols > 0) {
+        const minRows = Math.ceil(studentCount / cols);
+        rowsDisplay.textContent = minRows;
+    } else {
+        rowsDisplay.textContent = 5; // Default if no students
+    }
+}
 
 /**
  * Swaps the content and styling of two seat elements.
@@ -17,12 +60,10 @@ let firstSelectedTile = null;
  * @param {HTMLElement} tile2 The second seat element.
  */
 function swapTiles(tile1, tile2) {
-    // Swap the text content
     const tempText = tile1.textContent;
     tile1.textContent = tile2.textContent;
     tile2.textContent = tempText;
 
-    // Swap the classes that determine if a seat is empty or not
     const tile1IsEmpty = tile1.classList.contains('text-gray-400');
     const tile2IsEmpty = tile2.classList.contains('text-gray-400');
 
@@ -40,7 +81,6 @@ function swapTiles(tile1, tile2) {
 // --- Event Handlers for Drag and Drop ---
 function handleDragStart(e) {
     e.target.classList.add('dragging');
-    // Set data to be the ID of the dragged element
     e.dataTransfer.setData('text/plain', e.target.id);
 }
 
@@ -49,7 +89,7 @@ function handleDragEnd(e) {
 }
 
 function handleDragOver(e) {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     if (e.target.classList.contains('seat')) {
         e.target.classList.add('over');
     }
@@ -64,11 +104,9 @@ function handleDragLeave(e) {
 function handleDrop(e) {
     e.preventDefault();
     e.target.classList.remove('over');
-
     const draggedItemId = e.dataTransfer.getData('text/plain');
     const draggedItem = document.getElementById(draggedItemId);
     const dropTarget = e.target.closest('.seat');
-
     if (draggedItem && dropTarget && draggedItem !== dropTarget) {
         swapTiles(draggedItem, dropTarget);
     }
@@ -77,20 +115,14 @@ function handleDrop(e) {
 // --- Event Handler for Click-to-Swap ---
 function handleTileClick(e) {
     const clickedTile = e.currentTarget;
-
     if (!firstSelectedTile) {
-        // This is the first tile being selected
         firstSelectedTile = clickedTile;
         firstSelectedTile.classList.add('selected');
     } else if (firstSelectedTile === clickedTile) {
-        // The same tile was clicked again, so deselect it
         firstSelectedTile.classList.remove('selected');
         firstSelectedTile = null;
     } else {
-        // This is the second tile, so perform the swap
         swapTiles(firstSelectedTile, clickedTile);
-        
-        // Reset the selection
         firstSelectedTile.classList.remove('selected');
         firstSelectedTile = null;
     }
@@ -111,23 +143,17 @@ function shuffleArray(array) {
  * Generates and displays the randomized seating chart.
  */
 function generateSeatingChart() {
-    // Reset any pending click-to-swap action
     if (firstSelectedTile) {
         firstSelectedTile.classList.remove('selected');
         firstSelectedTile = null;
     }
 
     const selectedClass = classDropdown.value;
-    const rows = parseInt(rowsInput.value, 10);
-    const cols = parseInt(colsInput.value, 10);
+    const rows = parseInt(rowsDisplay.textContent, 10);
+    const cols = parseInt(colsDisplay.textContent, 10);
 
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) {
         chartMessage.textContent = "Please select a class first.";
-        seatingChartGrid.innerHTML = '';
-        return;
-    }
-    if (isNaN(rows) || isNaN(cols) || rows < 1 || cols < 1) {
-        chartMessage.textContent = "Please enter valid numbers for rows and columns.";
         seatingChartGrid.innerHTML = '';
         return;
     }
@@ -146,11 +172,10 @@ function generateSeatingChart() {
 
     for (let i = 0; i < totalSeats; i++) {
         const seat = document.createElement('div');
-        seat.id = `seat-${i}`; // Give each seat a unique ID
+        seat.id = `seat-${i}`;
         seat.className = 'seat bg-white p-2 border border-gray-300 rounded-md shadow-sm text-center text-sm flex items-center justify-center min-h-[60px] cursor-pointer transition-transform duration-150';
-        seat.draggable = true; // Make the seat draggable
-
-        // Add all necessary event listeners
+        seat.draggable = true;
+        
         seat.addEventListener('dragstart', handleDragStart);
         seat.addEventListener('dragend', handleDragEnd);
         seat.addEventListener('dragover', handleDragOver);
@@ -174,7 +199,25 @@ function generateSeatingChart() {
  */
 async function initializePageSpecificApp() {
     generateChartBtn.disabled = true;
+
+    // --- Add Event Listeners ---
     generateChartBtn.addEventListener('click', generateSeatingChart);
+    
+    rowsMinusBtn.addEventListener('click', () => updateGridDimension(rowsDisplay, -1));
+    rowsPlusBtn.addEventListener('click', () => updateGridDimension(rowsDisplay, 1));
+    colsMinusBtn.addEventListener('click', () => {
+        updateGridDimension(colsDisplay, -1);
+        calculateAndSetRows();
+    });
+    colsPlusBtn.addEventListener('click', () => {
+        updateGridDimension(colsDisplay, 1);
+        calculateAndSetRows();
+    });
+
+    classDropdown.addEventListener('change', () => {
+        calculateAndSetRows();
+        generateSeatingChart();
+    });
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
@@ -200,4 +243,6 @@ function resetPageSpecificAppState() {
     seatingChartGrid.innerHTML = '';
     chartMessage.textContent = "Select a class and click \"Generate Chart\" to create a seating arrangement.";
     generateChartBtn.disabled = true;
+    rowsDisplay.textContent = '5';
+    colsDisplay.textContent = '8';
 }
