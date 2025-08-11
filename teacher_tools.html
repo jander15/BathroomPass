@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Tools - School Pass System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="flex flex-col items-center p-4 min-h-screen" id="body">
+
+    <!-- Sign-In Page (Reused from other pages) -->
+    <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
+        <h1 class="text-4xl font-bold text-white mb-8">Teacher Tools</h1>
+        <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
+        <div id="googleSignInButton"></div>
+        <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col items-center justify-center">
+            <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+            <p class="text-white text-lg mt-4">Authenticating...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Content -->
+    <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
+        <!-- Profile Menu (Reused from other pages) -->
+        <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
+            <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500 transition-all duration-200">
+            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
+                <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
+                <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
+                <hr class="my-1">
+                <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                    Sign Out of Google
+                </button>
+            </div>
+        </div>
+        
+        <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Randomized Seating Chart</h1>
+        
+        <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-6">
+
+            <!-- Controls Section -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200 flex flex-wrap items-center justify-center gap-6">
+                <!-- Class Selection -->
+                <div class="flex items-center">
+                    <label for="classDropdown" class="mr-2 text-sm font-medium text-gray-900">Class:</label>
+                    <select id="classDropdown" class="block w-48 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none text-sm"></select>
+                </div>
+
+                <!-- Grid Size Controls -->
+                <div class="flex items-center">
+                    <label for="rowsInput" class="mr-2 text-sm font-medium text-gray-900">Rows:</label>
+                    <input type="number" id="rowsInput" value="5" min="1" max="15" class="w-20 p-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div class="flex items-center">
+                    <label for="colsInput" class="mr-2 text-sm font-medium text-gray-900">Columns:</label>
+                    <input type="number" id="colsInput" value="6" min="1" max="15" class="w-20 p-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generateChartBtn" class="px-5 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Generate Chart
+                </button>
+            </div>
+
+            <!-- Seating Chart Display Area -->
+            <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
+                <p id="chartMessage" class="text-center text-gray-500">Select a class and click "Generate Chart" to create a seating arrangement.</p>
+                <div id="seatingChartGrid" class="grid gap-4 mt-4">
+                    <!-- Student seats will be generated here by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include common script first, then the new page-specific script -->
+    <script src="js/common.js"></script>
+    <script src="js/teacher_tools.js"></script>
+</body>
+</html>
