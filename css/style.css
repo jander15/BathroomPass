@@ -138,3 +138,23 @@ iframe[name="iframe"] {
         transform: rotate(360deg);
     }
 }
+
+/* --- Seating Chart Interactivity Styles --- */
+
+/* Style for the tile being dragged */
+.seat.dragging {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+/* Style for a potential drop target */
+.seat.over {
+    background-color: #dbeafe; /* A light blue to indicate a drop zone */
+    transform: scale(1.05);
+}
+
+/* Style for the first tile clicked in a swap action */
+.seat.selected {
+    background-color: #fef9c3; /* A light yellow to indicate selection */
+    box-shadow: 0 0 0 2px #facc15; /* A yellow ring */
+}
