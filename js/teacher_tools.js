@@ -53,6 +53,8 @@ function updateActiveButton(size) {
  */
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
+        // ** THE FIX IS HERE: This line was missing **
+        const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
 }
@@ -74,10 +76,8 @@ function createStudentGroups(students, groupSize) {
 
     // Handle leftovers
     if (shuffledStudents.length === 1 && groups.length > 0) {
-        // Add the single leftover student to the last group
         groups[groups.length - 1].push(shuffledStudents.pop());
     } else if (shuffledStudents.length > 0) {
-        // If there are 2 or 3 leftovers, they form their own final group
         groups.push(shuffledStudents);
     }
 
@@ -120,7 +120,7 @@ function generateChart() {
  */
 function generateIndividualChart(students) {
     shuffleArray(students);
-    const cols = 8; // Default columns for individual layout
+    const cols = 8;
     const rows = Math.ceil(students.length / cols);
 
     seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -148,16 +148,15 @@ function generateIndividualChart(students) {
  */
 function generateGroupChart(students, groupSize) {
     const groups = createStudentGroups(students, groupSize);
-    const cols = 8; // A fixed width for the grid works well for auto-layout
+    const cols = 8;
     seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-    const grid = []; // 2D array to track occupied cells
+    const grid = [];
 
     groups.forEach((group, groupIndex) => {
         const color = groupColors[groupIndex % groupColors.length];
         const groupShape = groupSize === 2 ? { w: 2, h: 1 } : { w: 2, h: 2 };
 
-        // Find the next available spot for this group's shape
         let placed = false;
         for (let r = 0; !placed; r++) {
             for (let c = 0; c <= cols - groupShape.w; c++) {
@@ -170,24 +169,17 @@ function generateGroupChart(students, groupSize) {
         }
     });
 
-    // Render the final grid
     renderGrid(grid);
 }
 
 /**
  * Checks if a rectangular area in the grid is empty.
- * @param {Array} grid The 2D grid array.
- * @param {number} r The starting row.
- * @param {number} c The starting column.
- * @param {number} w The width of the area to check.
- * @param {number} h The height of the area to check.
- * @returns {boolean} True if the area is available.
  */
 function isSpotAvailable(grid, r, c, w, h) {
     for (let i = r; i < r + h; i++) {
         for (let j = c; j < c + w; j++) {
             if (grid[i] && grid[i][j]) {
-                return false; // Spot is already taken
+                return false;
             }
         }
     }
@@ -196,12 +188,6 @@ function isSpotAvailable(grid, r, c, w, h) {
 
 /**
  * Places a group's data into the 2D grid array.
- * @param {Array} grid The 2D grid array.
- * @param {number} r The starting row.
- * @param {number} c The starting column.
- * @param {string[]} group The list of students in the group.
- * @param {object} shape The shape of the group {w, h}.
- * @param {string} color The background color for the group.
  */
 function placeGroup(grid, r, c, group, shape, color) {
     let studentIndex = 0;
@@ -217,7 +203,6 @@ function placeGroup(grid, r, c, group, shape, color) {
 
 /**
  * Renders the seating chart grid from the 2D grid data.
- * @param {Array} grid The 2D grid array containing student and color info.
  */
 function renderGrid(grid) {
     const maxRows = grid.length;
@@ -239,7 +224,6 @@ function renderGrid(grid) {
                     seat.classList.add('text-gray-500', 'italic');
                 }
             } else {
-                // This is an empty cell outside of any group, make it visually distinct
                 seat.classList.add('bg-gray-100');
             }
             seatingChartGrid.appendChild(seat);
@@ -272,7 +256,7 @@ async function initializePageSpecificApp() {
     });
 
     classDropdown.addEventListener('change', () => {
-        updateActiveButton(0); // Default to individuals when class changes
+        updateActiveButton(0);
         generateChart();
     });
 
@@ -283,7 +267,7 @@ async function initializePageSpecificApp() {
             populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             classDropdown.removeAttribute("disabled");
             groupBtns.forEach(btn => btn.disabled = false);
-            updateActiveButton(0); // Set "Individuals" as active by default
+            updateActiveButton(0);
         } catch (error) {
             console.error("Failed to initialize Teacher Tools with data:", error);
             showErrorAlert("Could not load class data. Please reload.");
