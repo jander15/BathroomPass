@@ -158,3 +158,13 @@ iframe[name="iframe"] {
     background-color: #fef9c3; /* A light yellow to indicate selection */
     box-shadow: 0 0 0 2px #facc15; /* A yellow ring */
 }
+
+/* --- Seating Chart Group Button Styles --- */
+
+/* Style for the active generation button */
+.group-btn.active {
+    background-color: #1d4ed8; /* A darker blue */
+    color: white;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
