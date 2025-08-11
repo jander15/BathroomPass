@@ -12,7 +12,7 @@
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
-    <!-- Sign-In Page (Reused from other pages) -->
+    <!-- Sign-In Page -->
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">Teacher Tools</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
@@ -26,7 +26,7 @@
 
     <!-- Main Application Content -->
     <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
-        <!-- Profile Menu (Reused from other pages) -->
+        <!-- Profile Menu -->
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500 transition-all duration-200">
             <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
@@ -57,7 +57,7 @@
                 <!-- Generation Controls -->
                 <div class="flex items-center space-x-2">
                     <span class="text-sm font-medium text-gray-900">Generate:</span>
-                    <button id="generateIndividualsBtn" class="group-btn px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                    <button id="generateIndividualsBtn" data-groupsize="0" class="group-btn px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
                         Individuals
                     </button>
                     <button id="generatePairsBtn" data-groupsize="2" class="group-btn px-4 py-2 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-sm hover:bg-gray-300 transition-colors">
@@ -72,33 +72,9 @@
                 </div>
             </div>
 
-            <!-- Grid Size Controls -->
-            <div class="flex items-center space-x-4">
-                <span class="text-sm font-medium text-gray-900">Grid Size:</span>
-                <!-- Rows Control -->
-                <div class="flex items-center space-x-2">
-                    <button id="rowsMinusBtn" class="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">-</button>
-                    <span class="text-sm">Rows: <span id="rowsDisplay" class="font-bold">5</span></span>
-                    <button id="rowsPlusBtn" class="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">+</button>
-                </div>
-                <!-- Columns Control -->
-                <div class="flex items-center space-x-2">
-                    <button id="colsMinusBtn" class="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">-</button>
-                    <span class="text-sm">Cols: <span id="colsDisplay" class="font-bold">8</span></span>
-                    <button id="colsPlusBtn" class="px-2 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">+</button>
-                </div>
-            </div>
-
-
-                <!-- Generate Button -->
-                <button id="generateChartBtn" class="px-5 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Generate Chart
-                </button>
-            </div>
-
             <!-- Seating Chart Display Area -->
             <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
-                <p id="chartMessage" class="text-center text-gray-500">Select a class and click "Generate Chart" to create a seating arrangement.</p>
+                <p id="chartMessage" class="text-center text-gray-500">Select a class and click a button to generate a chart.</p>
                 <div id="seatingChartGrid" class="grid gap-4 mt-4">
                     <!-- Student seats will be generated here by JavaScript -->
                 </div>
@@ -106,7 +82,7 @@
         </div>
     </div>
 
-    <!-- Include common script first, then the new page-specific script -->
+    <!-- Scripts -->
     <script src="js/common.js"></script>
     <script src="js/teacher_tools.js"></script>
 </body>
