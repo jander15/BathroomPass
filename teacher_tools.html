@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@shopify/draggable@1.0.0-beta.12/lib/draggable.bundle.js"></script>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
-    <!-- Sign-In Page -->
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">Teacher Tools</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
@@ -24,9 +24,7 @@
         </div>
     </div>
 
-    <!-- Main Application Content -->
     <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
-        <!-- Profile Menu -->
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500 transition-all duration-200">
             <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
@@ -43,18 +41,14 @@
         
         <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-6">
 
-            <!-- Controls Section -->
             <div class="bg-white p-4 rounded-lg border border-gray-200 flex flex-wrap items-center justify-center gap-4 md:gap-6">
-                <!-- Class Selection -->
                 <div class="flex items-center">
                     <label for="classDropdown" class="mr-2 text-sm font-medium text-gray-900">Class:</label>
                     <select id="classDropdown" class="block w-48 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none text-sm"></select>
                 </div>
 
-                <!-- Divider -->
                 <div class="h-8 w-px bg-gray-300 hidden md:block"></div>
 
-                <!-- Generation Controls -->
                 <div class="flex items-center space-x-2">
                     <span class="text-sm font-medium text-gray-900">Generate:</span>
                     <button id="generateIndividualsBtn" class="group-btn px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
@@ -71,10 +65,8 @@
                     </button>
                 </div>
 
-                <!-- Divider -->
                 <div class="h-8 w-px bg-gray-300 hidden md:block"></div>
                 
-                <!-- Dynamic Group Controls -->
                 <div class="flex items-center space-x-2">
                     <label for="groupCountInput" class="text-sm font-medium text-gray-900">Number of Groups:</label>
                     <input type="number" id="groupCountInput" value="8" min="1" class="w-20 p-2 border border-gray-300 rounded-md shadow-sm">
@@ -84,7 +76,6 @@
                 </div>
             </div>
 
-            <!-- Seating Chart Display Area -->
             <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
                 <p id="chartMessage" class="text-center text-gray-500">Select a class and click a button to generate a chart.</p>
                 <div id="instructionsArea" 
@@ -92,14 +83,12 @@
                      class="w-full bg-white p-3 mt-4 border border-gray-300 rounded-md shadow-sm text-lg text-center text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                      data-placeholder="Click to add instructions for your students...">
                 </div>
-                <div id="seatingChartGrid" class="grid gap-4 mt-4">
-                    <!-- Student seats will be generated here by JavaScript -->
-                </div>
+                <div id="seatingChartGrid" class="grid grid-cols-8 gap-4 mt-4">
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="js/common.js"></script>
     <script src="js/teacher_tools.js"></script>
 </body>

@@ -139,26 +139,57 @@ iframe[name="iframe"] {
     }
 }
 
-/* --- Seating Chart Interactivity Styles --- */
+/* --- Seating Chart Interactivity Styles (Updated for Draggable.js) --- */
 
-/* Style for the tile being dragged */
-.seat.dragging {
-    opacity: 0.5;
-    border-style: dashed;
+/* Base style for any draggable item (seats and group containers) */
+.draggable-item {
+    cursor: move;
+    transition: transform 0.2s;
 }
 
-/* Style for a potential drop target */
-.seat.over {
-    background-color: #dbeafe; /* A light blue to indicate a drop zone */
+/* Style for the item currently being dragged (the "mirror") */
+.draggable-mirror {
+    opacity: 0.8;
+    background-color: #e0f2fe; /* Light blue */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     transform: scale(1.05);
+    z-index: 1000;
 }
 
-/* Style for the first tile clicked in a swap action */
-.seat.selected {
-    background-color: #fef9c3; /* A light yellow to indicate selection */
-    box-shadow: 0 0 0 2px #facc15; /* A yellow ring */
+/* The original item that the mirror is based on */
+.draggable-source--is-dragging {
+    opacity: 0.3;
 }
 
+/* A container that an item is being dragged over */
+.draggable-container--is-dragging-over {
+    background-color: #f0f9ff; /* Very light blue */
+}
+
+/* A draggable item that is being hovered over */
+.draggable-item--is-dragging-over {
+    border: 2px dashed #3b82f6; /* Blue dashed border */
+}
+
+/* ADDED: Styles for the new group container */
+.group-container {
+    padding: 0.75rem; /* p-3 */
+    border: 2px solid; /* Border color will be set by JS */
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem; /* space between seats inside */
+    align-items: stretch;
+    justify-content: center;
+    min-height: 80px; /* Ensure container has a minimum size */
+}
+
+/* Individual seats inside a group container */
+.group-container .seat {
+    flex-grow: 1; /* Allow seats to grow and fill space */
+    background-color: white;
+}
 
 /* --- Seating Chart Group Button Styles --- */
 
