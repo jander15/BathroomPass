@@ -225,8 +225,8 @@ function generateGroupChart(students, groupSize) {
     const grid = [];
     seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-    groups.forEach((group, groupIndex) => {
-        const color = groupColors[groupIndex % groupColors.length];
+    groups.forEach((group) => {
+        const color = groupColors[Math.floor(Math.random() * groupColors.length)];
         
         if (groupSize === 2) {
             let placed = false;
@@ -265,7 +265,7 @@ function generateGroupChart(students, groupSize) {
     renderGrid(grid);
 }
 
-// *** START: MISSING HELPER FUNCTIONS ***
+// *** START: HELPER FUNCTIONS ***
 /**
  * Checks if a rectangular area in the grid is empty.
  */
@@ -306,7 +306,7 @@ function findNextEmptyCell(grid, cols) {
     }
     return null;
 }
-// *** END: MISSING HELPER FUNCTIONS ***
+// *** END: HELPER FUNCTIONS ***
 
 /**
  * Renders an interactive seating chart from the 2D grid data.
