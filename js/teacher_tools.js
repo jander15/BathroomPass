@@ -37,7 +37,6 @@ function cacheToolsDOMElements() {
 
 /** Initializes or re-initializes the Draggable.js Sortable functionality. */
 function initializeSortable() {
-    // If an old instance exists, destroy it first to prevent memory leaks
     if (sortableInstance) {
         sortableInstance.destroy();
     }
@@ -45,12 +44,33 @@ function initializeSortable() {
     const containers = document.querySelectorAll('#seatingChartGrid, .group-container');
 
     sortableInstance = new Draggable.Sortable(containers, {
-        draggable: '.draggable-item', // Specifies which elements are draggable
-        handle: '.draggable-item',    // The whole item is the handle
-        mirror: {
-            constrainDimensions: true, // Mirror should have the same dimensions as the source
-        },
-        plugins: [Draggable.Plugins.ResizeMirror], // Ensures the mirror resizes nicely
+        draggable: '.draggable-item',
+        handle: '.draggable-item',
+        mirror: { constrainDimensions: true },
+        plugins: [Draggable.Plugins.ResizeMirror],
+    });
+
+    // --- NEW: Logic to prevent container nesting ---
+    sortableInstance.on('sortable:start', (evt) => {
+        if (evt.data.source.classList.contains('group-container')) {
+            document.querySelectorAll('.group-container').forEach(container => {
+                if (container !== evt.data.source) {
+                    container.classList.add('invalid-drop-target');
+                }
+            });
+        }
+    });
+
+    sortableInstance.on('drag:over:container', (evt) => {
+        if (evt.overContainer.classList.contains('invalid-drop-target')) {
+            evt.cancel();
+        }
+    });
+
+    sortableInstance.on('sortable:stop', () => {
+        document.querySelectorAll('.group-container').forEach(container => {
+            container.classList.remove('invalid-drop-target');
+        });
     });
 }
 
@@ -192,18 +212,21 @@ function renderChart(groups) {
     seatingChartGrid.innerHTML = ''; // Clear previous content
     shuffleArray(groups); // Shuffle the order of groups for randomness
 
-    groups.forEach((group, index) => {
-        if (group.length > 1) {
-            // It's a real group, create a container
-            const color = groupColors[index % groupColors.length];
-            const groupContainer = createGroupContainerElement(group, color);
-            seatingChartGrid.appendChild(groupContainer);
-        } else if (group.length === 1) {
-            // It's an individual student
-            const seat = createSeatElement(group[0]);
-            seatingChartGrid.appendChild(seat);
-        }
-        // Groups with 0 members are ignored
+    // --- MODIFICATION: Separate individuals from actual groups ---
+    const actualGroups = groups.filter(group => group.length > 1);
+    const individuals = groups.filter(group => group.length === 1);
+
+    // Render actual groups first
+    actualGroups.forEach((group, index) => {
+        const color = groupColors[index % groupColors.length];
+        const groupContainer = createGroupContainerElement(group, color);
+        seatingChartGrid.appendChild(groupContainer);
+    });
+
+    // Render individuals last
+    individuals.forEach(group => {
+        const seat = createSeatElement(group[0]);
+        seatingChartGrid.appendChild(seat);
     });
 }
 
