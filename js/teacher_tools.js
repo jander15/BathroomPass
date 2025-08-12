@@ -213,45 +213,45 @@ function generateIndividualChart(students) {
 }
 
 /**
- * NEW: Generates a chart using the "cluster" algorithm for dynamic group sizes.
+ * UPDATED: Uses a specific horizontal placement for pairs and the
+ * cluster algorithm for all other group sizes.
  */
 function generateGroupChart(students, groupSize) {
     const groups = createStudentGroups(students, groupSize);
-    const cols = 8; // A fixed width for the grid works well for auto-layout
+    const cols = 8;
     const grid = []; // 2D array to track occupied cells
-    let totalSeatsNeeded = students.length;
+    seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
     groups.forEach((group, groupIndex) => {
         const color = groupColors[groupIndex % groupColors.length];
-        
-        // Find the first empty cell to start the cluster
-        let startPos = findNextEmptyCell(grid, cols);
-        if (!startPos) return; // Should not happen if we calculate rows correctly
 
-        let placedMembers = 0;
-        let clusterQueue = [startPos];
-        
-        while(placedMembers < group.length) {
-            const currentPos = clusterQueue.shift();
-            if (!currentPos || (grid[currentPos.r] && grid[currentPos.r][currentPos.c])) {
-                if(clusterQueue.length === 0) clusterQueue.push(findNextEmptyCell(grid, cols));
-                continue;
+        // --- START: New Logic for Pairs ---
+        if (groupSize === 2) {
+            let placed = false;
+            for (let r = 0; !placed; r++) {
+                for (let c = 0; c <= cols - 2; c++) { // Need space for 2
+                    if (isSpotAvailable(grid, r, c, 2, 1)) {
+                        placeGroup(grid, r, c, group, { w: 2, h: 1 }, color);
+                        placed = true;
+                        break;
+                    }
+                }
             }
-
-            // Place student
-            if (!grid[currentPos.r]) grid[currentPos.r] = [];
-            grid[currentPos.r][currentPos.c] = { name: group[placedMembers], color: color };
-            placedMembers++;
-
-            // Add neighbors to the queue to be filled
-            const neighbors = [
-                { r: currentPos.r, c: currentPos.c + 1 }, // Right
-                { r: currentPos.r + 1, c: currentPos.c }, // Down
-                { r: currentPos.r, c: currentPos.c - 1 }, // Left
-                { r: currentPos.r - 1, c: currentPos.c }  // Up
-            ];
-            shuffleArray(neighbors); // Randomize neighbor order for organic shapes
-            clusterQueue.push(...neighbors.filter(n => n.r >= 0 && n.c >= 0 && n.c < cols));
+        } 
+        // --- END: New Logic for Pairs ---
+        
+        else { // Use the cluster algorithm for groups of 3+
+            const groupShape = { w: 2, h: 2 }; // Default shape for larger groups
+            let placed = false;
+            for (let r = 0; !placed; r++) {
+                for (let c = 0; c <= cols - groupShape.w; c++) {
+                    if (isSpotAvailable(grid, r, c, groupShape.w, groupShape.h)) {
+                        placeGroup(grid, r, c, group, groupShape, color);
+                        placed = true;
+                        break;
+                    }
+                }
+            }
         }
     });
 
