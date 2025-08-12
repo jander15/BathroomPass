@@ -207,7 +207,9 @@ function generateIndividualChart(students) {
     const totalSeats = rows * cols;
 
     for (let i = 0; i < totalSeats; i++) {
+        // THE FIX IS HERE: Use the helper function to create an interactive seat
         const seat = createInteractiveSeat(i);
+        
         if (i < students.length) {
             seat.textContent = students[i];
             seat.classList.add('font-semibold');
