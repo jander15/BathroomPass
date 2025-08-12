@@ -4,6 +4,8 @@
 const classDropdown = document.getElementById('classDropdown');
 const chartMessage = document.getElementById('chartMessage');
 const seatingChartGrid = document.getElementById('seatingChartGrid');
+const instructionsArea = document.getElementById('instructionsArea'); // Add this line
+
 
 // Generation buttons
 const generateIndividualsBtn = document.getElementById('generateIndividualsBtn');
@@ -368,4 +370,7 @@ function resetPageSpecificAppState() {
     chartMessage.textContent = "Select a class and click a button to generate a chart.";
     groupBtns.forEach(btn => btn.disabled = true);
     updateActiveButton(0);
+    if (instructionsArea) {
+        instructionsArea.textContent = '';
+    }
 }

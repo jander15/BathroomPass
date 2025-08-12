@@ -75,6 +75,13 @@
             <!-- Seating Chart Display Area -->
             <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
                 <p id="chartMessage" class="text-center text-gray-500">Select a class and click a button to generate a chart.</p>
+                <!-- START: New Instructions Area -->
+                <div id="instructionsArea" 
+                    contenteditable="true" 
+                    class="w-full bg-white p-3 mt-4 border border-gray-300 rounded-md shadow-sm text-lg text-center text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-placeholder="Click to add instructions for your students...">
+                </div>
+                <!-- END: New Instructions Area -->
                 <div id="seatingChartGrid" class="grid gap-4 mt-4">
                     <!-- Student seats will be generated here by JavaScript -->
                 </div>
