@@ -177,7 +177,7 @@ iframe[name="iframe"] {
     border: 2px solid; /* Border color will be set by JS */
     border-radius: 0.5rem; /* rounded-lg */
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    display: flex;
+    display: grid;
     flex-wrap: wrap;
     gap: 0.5rem; /* space between seats inside */
     align-items: stretch;
