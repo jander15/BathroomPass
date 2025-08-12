@@ -217,24 +217,21 @@ function generateIndividualChart(students) {
 }
 
 /**
- * UPDATED: Uses a specific horizontal placement for pairs and the
- * cluster algorithm for all other group sizes.
+ * Generates a chart using different algorithms based on group size.
  */
 function generateGroupChart(students, groupSize) {
     const groups = createStudentGroups(students, groupSize);
     const cols = 8;
-    const grid = []; // 2D array to track occupied cells
+    const grid = [];
     seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
     groups.forEach((group, groupIndex) => {
         const color = groupColors[groupIndex % groupColors.length];
-
-        // --- START: New Logic for Pairs ---
+        
         if (groupSize === 2) {
             let placed = false;
             for (let r = 0; !placed; r++) {
-                // Find the next available spot that can fit a 2x1 block
-                for (let c = 0; c <= cols - 2; c++) { 
+                for (let c = 0; c <= cols - 2; c++) {
                     if (isSpotAvailable(grid, r, c, 2, 1)) {
                         placeGroup(grid, r, c, group, { w: 2, h: 1 }, color);
                         placed = true;
@@ -242,40 +239,60 @@ function generateGroupChart(students, groupSize) {
                     }
                 }
             }
-        } 
-        // --- END: New Logic for Pairs ---
-        
-        else { // Use the flexible cluster algorithm for groups of 3+
+        } else {
             let startPos = findNextEmptyCell(grid, cols);
             if (!startPos) return;
-
             let placedMembers = 0;
             let clusterQueue = [startPos];
-            
             while(placedMembers < group.length) {
                 const currentPos = clusterQueue.shift();
                 if (!currentPos || (grid[currentPos.r] && grid[currentPos.r][currentPos.c])) {
                     if(clusterQueue.length === 0) clusterQueue.push(findNextEmptyCell(grid, cols));
                     continue;
                 }
-
                 if (!grid[currentPos.r]) grid[currentPos.r] = [];
                 grid[currentPos.r][currentPos.c] = { name: group[placedMembers], color: color };
                 placedMembers++;
-
                 const neighbors = [
-                    { r: currentPos.r, c: currentPos.c + 1 }, // Right
-                    { r: currentPos.r + 1, c: currentPos.c }, // Down
-                    { r: currentPos.r, c: currentPos.c - 1 }, // Left
-                    { r: currentPos.r - 1, c: currentPos.c }  // Up
+                    { r: currentPos.r, c: currentPos.c + 1 }, { r: currentPos.r + 1, c: currentPos.c },
+                    { r: currentPos.r, c: currentPos.c - 1 }, { r: currentPos.r - 1, c: currentPos.c }
                 ];
                 shuffleArray(neighbors);
                 clusterQueue.push(...neighbors.filter(n => n.r >= 0 && n.c >= 0 && n.c < cols));
             }
         }
     });
-
     renderGrid(grid);
+}
+
+// *** START: MISSING HELPER FUNCTIONS ***
+/**
+ * Checks if a rectangular area in the grid is empty.
+ */
+function isSpotAvailable(grid, r, c, w, h) {
+    for (let i = r; i < r + h; i++) {
+        for (let j = c; j < c + w; j++) {
+            if (grid[i] && grid[i][j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * Places a group's data into the 2D grid array.
+ */
+function placeGroup(grid, r, c, group, shape, color) {
+    let studentIndex = 0;
+    for (let i = r; i < r + shape.h; i++) {
+        if (!grid[i]) grid[i] = [];
+        for (let j = c; j < c + shape.w; j++) {
+            const studentName = studentIndex < group.length ? group[studentIndex] : "(Empty)";
+            grid[i][j] = { name: studentName, color: color };
+            studentIndex++;
+        }
+    }
 }
 
 function findNextEmptyCell(grid, cols) {
@@ -289,6 +306,7 @@ function findNextEmptyCell(grid, cols) {
     }
     return null;
 }
+// *** END: MISSING HELPER FUNCTIONS ***
 
 /**
  * Renders an interactive seating chart from the 2D grid data.
@@ -380,5 +398,5 @@ function resetPageSpecificAppState() {
     if (generateIndividualsBtn) generateIndividualsBtn.disabled = true;
     if (generateGroupsBtn) generateGroupsBtn.disabled = true;
     activeMode = 'individuals';
-    updateActiveButton();
+    if(generateIndividualsBtn) updateActiveButton();
 }
