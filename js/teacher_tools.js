@@ -37,7 +37,7 @@ function cacheToolsDOMElements() {
 
 /**
  * MODIFIED: Initializes or re-initializes the Draggable.js Sortable functionality,
- * now with logic to prevent nesting group containers.
+ * with revised logic to correctly prevent nesting group containers.
  */
 function initializeSortable() {
     if (sortableInstance) {
@@ -53,19 +53,29 @@ function initializeSortable() {
         plugins: [Draggable.Plugins.ResizeMirror],
     });
 
-    // --- REVISED LOGIC: Prevent container nesting ---
-    sortableInstance.on('drag:over', (evt) => {
-        // If the item being dragged is not a group container, do nothing.
-        if (!evt.data.source.classList.contains('group-container')) {
-            return;
+    // --- REVISED AND FINAL LOGIC to prevent container nesting ---
+    sortableInstance.on('sortable:start', (evt) => {
+        // When a drag starts, check if the source is a group container.
+        if (evt.data.source.classList.contains('group-container')) {
+            // If so, add a class to the body to signify a container is being dragged.
+            document.body.classList.add('dragging-a-container');
         }
+    });
 
-        // If the item being dragged OVER is another group container, or is a seat
-        // inside another group container, cancel the drag operation.
-        const overElement = evt.data.over;
-        if (overElement.classList.contains('group-container') || overElement.closest('.group-container')) {
-            evt.cancel();
+    sortableInstance.on('drag:over:container', (evt) => {
+        // When dragging over any container, check our special class on the body.
+        if (document.body.classList.contains('dragging-a-container')) {
+            // If a container is being dragged, and we are now over *another* container,
+            // we should cancel the drop.
+            if (evt.overContainer.classList.contains('group-container')) {
+                evt.cancel();
+            }
         }
+    });
+
+    sortableInstance.on('sortable:stop', () => {
+        // Always clean up the special class when the drag operation ends.
+        document.body.classList.remove('dragging-a-container');
     });
 }
 
