@@ -187,7 +187,6 @@ iframe[name="iframe"] {
 
 /* Individual seats inside a group container */
 .group-container .seat {
-    flex-grow: 1; /* Allow seats to grow and fill space */
     background-color: white;
 }
 

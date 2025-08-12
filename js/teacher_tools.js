@@ -154,7 +154,7 @@ function createSeatElement(studentName) {
     return seat;
 }
 
-/** * MODIFIED: Creates a group container element with dynamic grid styling. 
+/** * MODIFIED: Creates a group container element with dynamic grid styling and column span.
  */
 function createGroupContainerElement(group, color) {
     const container = document.createElement('div');
@@ -165,31 +165,27 @@ function createGroupContainerElement(group, color) {
     const size = group.length;
     let cols = 1;
 
-    // Determine the number of columns based on group size
-    if (size <= 2) {
-        cols = 2; // Pairs are horizontal
-    } else if (size <= 4) {
-        cols = 2; // 2x2 block
-    } else if (size <= 6) {
-        cols = 3; // 3x2 block
-    } else if (size <= 9) {
-        cols = 3; // 3x3 block
-    } else if (size <= 12) {
-        cols = 4; // 4x3 block
-    } else if (size <= 16) {
-        cols = 4; // 4x4 block
-    } else {
-        cols = Math.ceil(Math.sqrt(size)); // Fallback for larger groups
-    }
+    // Determine the number of columns for the *internal* grid
+    if (size <= 2) { cols = 2; }
+    else if (size <= 4) { cols = 2; } 
+    else if (size <= 6) { cols = 3; } 
+    else if (size <= 9) { cols = 3; } 
+    else if (size <= 12) { cols = 4; }
+    else if (size <= 16) { cols = 4; }
+    else { cols = Math.ceil(Math.sqrt(size)); }
 
-    // Apply the grid styling
+    // Apply the internal grid styling
     container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    
+    // *** THE FIX: Set the column span for the PARENT grid ***
+    container.style.gridColumn = `span ${cols}`;
 
     group.forEach(studentName => {
         container.appendChild(createSeatElement(studentName));
     });
     return container;
 }
+
 
 /** Renders the entire chart from an array of groups. */
 function renderChart(groups) {
