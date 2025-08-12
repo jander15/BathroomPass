@@ -5,14 +5,16 @@ const classDropdown = document.getElementById('classDropdown');
 const chartMessage = document.getElementById('chartMessage');
 const seatingChartGrid = document.getElementById('seatingChartGrid');
 
-// New dynamic controls
+// Generation buttons
 const generateIndividualsBtn = document.getElementById('generateIndividualsBtn');
-const groupSizeInput = document.getElementById('groupSizeInput');
-const generateGroupsBtn = document.getElementById('generateGroupsBtn');
+const generatePairsBtn = document.getElementById('generatePairsBtn');
+const generateThreesBtn = document.getElementById('generateThreesBtn');
+const generateFoursBtn = document.getElementById('generateFoursBtn');
+const groupBtns = [generateIndividualsBtn, generatePairsBtn, generateThreesBtn, generateFoursBtn];
 
 // --- State Management ---
 let firstSelectedTile = null;
-let activeMode = 'individuals'; // 'individuals' or 'groups'
+let activeGroupSize = 0; // 0 for individuals, 2 for pairs, etc.
 
 // --- Color Palette for Groups ---
 const groupColors = [
@@ -20,17 +22,15 @@ const groupColors = [
     '#fca5a5', '#fdba74', '#fde047', '#bef264', '#93c5fd', '#d8b4fe', '#f9a8d4'
 ];
 
-// --- Interactivity Functions (Drag/Drop, Click-to-Swap) ---
+
+/**
+ * Swaps all properties of two seat elements, including background color.
+ */
 function swapTiles(tile1, tile2) {
     // Swap text content
     const tempText = tile1.textContent;
     tile1.textContent = tile2.textContent;
     tile2.textContent = tempText;
-
-    // Swap background color
-    const tempColor = tile1.style.backgroundColor;
-    tile1.style.backgroundColor = tile2.style.backgroundColor;
-    tile2.style.backgroundColor = tempColor;
 
     // Swap classes for empty/non-empty status
     const tile1IsEmpty = tile1.classList.contains('text-gray-400');
@@ -46,6 +46,8 @@ function swapTiles(tile1, tile2) {
         tile2.classList.toggle('font-semibold');
     }
 }
+
+// --- Event Handlers for Drag and Drop ---
 function handleDragStart(e) {
     e.target.classList.add('dragging');
     e.dataTransfer.setData('text/plain', e.target.id);
@@ -74,6 +76,8 @@ function handleDrop(e) {
         swapTiles(draggedItem, dropTarget);
     }
 }
+
+// --- Event Handler for Click-to-Swap ---
 function handleTileClick(e) {
     const clickedTile = e.currentTarget;
     if (!firstSelectedTile) {
@@ -92,18 +96,29 @@ function handleTileClick(e) {
 /**
  * Updates the visual state of the generation buttons.
  */
-function updateActiveButton() {
-    if (activeMode === 'individuals') {
-        generateIndividualsBtn.classList.add('active', 'bg-blue-700');
-        generateGroupsBtn.classList.remove('active', 'bg-blue-700');
+function updateActiveButton(size) {
+    activeGroupSize = size;
+    groupBtns.forEach(btn => {
+        const btnSize = parseInt(btn.dataset.groupsize, 10);
+        if (btnSize === size || (size === 0 && btn.id === 'generateIndividualsBtn')) {
+            btn.classList.add('active', 'bg-blue-700', 'text-white');
+            btn.classList.remove('bg-gray-200', 'text-gray-800');
+        } else {
+            btn.classList.remove('active', 'bg-blue-700', 'text-white');
+            btn.classList.add('bg-gray-200', 'text-gray-800');
+        }
+    });
+    if (size === 0) {
+        generateIndividualsBtn.classList.add('bg-blue-600');
+        generateIndividualsBtn.classList.remove('bg-gray-200', 'text-gray-800');
     } else {
-        generateIndividualsBtn.classList.remove('active', 'bg-blue-700');
-        generateGroupsBtn.classList.add('active', 'bg-blue-700', 'text-white');
+        generateIndividualsBtn.classList.remove('bg-blue-600');
+        generateIndividualsBtn.classList.add('bg-gray-200', 'text-gray-800');
     }
 }
 
 /**
- * Shuffles an array in place.
+ * Shuffles an array in place using the Fisher-Yates algorithm.
  */
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -113,35 +128,29 @@ function shuffleArray(array) {
 }
 
 /**
- * UPDATED: Creates student groups, ensuring no student is ever left alone.
+ * Creates student groups based on the desired size.
  */
 function createStudentGroups(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
-    
     const groups = [];
-    if (shuffledStudents.length === 0 || groupSize <= 1) return [];
-
-    // Create as many full-sized groups as possible
     while (shuffledStudents.length >= groupSize) {
         groups.push(shuffledStudents.splice(0, groupSize));
     }
-
-    // Distribute any leftovers into the existing groups
-    let groupIndex = 0;
-    while (shuffledStudents.length > 0) {
-        if (groups.length === 0) { // Should not happen if groupSize > 1
-             groups.push([]);
+    if (shuffledStudents.length > 0) {
+        if (groupSize === 2 && shuffledStudents.length === 1) {
+            groups.push(shuffledStudents);
+        } else if (groups.length > 0) {
+            groups[groups.length - 1].push(...shuffledStudents);
+        } else {
+            groups.push(shuffledStudents);
         }
-        groups[groupIndex % groups.length].push(shuffledStudents.pop());
-        groupIndex++;
     }
-
     return groups;
 }
 
 /**
- * Main function to generate the chart based on the active mode.
+ * Main function to generate the chart, delegating to the correct sub-function.
  */
 function generateChart() {
     if (firstSelectedTile) {
@@ -160,15 +169,10 @@ function generateChart() {
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
     seatingChartGrid.innerHTML = '';
     
-    if (activeMode === 'individuals') {
+    if (activeGroupSize === 0) {
         generateIndividualChart(students);
     } else {
-        const groupSize = parseInt(groupSizeInput.value, 10);
-        if (isNaN(groupSize) || groupSize < 2) {
-            chartMessage.textContent = "Please enter a valid group size of 2 or more.";
-            return;
-        }
-        generateGroupChart(students, groupSize);
+        generateGroupChart(students, activeGroupSize);
     }
 }
 
@@ -180,12 +184,14 @@ function createInteractiveSeat(id) {
     seat.id = `seat-${id}`;
     seat.className = 'seat bg-white p-2 border border-gray-300 rounded-md shadow-sm text-center text-sm flex items-center justify-center min-h-[60px] cursor-pointer transition-all duration-150';
     seat.draggable = true;
+
     seat.addEventListener('dragstart', handleDragStart);
     seat.addEventListener('dragend', handleDragEnd);
     seat.addEventListener('dragover', handleDragOver);
     seat.addEventListener('dragleave', handleDragLeave);
     seat.addEventListener('drop', handleDrop);
     seat.addEventListener('click', handleTileClick);
+    
     return seat;
 }
 
@@ -201,6 +207,7 @@ function generateIndividualChart(students) {
 
     for (let i = 0; i < totalSeats; i++) {
         const seat = createInteractiveSeat(i);
+        
         if (i < students.length) {
             seat.textContent = students[i];
             seat.classList.add('font-semibold');
@@ -213,23 +220,20 @@ function generateIndividualChart(students) {
 }
 
 /**
- * UPDATED: Uses a specific horizontal placement for pairs and the
- * cluster algorithm for all other group sizes.
+ * Generates an interactive chart for groups.
  */
 function generateGroupChart(students, groupSize) {
     const groups = createStudentGroups(students, groupSize);
     const cols = 8;
-    const grid = []; // 2D array to track occupied cells
+    const grid = [];
     seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
     groups.forEach((group, groupIndex) => {
         const color = groupColors[groupIndex % groupColors.length];
-
-        // --- START: New Logic for Pairs ---
         if (groupSize === 2) {
             let placed = false;
             for (let r = 0; !placed; r++) {
-                for (let c = 0; c <= cols - 2; c++) { // Need space for 2
+                for (let c = 0; c <= cols - 2; c++) {
                     if (isSpotAvailable(grid, r, c, 2, 1)) {
                         placeGroup(grid, r, c, group, { w: 2, h: 1 }, color);
                         placed = true;
@@ -237,11 +241,8 @@ function generateGroupChart(students, groupSize) {
                     }
                 }
             }
-        } 
-        // --- END: New Logic for Pairs ---
-        
-        else { // Use the cluster algorithm for groups of 3+
-            const groupShape = { w: 2, h: 2 }; // Default shape for larger groups
+        } else {
+            const groupShape = { w: 2, h: 2 };
             let placed = false;
             for (let r = 0; !placed; r++) {
                 for (let c = 0; c <= cols - groupShape.w; c++) {
@@ -254,20 +255,36 @@ function generateGroupChart(students, groupSize) {
             }
         }
     });
-
     renderGrid(grid);
 }
 
-function findNextEmptyCell(grid, cols) {
-    const maxRows = grid.length + 1;
-    for (let r = 0; r < maxRows; r++) {
-        for (let c = 0; c < cols; c++) {
-            if (!grid[r] || !grid[r][c]) {
-                return { r, c };
+/**
+ * **THE FIX IS HERE**: Checks if a rectangular area in the grid is empty.
+ */
+function isSpotAvailable(grid, r, c, w, h) {
+    for (let i = r; i < r + h; i++) {
+        for (let j = c; j < c + w; j++) {
+            if (grid[i] && grid[i][j]) {
+                return false; // Spot is already taken
             }
         }
     }
-    return null;
+    return true; // Spot is available
+}
+
+/**
+ * Places a group's data into the 2D grid array.
+ */
+function placeGroup(grid, r, c, group, shape, color) {
+    let studentIndex = 0;
+    for (let i = r; i < r + shape.h; i++) {
+        if (!grid[i]) grid[i] = [];
+        for (let j = c; j < c + shape.w; j++) {
+            const studentName = studentIndex < group.length ? group[studentIndex] : "(Empty)";
+            grid[i][j] = { name: studentName, color: color };
+            studentIndex++;
+        }
+    }
 }
 
 /**
@@ -303,33 +320,19 @@ function renderGrid(grid) {
 }
 
 /**
- * Initializes the Teacher Tools page.
+ * Initializes the Teacher Tools page after the user is authenticated.
  */
 async function initializePageSpecificApp() {
-    generateIndividualsBtn.disabled = true;
-    generateGroupsBtn.disabled = true;
-
-    // --- Add Event Listeners ---
-    generateIndividualsBtn.addEventListener('click', () => {
-        activeMode = 'individuals';
-        updateActiveButton();
-        generateChart();
-    });
-    generateGroupsBtn.addEventListener('click', () => {
-        activeMode = 'groups';
-        updateActiveButton();
-        generateChart();
-    });
+    groupBtns.forEach(btn => btn.disabled = true);
     
-    classDropdown.addEventListener('change', () => {
-        const selectedClass = classDropdown.value;
-        if (selectedClass && selectedClass !== DEFAULT_CLASS_OPTION) {
-            const studentCount = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).length;
-            groupSizeInput.max = Math.floor(studentCount / 2);
-        }
-        activeMode = 'individuals';
-        updateActiveButton();
-        generateChart();
+    generateIndividualsBtn.addEventListener('click', () => { updateActiveButton(0); generateChart(); });
+    generatePairsBtn.addEventListener('click', () => { updateActiveButton(2); generateChart(); });
+    generateThreesBtn.addEventListener('click', () => { updateActiveButton(3); generateChart(); });
+    generateFoursBtn.addEventListener('click', () => { updateActiveButton(4); generateChart(); });
+    
+    classDropdown.addEventListener('change', () => { 
+        updateActiveButton(0); 
+        generateChart(); 
     });
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
@@ -338,9 +341,8 @@ async function initializePageSpecificApp() {
             populateCourseDropdownFromData();
             populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             classDropdown.removeAttribute("disabled");
-            generateIndividualsBtn.disabled = false;
-            generateGroupsBtn.disabled = false;
-            updateActiveButton();
+            groupBtns.forEach(btn => btn.disabled = false);
+            updateActiveButton(0);
         } catch (error) {
             console.error("Failed to initialize Teacher Tools with data:", error);
             showErrorAlert("Could not load class data. Please reload.");
@@ -357,8 +359,6 @@ function resetPageSpecificAppState() {
     classDropdown.setAttribute("disabled", "disabled");
     seatingChartGrid.innerHTML = '';
     chartMessage.textContent = "Select a class and click a button to generate a chart.";
-    generateIndividualsBtn.disabled = true;
-    generateGroupsBtn.disabled = true;
-    activeMode = 'individuals';
-    updateActiveButton();
+    groupBtns.forEach(btn => btn.disabled = true);
+    updateActiveButton(0);
 }
