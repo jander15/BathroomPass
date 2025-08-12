@@ -4,19 +4,15 @@
 const classDropdown = document.getElementById('classDropdown');
 const chartMessage = document.getElementById('chartMessage');
 const seatingChartGrid = document.getElementById('seatingChartGrid');
-const instructionsArea = document.getElementById('instructionsArea'); // Add this line
 
-
-// Generation buttons
+// New dynamic controls
 const generateIndividualsBtn = document.getElementById('generateIndividualsBtn');
-const generatePairsBtn = document.getElementById('generatePairsBtn');
-const generateThreesBtn = document.getElementById('generateThreesBtn');
-const generateFoursBtn = document.getElementById('generateFoursBtn');
-const groupBtns = [generateIndividualsBtn, generatePairsBtn, generateThreesBtn, generateFoursBtn];
+const groupSizeInput = document.getElementById('groupSizeInput');
+const generateGroupsBtn = document.getElementById('generateGroupsBtn');
 
 // --- State Management ---
 let firstSelectedTile = null;
-let activeGroupSize = 0; // 0 for individuals, 2 for pairs, etc.
+let activeMode = 'individuals'; // 'individuals' or 'groups'
 
 // --- Color Palette for Groups ---
 const groupColors = [
@@ -24,23 +20,17 @@ const groupColors = [
     '#fca5a5', '#fdba74', '#fde047', '#bef264', '#93c5fd', '#d8b4fe', '#f9a8d4'
 ];
 
-
-/**
- * UPDATED: Correctly swaps all properties of two seat elements,
- * including a full swap of their background colors.
- */
+// --- Interactivity Functions (Drag/Drop, Click-to-Swap) ---
 function swapTiles(tile1, tile2) {
-    // Swap text content (the student names)
+    // Swap text content
     const tempText = tile1.textContent;
     tile1.textContent = tile2.textContent;
     tile2.textContent = tempText;
 
-    // --- THE FIX IS HERE ---
-    // Perform a classic swap of the background color property
-    //const tempColor = tile1.style.backgroundColor;
-    //tile1.style.backgroundColor = tile2.style.backgroundColor;
-    //tile2.style.backgroundColor = tempColor;
-    // --- END OF FIX ---
+    // Swap background color
+    const tempColor = tile1.style.backgroundColor;
+    tile1.style.backgroundColor = tile2.style.backgroundColor;
+    tile2.style.backgroundColor = tempColor;
 
     // Swap classes for empty/non-empty status
     const tile1IsEmpty = tile1.classList.contains('text-gray-400');
@@ -56,8 +46,6 @@ function swapTiles(tile1, tile2) {
         tile2.classList.toggle('font-semibold');
     }
 }
-
-// --- Event Handlers for Drag and Drop ---
 function handleDragStart(e) {
     e.target.classList.add('dragging');
     e.dataTransfer.setData('text/plain', e.target.id);
@@ -86,8 +74,6 @@ function handleDrop(e) {
         swapTiles(draggedItem, dropTarget);
     }
 }
-
-// --- Event Handler for Click-to-Swap ---
 function handleTileClick(e) {
     const clickedTile = e.currentTarget;
     if (!firstSelectedTile) {
@@ -103,9 +89,6 @@ function handleTileClick(e) {
     }
 }
 
-/**
- * Updates the visual state of the generation buttons.
- */
 /**
  * Updates the visual state of the generation buttons.
  */
@@ -365,6 +348,7 @@ async function initializePageSpecificApp() {
         }
     }
 }
+
 /**
  * Resets the page state when the user signs out.
  */
@@ -373,9 +357,8 @@ function resetPageSpecificAppState() {
     classDropdown.setAttribute("disabled", "disabled");
     seatingChartGrid.innerHTML = '';
     chartMessage.textContent = "Select a class and click a button to generate a chart.";
-    groupBtns.forEach(btn => btn.disabled = true);
-    updateActiveButton(0);
-    if (instructionsArea) {
-        instructionsArea.textContent = '';
-    }
+    generateIndividualsBtn.disabled = true;
+    generateGroupsBtn.disabled = true;
+    activeMode = 'individuals';
+    updateActiveButton();
 }
