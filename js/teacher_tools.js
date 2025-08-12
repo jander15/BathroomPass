@@ -35,9 +35,9 @@ function swapTiles(tile1, tile2) {
 
     // --- THE FIX IS HERE ---
     // Perform a classic swap of the background color property
-    const tempColor = tile1.style.backgroundColor;
-    tile1.style.backgroundColor = tile2.style.backgroundColor;
-    tile2.style.backgroundColor = tempColor;
+    //const tempColor = tile1.style.backgroundColor;
+    //tile1.style.backgroundColor = tile2.style.backgroundColor;
+    //tile2.style.backgroundColor = tempColor;
     // --- END OF FIX ---
 
     // Swap classes for empty/non-empty status
@@ -136,20 +136,38 @@ function shuffleArray(array) {
 }
 
 /**
- * Creates student groups based on the desired size.
+ * UPDATED: Creates student groups with special handling for a single
+ * leftover student when creating pairs.
+ * @param {string[]} students The list of student names.
+ * @param {number} groupSize The target size for each group.
+ * @returns {string[][]} An array of groups.
  */
 function createStudentGroups(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
+    
     const groups = [];
     while (shuffledStudents.length >= groupSize) {
         groups.push(shuffledStudents.splice(0, groupSize));
     }
-    if (shuffledStudents.length === 1 && groups.length > 0) {
-        groups[groups.length - 1].push(shuffledStudents.pop());
-    } else if (shuffledStudents.length > 0) {
-        groups.push(shuffledStudents);
+
+    // --- START: Updated Leftover Logic ---
+    if (shuffledStudents.length > 0) {
+        // If the group size is 2 and there's one person left, let them be a solo group.
+        if (groupSize === 2 && shuffledStudents.length === 1) {
+            groups.push(shuffledStudents);
+        } 
+        // For all other cases (groups of 3, 4, or 2 leftovers for pairs), add them to the last group.
+        else if (groups.length > 0) {
+            groups[groups.length - 1].push(...shuffledStudents);
+        } 
+        // If no groups were formed yet (e.g., 3 students in groups of 4), they form their own group.
+        else {
+            groups.push(shuffledStudents);
+        }
     }
+    // --- END: Updated Leftover Logic ---
+
     return groups;
 }
 
