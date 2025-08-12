@@ -217,35 +217,64 @@ function generateIndividualChart(students) {
 }
 
 /**
- * Generates a chart using the "cluster" algorithm for dynamic group sizes.
+ * UPDATED: Uses a specific horizontal placement for pairs and the
+ * cluster algorithm for all other group sizes.
  */
 function generateGroupChart(students, groupSize) {
     const groups = createStudentGroups(students, groupSize);
     const cols = 8;
-    const grid = [];
-    groups.forEach((group) => {
-        const color = groupColors[Math.floor(Math.random() * groupColors.length)];
-        let startPos = findNextEmptyCell(grid, cols);
-        if (!startPos) return;
-        let placedMembers = 0;
-        let clusterQueue = [startPos];
-        while(placedMembers < group.length) {
-            const currentPos = clusterQueue.shift();
-            if (!currentPos || (grid[currentPos.r] && grid[currentPos.r][currentPos.c])) {
-                if(clusterQueue.length === 0) clusterQueue.push(findNextEmptyCell(grid, cols));
-                continue;
+    const grid = []; // 2D array to track occupied cells
+    seatingChartGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    groups.forEach((group, groupIndex) => {
+        const color = groupColors[groupIndex % groupColors.length];
+
+        // --- START: New Logic for Pairs ---
+        if (groupSize === 2) {
+            let placed = false;
+            for (let r = 0; !placed; r++) {
+                // Find the next available spot that can fit a 2x1 block
+                for (let c = 0; c <= cols - 2; c++) { 
+                    if (isSpotAvailable(grid, r, c, 2, 1)) {
+                        placeGroup(grid, r, c, group, { w: 2, h: 1 }, color);
+                        placed = true;
+                        break;
+                    }
+                }
             }
-            if (!grid[currentPos.r]) grid[currentPos.r] = [];
-            grid[currentPos.r][currentPos.c] = { name: group[placedMembers], color: color };
-            placedMembers++;
-            const neighbors = [
-                { r: currentPos.r, c: currentPos.c + 1 }, { r: currentPos.r + 1, c: currentPos.c },
-                { r: currentPos.r, c: currentPos.c - 1 }, { r: currentPos.r - 1, c: currentPos.c }
-            ];
-            shuffleArray(neighbors);
-            clusterQueue.push(...neighbors.filter(n => n.r >= 0 && n.c >= 0 && n.c < cols));
+        } 
+        // --- END: New Logic for Pairs ---
+        
+        else { // Use the flexible cluster algorithm for groups of 3+
+            let startPos = findNextEmptyCell(grid, cols);
+            if (!startPos) return;
+
+            let placedMembers = 0;
+            let clusterQueue = [startPos];
+            
+            while(placedMembers < group.length) {
+                const currentPos = clusterQueue.shift();
+                if (!currentPos || (grid[currentPos.r] && grid[currentPos.r][currentPos.c])) {
+                    if(clusterQueue.length === 0) clusterQueue.push(findNextEmptyCell(grid, cols));
+                    continue;
+                }
+
+                if (!grid[currentPos.r]) grid[currentPos.r] = [];
+                grid[currentPos.r][currentPos.c] = { name: group[placedMembers], color: color };
+                placedMembers++;
+
+                const neighbors = [
+                    { r: currentPos.r, c: currentPos.c + 1 }, // Right
+                    { r: currentPos.r + 1, c: currentPos.c }, // Down
+                    { r: currentPos.r, c: currentPos.c - 1 }, // Left
+                    { r: currentPos.r - 1, c: currentPos.c }  // Up
+                ];
+                shuffleArray(neighbors);
+                clusterQueue.push(...neighbors.filter(n => n.r >= 0 && n.c >= 0 && n.c < cols));
+            }
         }
     });
+
     renderGrid(grid);
 }
 
