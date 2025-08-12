@@ -35,7 +35,10 @@ function cacheToolsDOMElements() {
     groupBtns = [generateIndividualsBtn, generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
-/** Initializes or re-initializes the Draggable.js Sortable functionality. */
+/**
+ * MODIFIED: Initializes or re-initializes the Draggable.js Sortable functionality,
+ * now with logic to prevent nesting group containers.
+ */
 function initializeSortable() {
     if (sortableInstance) {
         sortableInstance.destroy();
@@ -50,29 +53,22 @@ function initializeSortable() {
         plugins: [Draggable.Plugins.ResizeMirror],
     });
 
-    // --- NEW: Logic to prevent container nesting ---
-    sortableInstance.on('sortable:start', (evt) => {
-        if (evt.data.source.classList.contains('group-container')) {
-            document.querySelectorAll('.group-container').forEach(container => {
-                if (container !== evt.data.source) {
-                    container.classList.add('invalid-drop-target');
-                }
-            });
+    // --- REVISED LOGIC: Prevent container nesting ---
+    sortableInstance.on('drag:over', (evt) => {
+        // If the item being dragged is not a group container, do nothing.
+        if (!evt.data.source.classList.contains('group-container')) {
+            return;
         }
-    });
 
-    sortableInstance.on('drag:over:container', (evt) => {
-        if (evt.overContainer.classList.contains('invalid-drop-target')) {
+        // If the item being dragged OVER is another group container, or is a seat
+        // inside another group container, cancel the drag operation.
+        const overElement = evt.data.over;
+        if (overElement.classList.contains('group-container') || overElement.closest('.group-container')) {
             evt.cancel();
         }
     });
-
-    sortableInstance.on('sortable:stop', () => {
-        document.querySelectorAll('.group-container').forEach(container => {
-            container.classList.remove('invalid-drop-target');
-        });
-    });
 }
+
 
 /** Updates the visual state of the generation buttons. */
 function updateActiveButton(activeBtn) {
