@@ -193,8 +193,8 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
 }
 
 /**
- * UPDATED: Makes an authenticated POST request with more robust error handling
- * to prevent the "body stream already read" error.
+ * MODIFIED: Makes an authenticated POST request with more robust error handling
+ * and a retry mechanism to handle "wake from sleep" network issues.
  */
 async function sendAuthenticatedRequest(payload, isRetry = false) {
     if (!appState.currentUser.idToken) {
@@ -204,70 +204,81 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
     payload.userEmail = appState.currentUser.email;
     payload.idToken = appState.currentUser.idToken;
 
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
+    // --- NEW: Retry Loop ---
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.error === "SESSION_EXPIRED") {
+                        throw new Error("SESSION_EXPIRED");
+                    }
+                    throw new Error(errorJson.error || `Server returned an error: ${errorText}`);
+                } catch (e) {
+                    if (e.message === "SESSION_EXPIRED") throw e;
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                }
+            }
+            // If the fetch was successful, return the JSON and exit the loop.
+            return await response.json();
+
+        } catch (error) {
+            // This catch block now handles both network errors and thrown session errors.
+
+            // If it's a session error, proceed to the refresh logic immediately.
+            if (error.message === "SESSION_EXPIRED") {
+                if (isRetry) throw error; // Prevent infinite refresh loops.
+                // Break the retry loop and let the outer refresh logic handle it.
+                break;
+            }
+
+            // If it's another type of error (likely a network failure)...
+            console.warn(`Request attempt ${attempt} failed: ${error.message}`);
+            if (attempt === MAX_ATTEMPTS) {
+                // If this was the last attempt, throw the error to be handled by the caller.
+                throw error;
+            }
+            // Wait for a moment before the next attempt.
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        }
+    }
+    // --- End Retry Loop ---
+
+    // This section is now only reached if the retry loop breaks due to "SESSION_EXPIRED".
     try {
-        const response = await fetch(API_URL, {
+        console.warn("Session expired. Attempting silent refresh...");
+        const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
+        
+        const refreshResponse = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+            body: JSON.stringify(refreshPayload)
+        }).then(res => res.json());
 
-        // This block now handles ALL non-successful (non-2xx) responses.
-        if (!response.ok) {
-            const errorText = await response.text(); // Read the error body text ONCE.
-            try {
-                // Check if the server sent a specific JSON error message.
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.error === "SESSION_EXPIRED") {
-                    throw new Error("SESSION_EXPIRED"); // Handle session expiry for token refresh.
-                }
-                // If it's a different JSON error, throw its specific message.
-                throw new Error(errorJson.error || `Server returned an error: ${errorText}`);
-            } catch (e) {
-                // If the error response wasn't JSON, or if it was the SESSION_EXPIRED error,
-                // this catch block will handle it.
-                if (e.message === "SESSION_EXPIRED") {
-                    throw e; // Re-throw the specific error for the refresh logic.
-                }
-                // Otherwise, it was a non-JSON error. Throw the generic HTTP error.
-                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-            }
+        if (refreshResponse.result === 'success' && refreshResponse.idToken) {
+            console.log("Token successfully refreshed. Retrying original request.");
+            appState.currentUser.idToken = refreshResponse.idToken;
+            return await sendAuthenticatedRequest(payload, true);
+        } else {
+            const failureReason = refreshResponse.details || 'unknown_frontend_error';
+            console.error(`Token refresh failed. Reason: ${failureReason}`);
+            handleGoogleSignOut();
+            throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
         }
-
-        // This line is ONLY reached if the response was successful (response.ok is true).
-        return await response.json();
-
-    } catch (error) {
-        // This outer catch handles network failures and any errors we've thrown above.
-        if (error.message === "SESSION_EXPIRED" && !isRetry) {
-            console.warn("Session expired. Attempting silent refresh...");
-            try {
-                const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
-                
-                const refreshResponse = await fetch(API_URL, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify(refreshPayload)
-                }).then(res => res.json());
-
-                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
-                    console.log("Token successfully refreshed. Retrying original request.");
-                    appState.currentUser.idToken = refreshResponse.idToken;
-                    return await sendAuthenticatedRequest(payload, true);
-                } else {
-                    const failureReason = refreshResponse.details || 'unknown_frontend_error';
-                    console.error(`Token refresh failed. Reason: ${failureReason}`);
-                    handleGoogleSignOut();
-                    throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
-                }
-            } catch (e) {
-                 console.error("A critical error occurred during the refresh attempt:", e);
-                 handleGoogleSignOut();
-                 throw new Error("Your session has expired. Please sign in again.");
-            }
-        }
-        
-        // Re-throw the error so the calling function knows something went wrong.
-        throw error;
+    } catch (e) {
+        console.error("A critical error occurred during the refresh attempt:", e);
+        handleGoogleSignOut();
+        throw new Error("Your session has expired. Please sign in again.");
     }
 }
 
