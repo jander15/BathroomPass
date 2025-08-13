@@ -373,6 +373,12 @@ function resetMainPassUI() {
     minutesSpan.textContent = appState.timer.minutes;
     secondsSpan.textContent = "00";
     
+    // --- FIX: Reset the Sign Out Button State ---
+    signOutButton.disabled = false;
+    signOutButton.textContent = "Sign Out";
+    signOutButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    // --- End Fix ---
+
     signInButton.style.display = "none";
     signInButton.disabled = false;
     signInButton.classList.remove('opacity-50', 'cursor-not-allowed');
