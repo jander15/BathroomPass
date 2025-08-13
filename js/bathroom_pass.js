@@ -65,15 +65,18 @@ function startInfoBarClock() {
 }
 
 /**
- * UPDATED: Now conditionally updates dropdowns to prevent unnecessary resets.
+ * UPDATED: Now makes a single, combined request to the backend for efficiency.
  */
 async function syncAppState() {
     try {
-        const [liveState, travelState, departingList] = await Promise.all([
-            sendAuthenticatedRequest({ action: 'getLiveState' }),
-            sendAuthenticatedRequest({ action: 'getTravelingStudents' }),
-            sendAuthenticatedRequest({ action: 'getDepartingStudentList' })
-        ]);
+        // Make a single call to the new, consolidated endpoint
+        const syncData = await sendAuthenticatedRequest({ action: 'getLiveSyncData' });
+
+        if (syncData.result !== 'success') {
+            throw new Error(syncData.error || "Failed to get sync data from server.");
+        }
+
+        const { liveState, travelState, departingList } = syncData;
 
         // --- START: New Timestamp Logic ---
         appState.ui.lastPoll = new Date();
@@ -82,15 +85,9 @@ async function syncAppState() {
         }
         // --- END: New Timestamp Logic ---
 
-        if (departingList.debug) {
-            console.log("--- Backend Debug Log ---");
-            departingList.debug.forEach(log => console.log(log));
-            console.log("-------------------------");
-        }
-
         // --- Process Traveling and Departing Students (every poll) ---
         let activelyTravelingStudents = [];
-        if (travelState.result === 'success' && travelState.students) {
+        if (travelState.students) {
             const allTravelers = travelState.students || [];
             activelyTravelingStudents = allTravelers
                 .filter(student => student.Timestamp !== "arrived")
@@ -100,25 +97,23 @@ async function syncAppState() {
             populateDropdown('travelSignInName', normalizedArriving, DEFAULT_NAME_OPTION);
         }
         
-        if (departingList.result === 'success' && departingList.students) {
+        if (departingList.students) {
             const finalDepartingList = departingList.students.filter(student => !activelyTravelingStudents.includes(student));
             const normalizedDeparting = finalDepartingList.map(name => normalizeName(name));
             populateDropdown('travelSignOutName', normalizedDeparting, DEFAULT_NAME_OPTION);
         }
         
-        // Enable travel dropdowns and update their button states
         travelSignOutName.removeAttribute("disabled");
         travelSignInName.removeAttribute("disabled");
         handleTravelSignOutChange();
         handleTravelSignInChange();
-
 
         // --- Handle Class Changes and Main Pass Dropdowns (conditionally) ---
         const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
         
         if (classHasChanged) {
             console.log(`Class changed from ${appState.ui.currentClassPeriod} to ${liveState.currentClass}`);
-            if (appState.ui.currentClassPeriod && !appState.passHolder) { // Only show alert if class changes mid-period
+            if (appState.ui.currentClassPeriod && !appState.passHolder) {
                 let alertMessage = "Class period changed. ";
                 if (appState.queue.length > 0) {
                     appState.queue = [];
@@ -127,7 +122,6 @@ async function syncAppState() {
                 }
                 showSuccessAlert(alertMessage.trim());
             }
-            // Update the main pass dropdowns since the class has changed
             updateMainPassDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
         }
         
@@ -143,7 +137,6 @@ async function syncAppState() {
         }
     }
 }
-
 
 
 /**
