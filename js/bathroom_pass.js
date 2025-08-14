@@ -652,6 +652,25 @@ function updateQueueMessage(message) {
 }
 
 /**
+ * Shows or hides the Queue tab button based on the application state.
+ */
+function updateQueueTabVisibility() {
+    const isPassHolderOut = appState.passHolder !== null;
+    const isQueuePopulated = appState.queue.length > 0;
+
+    if (isPassHolderOut || isQueuePopulated) {
+        queueViewBtn.classList.remove('hidden');
+    } else {
+        queueViewBtn.classList.add('hidden');
+        // If the queue tab is currently active and needs to be hidden,
+        // switch to a default view to avoid a blank space.
+        if (appState.ui.currentRightView === 'queue') {
+            showTravelPassView();
+        }
+    }
+}
+
+/**
  * Updates the visual display of the queue.
  */
 function updateQueueDisplay() {
@@ -684,7 +703,8 @@ function updateQueueDisplay() {
             queueList.appendChild(listItem);
         });
     }
-    toggleAddToQueueButtonVisibility(); 
+    toggleAddToQueueButtonVisibility();
+    updateQueueTabVisibility();
 }
 
 /**
@@ -925,6 +945,8 @@ async function initializePageSpecificApp() {
         populateDropdown(id, [], DEFAULT_NAME_OPTION, "");
         if(document.getElementById(id)) document.getElementById(id).setAttribute("disabled", "disabled");
     });
+    populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
+
     signOutButton.style.display = "none";
     signInButton.style.display = "none";
 
