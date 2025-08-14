@@ -653,7 +653,7 @@ function updateQueueMessage(message) {
 }
 
 /**
- * Shows or hides the Queue tab button based on the application state.
+ * MODIFIED: Now also manages the border radius of the Late Sign In button.
  */
 function updateQueueTabVisibility() {
     const isPassHolderOut = appState.passHolder !== null;
@@ -661,10 +661,13 @@ function updateQueueTabVisibility() {
 
     if (isPassHolderOut || isQueuePopulated) {
         queueViewBtn.classList.remove('hidden');
+        // When the Queue button is visible, the Late Sign In button has square corners.
+        lateSignInViewBtn.classList.remove('rounded-tl-lg');
     } else {
         queueViewBtn.classList.add('hidden');
-        // If the queue tab is currently active and needs to be hidden,
-        // switch to a default view to avoid a blank space.
+        // When the Queue button is hidden, the Late Sign In button gets the rounded corner.
+        lateSignInViewBtn.classList.add('rounded-tl-lg');
+        
         if (appState.ui.currentRightView === 'queue') {
             showTravelPassView();
         }
