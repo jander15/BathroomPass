@@ -726,7 +726,7 @@ function toggleAddToQueueButtonVisibility() {
 }
 
 /**
- * Handles adding a student to the queue.
+ * MODIFIED: Resets the queue dropdown to the default prompt after adding a name.
  */
 function handleAddToQueueClick() {
     const name = nameQueueDropdown.value.trim();
@@ -740,8 +740,11 @@ function handleAddToQueueClick() {
     } else {
         appState.queue.push(name);
         updateQueueMessage(`${name} has been added to the queue.`);
-        updateQueueDisplay();
+        
+        // --- THE FIX: Change this line ---
         nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
+        
+        updateQueueDisplay();
 
         if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
             const nextPerson = appState.queue.shift();
