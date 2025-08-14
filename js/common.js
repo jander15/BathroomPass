@@ -330,8 +330,7 @@ function populateCourseDropdownFromData() {
 // --- Google Sign-In Initialization & Handlers ---
 
 /**
- * FINAL VERSION: Uses a setTimeout to ensure the UI update happens after
- * all other rendering, fixing the black screen issue.
+ * MODIFIED: Now stores the user's email in localStorage on successful sign-in.
  */
 async function handleSignIn(authCode) {
     try {
@@ -349,6 +348,9 @@ async function handleSignIn(authCode) {
         if (tokenData.result === 'success' && tokenData.idToken) {
             const profile = decodeJwtResponse(tokenData.idToken);
             
+            // --- NEW: Store email for silent sign-in ---
+            localStorage.setItem('lastUserEmail', profile.email);
+
             appState.currentUser.email = profile.email;
             appState.currentUser.name = profile.name;
             appState.currentUser.profilePic = profile.picture;
@@ -356,18 +358,13 @@ async function handleSignIn(authCode) {
 
             console.log("User signed in and tokens exchanged successfully!");
 
-            // --- THE FIX IS HERE ---
-            // Use a 100ms timeout. This gives the browser ample time to settle
-            // before we attempt to change the visibility of major page elements.
             setTimeout(() => {
                 if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 
-                // Forcefully hide the entire sign-in page
                 if (signInPage) signInPage.style.display = 'none'; 
                 
-                // Show the main application content
                 if (appContent) {
                     appContent.classList.remove('hidden');
                     appContent.style.display = 'flex';
@@ -376,11 +373,10 @@ async function handleSignIn(authCode) {
                 if (bodyElement) bodyElement.classList.remove('justify-center');
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
 
-                // Initialize the page-specific JavaScript
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
                 }
-            }, 100); // Using 100ms for a more reliable rendering pause.
+            }, 100);
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
@@ -448,16 +444,21 @@ function initGoogleSignIn() {
 }
 
 /**
- * Handles Google Sign-Out.
+ * MODIFIED: Handles Google Sign-Out and clears the stored email.
  */
 function handleGoogleSignOut() {
-    // No need to call google.accounts.id.disableAutoSelect() as we aren't using that flow.
+    // --- NEW: Clear stored email on sign-out ---
+    localStorage.removeItem('lastUserEmail');
+
     console.log('User signed out.');
     
     appState.currentUser = { email: '', name: '', profilePic: '', idToken: '' };
 
     if (appContent) appContent.classList.add('hidden');
-    if (signInPage) signInPage.classList.remove('hidden');
+    if (signInPage) {
+        signInPage.classList.remove('hidden');
+        signInPage.style.display = 'flex'; // Ensure it's visible
+    }
     if (bodyElement) bodyElement.classList.add('justify-center');
     if (profileMenuContainer) profileMenuContainer.classList.add('hidden');
     if (profileDropdown) profileDropdown.classList.add('hidden');
@@ -467,9 +468,82 @@ function handleGoogleSignOut() {
     }
 }
 
-// --- Main App Initialization Flow (Centralized DOMContentLoaded handling) ---
-// This ensures common DOM elements are cached and GSI is initialized after the DOM is ready.
-document.addEventListener('DOMContentLoaded', () => {
-    cacheCommonDOMElements(); // Cache all common DOM elements first
-    initGoogleSignIn();        // Then initialize GSI and render button
+/**
+ * NEW: Attempts to sign the user in automatically on page load using a refresh token.
+ */
+async function attemptSilentSignIn() {
+    const lastUserEmail = localStorage.getItem('lastUserEmail');
+    if (!lastUserEmail) {
+        // No stored user, so show the regular sign-in button.
+        return false;
+    }
+
+    console.log(`Found stored user: ${lastUserEmail}. Attempting silent sign-in...`);
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+
+    try {
+        const refreshPayload = {
+            action: ACTION_REFRESH_TOKEN,
+            userEmail: lastUserEmail
+        };
+        const tokenData = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(refreshPayload)
+        }).then(res => res.json());
+
+        if (tokenData.result === 'success' && tokenData.idToken) {
+            console.log("Silent sign-in successful.");
+            const profile = decodeJwtResponse(tokenData.idToken);
+
+            appState.currentUser.email = profile.email;
+            appState.currentUser.name = profile.name;
+            appState.currentUser.profilePic = profile.picture;
+            appState.currentUser.idToken = tokenData.idToken;
+
+            // Transition the UI to the main app view
+            setTimeout(() => {
+                if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+                if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+                if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+
+                if (signInPage) signInPage.style.display = 'none';
+                if (appContent) {
+                    appContent.classList.remove('hidden');
+                    appContent.style.display = 'flex';
+                }
+                if (bodyElement) bodyElement.classList.remove('justify-center');
+                if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+
+                if (typeof initializePageSpecificApp === 'function') {
+                    initializePageSpecificApp();
+                }
+            }, 100);
+
+            return true; // Silent sign-in succeeded
+        } else {
+            throw new Error(tokenData.details || "Refresh token was rejected.");
+        }
+    } catch (error) {
+        console.warn("Silent sign-in failed:", error.message);
+        // If it fails, clear the bad email and fall back to manual sign-in.
+        localStorage.removeItem('lastUserEmail');
+        return false; // Silent sign-in failed
+    } finally {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    }
+}
+
+
+// --- Main App Initialization Flow (MODIFIED) ---
+document.addEventListener('DOMContentLoaded', async () => {
+    cacheCommonDOMElements();
+    
+    // First, try to sign in silently.
+    const silentSignInSuccess = await attemptSilentSignIn();
+
+    // If silent sign-in fails, then initialize the manual sign-in button.
+    if (!silentSignInSuccess) {
+        initGoogleSignIn();
+    }
 });
