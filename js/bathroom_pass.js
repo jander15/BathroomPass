@@ -195,15 +195,6 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
  * Central function to manage the state of the queue dropdown and buttons.
  */
 function updateQueueControls() {
-    const isClassSelected = !!appState.ui.currentClassPeriod;
-    const isPassInUse = appState.passHolder || appState.queue.length > 0;
-
-    if (isClassSelected && (!appState.ui.isPassEnabled || isPassInUse)) {
-        nameQueueDropdown.removeAttribute("disabled");
-    } else {
-        nameQueueDropdown.setAttribute("disabled", "disabled");
-    }
-
     toggleAddToQueueButtonVisibility();
 }
 
@@ -952,11 +943,12 @@ async function initializePageSpecificApp() {
     mainForm.style.backgroundColor = '#d1d5db'; // Match the header
     // --- End New ---
 
-    const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
+    const nameDropdownsToInit = ['nameDropdown', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
     nameDropdownsToInit.forEach(id => {
         populateDropdown(id, [], DEFAULT_NAME_OPTION, "");
         if(document.getElementById(id)) document.getElementById(id).setAttribute("disabled", "disabled");
     });
+    populateDropdown('nameQueue', [], DEFAULT_NAME_OPTION, "");
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
     signOutButton.style.display = "none";
     signInButton.style.display = "none";
