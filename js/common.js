@@ -362,7 +362,8 @@ async function handleSignIn(authCode) {
                 if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-                
+                if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
+
                 if (signInPage) signInPage.style.display = 'none'; 
                 
                 if (appContent) {
@@ -506,6 +507,7 @@ async function attemptSilentSignIn() {
                 if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+                if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
                 if (signInPage) signInPage.style.display = 'none';
                 if (appContent) {

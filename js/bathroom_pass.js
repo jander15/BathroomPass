@@ -953,8 +953,6 @@ async function initializePageSpecificApp() {
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         startInfoBarClock();
-        infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
-
         try {
             await loadInitialPassData();
             await syncAppState();
