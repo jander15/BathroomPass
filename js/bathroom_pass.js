@@ -30,7 +30,6 @@ const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
 const formDisabledOverlay = document.getElementById('formDisabledOverlay');
 const rightSideFormsContainer = document.getElementById('rightSideFormsContainer');
 const infoBarDateTime = document.getElementById('infoBarDateTime');
-//const infoBarTeacher = document.getElementById('infoBarTeacher');
 const infoBarClass = document.getElementById('infoBarClass');
 const travelPassViewBtn = document.getElementById('travelPassViewBtn');
 const travelPassArea = document.getElementById('travelPassArea');

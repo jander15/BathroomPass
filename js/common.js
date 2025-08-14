@@ -24,6 +24,8 @@ const FORM_COLOR_TARDY = "#ef4444"; // Red
 const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
+const infoBarTeacher = document.getElementById('infoBarTeacher');
+
 
 
 // --- Global State Management ---
