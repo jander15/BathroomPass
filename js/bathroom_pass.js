@@ -952,6 +952,14 @@ async function initializePageSpecificApp() {
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         startInfoBarClock();
+        // --- ADD THIS EVENT LISTENER ---
+        // This will trigger a sync immediately when the user returns to the tab.
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'visible') {
+                console.log("Tab is visible again, forcing a sync.");
+                syncAppState();
+            }
+        });
         try {
             await loadInitialPassData();
             await syncAppState();
