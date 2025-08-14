@@ -534,11 +534,11 @@ async function attemptSilentSignIn() {
     }
 }
 
-
-// --- Main App Initialization Flow (MODIFIED) ---
-document.addEventListener('DOMContentLoaded', async () => {
-    cacheCommonDOMElements();
-    
+/**
+ * NEW: This function is called by the onload attribute in the Google script tag.
+ * It ensures that our sign-in logic only runs after Google's library is fully loaded.
+ */
+async function onGoogleLibraryLoad() {
     // First, try to sign in silently.
     const silentSignInSuccess = await attemptSilentSignIn();
 
@@ -546,4 +546,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!silentSignInSuccess) {
         initGoogleSignIn();
     }
+}
+
+
+// --- Main App Initialization Flow (MODIFIED) ---
+// This now only caches DOM elements, as the sign-in logic has been moved.
+document.addEventListener('DOMContentLoaded', () => {
+    cacheCommonDOMElements();
 });
