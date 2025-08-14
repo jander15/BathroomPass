@@ -931,15 +931,20 @@ function showLateSignInView() {
 
 
 /**
- * UPDATED: Correctly restores the full student name to the dropdown on page load.
+ * MODIFIED: Sets an initial "loading" state for the UI before fetching data.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
     studentOutNameSpan.textContent = '';
-    headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-    studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+
+    // --- NEW: Set initial loading state ---
+    headerStatusSpan.textContent = "Loading Class...";
+    studentOutHeader.style.backgroundColor = '#d1d5db'; // A neutral gray color
+    mainForm.style.backgroundColor = '#d1d5db'; // Match the header
+    // --- End New ---
+
     const nameDropdownsToInit = ['nameDropdown', 'nameQueue', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
     nameDropdownsToInit.forEach(id => {
         populateDropdown(id, [], DEFAULT_NAME_OPTION, "");
@@ -955,32 +960,26 @@ async function initializePageSpecificApp() {
         infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
 
         try {
-            // Load the full student roster first; it's needed for the dropdown lookup.
             await loadInitialPassData();
-            
-            // Perform the first full sync to populate dropdowns etc.
-            // We need the dropdowns populated BEFORE we try to set the value.
             await syncAppState(); 
             
             const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
-            const currentClass = appState.ui.currentClassPeriod; // Get class from the sync
+            const currentClass = appState.ui.currentClassPeriod; 
             
+            // If a student is already out, this logic will override the loading state.
+            // If not, the loading state will persist until the sync runs again.
             if (bathroomState.result === 'success' && bathroomState.passHolders.length > 0 && currentClass) {
                 const outStudent = bathroomState.passHolders.find(holder => 
                     holder.Class && holder.Class.trim() === currentClass.trim()
                 );
                 
                 if (outStudent) {
-                    // --- THE FIX ---
-                    // Find the full student name from the roster that matches the simple name.
                     const fullStudentName = appState.data.allNamesFromSheet.find(student => 
                         student.Class === currentClass && normalizeName(student.Name) === outStudent.Name
-                    )?.Name || outStudent.Name; // Fallback to the simple name if not found.
+                    )?.Name || outStudent.Name; 
 
-                    // Set the dropdown value AND the passHolder to the full name.
                     nameDropdown.value = fullStudentName;
                     appState.passHolder = fullStudentName;
-                    // --- END THE FIX ---
                     
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
                     
@@ -997,9 +996,13 @@ async function initializePageSpecificApp() {
                     if (appState.timer.intervalId) clearInterval(appState.timer.intervalId);
                     appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
                 }
+            } else {
+                // If no student is out, now we can safely set the "available" state.
+                headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+                studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+                mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
             }
 
-            // Set up polling
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(syncAppState, 15000);
 
@@ -1015,7 +1018,7 @@ async function initializePageSpecificApp() {
     showTravelPassView();
     handleTravelDepartingClick();
     handleLateNameSelectionChange();
-    updateQueueTabVisibility(); // Initial check for queue tab visibility
+    updateQueueTabVisibility(); 
 }
 
 /**
