@@ -929,19 +929,16 @@ function showLateSignInView() {
 
 
 /**
- * MODIFIED: Sets an initial "loading" state for the UI before fetching data.
+ * MODIFIED: Now correctly checks for tardiness on initial load to prevent color flashing.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
     studentOutNameSpan.textContent = '';
-
-    // --- NEW: Set initial loading state ---
     headerStatusSpan.textContent = "Loading Class...";
-    studentOutHeader.style.backgroundColor = '#d1d5db'; // A neutral gray color
-    mainForm.style.backgroundColor = '#d1d5db'; // Match the header
-    // --- End New ---
+    studentOutHeader.style.backgroundColor = '#d1d5db';
+    mainForm.style.backgroundColor = '#d1d5db';
 
     const nameDropdownsToInit = ['nameDropdown', 'lateNameDropdown', 'travelSignOutName', 'travelSignInName'];
     nameDropdownsToInit.forEach(id => {
@@ -960,44 +957,48 @@ async function initializePageSpecificApp() {
 
         try {
             await loadInitialPassData();
-            await syncAppState(); 
+            await syncAppState();
             rightSideFormsContainer.classList.remove('hidden');
 
             const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
-            const currentClass = appState.ui.currentClassPeriod; 
-            
-            // If a student is already out, this logic will override the loading state.
-            // If not, the loading state will persist until the sync runs again.
+            const currentClass = appState.ui.currentClassPeriod;
+
             if (bathroomState.result === 'success' && bathroomState.passHolders.length > 0 && currentClass) {
-                const outStudent = bathroomState.passHolders.find(holder => 
+                const outStudent = bathroomState.passHolders.find(holder =>
                     holder.Class && holder.Class.trim() === currentClass.trim()
                 );
-                
+
                 if (outStudent) {
-                    const fullStudentName = appState.data.allNamesFromSheet.find(student => 
+                    const fullStudentName = appState.data.allNamesFromSheet.find(student =>
                         student.Class === currentClass && normalizeName(student.Name) === outStudent.Name
-                    )?.Name || outStudent.Name; 
+                    )?.Name || outStudent.Name;
 
                     nameDropdown.value = fullStudentName;
                     appState.passHolder = fullStudentName;
-                    
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
-                    
+
+                    // --- THE FIX: Check for tardiness immediately on load ---
+                    const elapsedTimeSeconds = (new Date().getTime() - appState.timer.startTime) / 1000;
+                    const isTardy = Math.floor(elapsedTimeSeconds / 60) >= TARDY_THRESHOLD_MINUTES;
+                    appState.timer.isTardy = isTardy; // Set the state
+
+                    const initialColor = isTardy ? FORM_COLOR_TARDY : FORM_COLOR_OUT;
+                    studentOutHeader.style.backgroundColor = initialColor;
+                    mainForm.style.backgroundColor = initialColor;
+                    // --- End Fix ---
+
                     studentOutNameSpan.textContent = outStudent.Name;
                     headerStatusSpan.textContent = STATUS_IS_OUT;
-                    studentOutHeader.style.backgroundColor = FORM_COLOR_OUT;
-                    mainForm.style.backgroundColor = FORM_COLOR_OUT;
 
                     signOutButton.style.display = "none";
                     signInButton.style.display = "block";
                     nameDropdown.setAttribute("disabled", "disabled");
                     emojiDropdown.setAttribute("disabled", "disabled");
-                    
+
                     if (appState.timer.intervalId) clearInterval(appState.timer.intervalId);
                     appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
                 }
-            } else {
-                // If no student is out, now we can safely set the "available" state.
+            } else if (!appState.passHolder) {
                 headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
                 studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
                 mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
@@ -1014,11 +1015,10 @@ async function initializePageSpecificApp() {
     } else {
         console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
-    
+
     showLateSignInView();
-    handleTravelDepartingClick();
     handleLateNameSelectionChange();
-    updateQueueTabVisibility(); 
+    updateQueueTabVisibility();
 }
 
 /**
