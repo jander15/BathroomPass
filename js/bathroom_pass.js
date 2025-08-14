@@ -931,7 +931,7 @@ function showLateSignInView() {
 
 
 /**
- * UPDATED: Added detailed logging to debug the state restoration process.
+ * UPDATED: Correctly restores the full student name to the dropdown on page load.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
@@ -946,7 +946,6 @@ async function initializePageSpecificApp() {
         if(document.getElementById(id)) document.getElementById(id).setAttribute("disabled", "disabled");
     });
     populateDropdown('emojiDropdown', EMOJI_LIST, NO_EMOJI_OPTION, NO_EMOJI_OPTION);
-
     signOutButton.style.display = "none";
     signInButton.style.display = "none";
 
@@ -959,12 +958,12 @@ async function initializePageSpecificApp() {
             // Load the full student roster first; it's needed for the dropdown lookup.
             await loadInitialPassData();
             
-            const [liveState, bathroomState] = await Promise.all([
-                sendAuthenticatedRequest({ action: 'getLiveState' }),
-                sendAuthenticatedRequest({ action: 'getBathroomState' })
-            ]);
-
-            const currentClass = liveState.currentClass;
+            // Perform the first full sync to populate dropdowns etc.
+            // We need the dropdowns populated BEFORE we try to set the value.
+            await syncAppState(); 
+            
+            const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
+            const currentClass = appState.ui.currentClassPeriod; // Get class from the sync
             
             if (bathroomState.result === 'success' && bathroomState.passHolders.length > 0 && currentClass) {
                 const outStudent = bathroomState.passHolders.find(holder => 
@@ -972,16 +971,16 @@ async function initializePageSpecificApp() {
                 );
                 
                 if (outStudent) {
-                    // --- START: THE FIX ---
-                    // Find the full student name from the roster that matches the simple name from the bathroom log.
+                    // --- THE FIX ---
+                    // Find the full student name from the roster that matches the simple name.
                     const fullStudentName = appState.data.allNamesFromSheet.find(student => 
                         student.Class === currentClass && normalizeName(student.Name) === outStudent.Name
-                    )?.Name || outStudent.Name; // Fallback to the simple name if not found in the roster.
+                    )?.Name || outStudent.Name; // Fallback to the simple name if not found.
 
                     // Set the dropdown value AND the passHolder to the full name.
                     nameDropdown.value = fullStudentName;
                     appState.passHolder = fullStudentName;
-                    // --- END: THE FIX ---
+                    // --- END THE FIX ---
                     
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
                     
@@ -1000,9 +999,6 @@ async function initializePageSpecificApp() {
                 }
             }
 
-            // Perform the first full sync to populate other dropdowns etc.
-            await syncAppState(); 
-
             // Set up polling
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
             appState.ui.pollingIntervalId = setInterval(syncAppState, 15000);
@@ -1019,6 +1015,7 @@ async function initializePageSpecificApp() {
     showTravelPassView();
     handleTravelDepartingClick();
     handleLateNameSelectionChange();
+    updateQueueTabVisibility(); // Initial check for queue tab visibility
 }
 
 /**
