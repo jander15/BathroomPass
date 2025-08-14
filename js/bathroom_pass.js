@@ -28,6 +28,7 @@ const lateSignInForm = document.getElementById('lateSignInForm');
 const lateNameDropdown = document.getElementById('lateNameDropdown');
 const lateSignInSubmitBtn = document.getElementById('lateSignInSubmitBtn');
 const formDisabledOverlay = document.getElementById('formDisabledOverlay');
+const rightSideFormsContainer = document.getElementById('rightSideFormsContainer');
 const infoBarDateTime = document.getElementById('infoBarDateTime');
 const infoBarTeacher = document.getElementById('infoBarTeacher');
 const infoBarClass = document.getElementById('infoBarClass');
@@ -962,7 +963,8 @@ async function initializePageSpecificApp() {
         try {
             await loadInitialPassData();
             await syncAppState(); 
-            
+            rightSideFormsContainer.classList.remove('hidden');
+
             const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
             const currentClass = appState.ui.currentClassPeriod; 
             
