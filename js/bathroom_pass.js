@@ -1017,7 +1017,7 @@ async function initializePageSpecificApp() {
         console.warn("User not authenticated. Cannot fetch data for Bathroom Pass.");
     }
     
-    showTravelPassView();
+    showLateSignInView();
     handleTravelDepartingClick();
     handleLateNameSelectionChange();
     updateQueueTabVisibility(); 
