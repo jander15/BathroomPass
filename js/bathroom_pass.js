@@ -1011,10 +1011,6 @@ async function initializePageSpecificApp() {
                     if (appState.timer.intervalId) clearInterval(appState.timer.intervalId);
                     appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
                 }
-            } else if (!appState.passHolder) {
-                headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-                studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-                mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
             }
 
             if (appState.ui.pollingIntervalId) clearInterval(appState.ui.pollingIntervalId);
