@@ -1,6 +1,20 @@
 [build]
-  publish = "." # Adjust if your HTML files are in a subdirectory like "docs" or "public"
-  command = "echo 'No build command needed for a static site with functions'"
+  publish = "."
+  command = "echo 'No build command needed'"
 
 [functions]
-  directory = "netlify/functions" # This tells Netlify where to find your function files
+  directory = "netlify/functions"
+
+# --- ADD THIS ENTIRE BLOCK ---
+# This tells Netlify how to handle requests to your proxy function.
+[[headers]]
+  # Apply these rules to all requests for your proxy function
+  for = "/.netlify/functions/proxy"
+
+  [headers.values]
+    # Allow requests from your GitHub Pages site
+    Access-Control-Allow-Origin = "https://jander15.github.io"
+    # Specify which methods are allowed
+    Access-Control-Allow-Methods = "POST, GET, OPTIONS"
+    # Specify which headers are allowed
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
