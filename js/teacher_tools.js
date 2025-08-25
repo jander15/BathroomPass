@@ -2,7 +2,7 @@
 
 // --- DOM Element Caching ---
 let classDropdown, chartMessage, seatingChartGrid, instructionsArea;
-let generateIndividualsBtn, generatePairsBtn, generateThreesBtn, generateFoursBtn;
+let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let groupBtns = [];
 let sortableInstance = null; // To hold the Draggable.js instance
@@ -26,13 +26,12 @@ function cacheToolsDOMElements() {
     chartMessage = document.getElementById('chartMessage');
     seatingChartGrid = document.getElementById('seatingChartGrid');
     instructionsArea = document.getElementById('instructionsArea');
-    generateIndividualsBtn = document.getElementById('generateIndividualsBtn');
     generatePairsBtn = document.getElementById('generatePairsBtn');
     generateThreesBtn = document.getElementById('generateThreesBtn');
     generateFoursBtn = document.getElementById('generateFoursBtn');
     groupCountInput = document.getElementById('groupCountInput');
     generateGroupsByCountBtn = document.getElementById('generateGroupsByCountBtn');
-    groupBtns = [generateIndividualsBtn, generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
+    groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
 /**
@@ -92,10 +91,10 @@ function updateActiveButton(activeBtn) {
         }
     });
     // Ensure "Individuals" always has the primary blue color when active
-    if (activeBtn === generateIndividualsBtn) {
-         generateIndividualsBtn.classList.add('bg-blue-600');
+    if (activeBtn === generatePairsBtn) {
+         generatePairsBtn.classList.add('bg-blue-600');
     } else {
-         generateIndividualsBtn.classList.remove('bg-blue-600');
+         generatePairsBtn.classList.remove('bg-blue-600');
     }
 }
 
@@ -256,7 +255,7 @@ async function initializePageSpecificApp() {
             groupCountInput.max = studentCount;
         }
         // Default to individuals and regenerate chart on class change
-        updateActiveButton(generateIndividualsBtn);
+        updateActiveButton(generatePairsBtn);
         generateAndRenderChart();
     });
 
@@ -267,7 +266,7 @@ async function initializePageSpecificApp() {
             populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
             classDropdown.removeAttribute("disabled");
             groupBtns.forEach(btn => btn.disabled = false);
-            updateActiveButton(generateIndividualsBtn);
+            updateActiveButton(generatePairsBtn);
         } catch (error) {
             console.error("Failed to initialize Teacher Tools with data:", error);
             showErrorAlert("Could not load class data. Please reload.");
@@ -289,5 +288,4 @@ function resetPageSpecificAppState() {
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (chartMessage) chartMessage.textContent = "Select a class and click a button to generate a chart.";
     if (groupBtns.length > 0) groupBtns.forEach(btn => { if(btn) btn.disabled = true });
-    if(generateIndividualsBtn) updateActiveButton(generateIndividualsBtn);
 }
