@@ -172,6 +172,14 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
 
+        // --- ADD THIS BLOCK ---
+        // If no student is currently out, update the UI to the "Available" state.
+        if (!appState.passHolder) {
+            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
+        }
+
     } else {
         // If there's no class, disable the class-specific dropdowns
         const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
