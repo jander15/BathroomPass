@@ -191,7 +191,12 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
             }
         });
         if(emojiDropdown) emojiDropdown.setAttribute("disabled", "disabled");
+         // If there's no class, update the header and disable dropdowns.
+        if (!appState.passHolder) { // Only change if a student isn't out from a previous period
+            headerStatusSpan.textContent = "No Active Class";
+        }
     }
+
 
     handleNameSelectionChange();
     handleLateNameSelectionChange();
