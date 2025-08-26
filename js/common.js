@@ -272,18 +272,26 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
             appState.currentUser.idToken = refreshResponse.idToken;
             return await sendAuthenticatedRequest(payload, true);
         } else {
-            // --- MODIFICATION START ---
-            const failureReason = refreshResponse.details || 'unknown_frontend_error';
-            // Log the specific reason from the backend for easier debugging.
-            console.error(`Token refresh failed. Reason from backend: ${failureReason}`);
-            handleGoogleSignOut();
-            // Display a more helpful error message to the user.
-            throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
-            // --- MODIFICATION END ---
-}
+            // --- THIS IS THE IMPLEMENTATION OF YOUR SOLUTION ---
+            const failureReason = refreshResponse.details || 'unknown_error';
+            console.error(`Silent refresh failed. Reason: ${failureReason}. Triggering a page reload.`);
+            
+            // Inform the user, then reload the page to get a fresh session.
+            showErrorAlert(`Your session has expired. The application will now refresh to reconnect.`);
+            
+            // Wait a few seconds for the user to see the message before reloading.
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+            
+            // Throw an error to stop the current, failed operation.
+            throw new Error(`Session expired (${failureReason}). Refreshing page.`);
+            // --- END OF FIX ---
+        }
     } catch (e) {
+        // This will catch the error we just threw and any other critical errors.
         console.error("A critical error occurred during the refresh attempt:", e);
-        handleGoogleSignOut();
+        // We no longer call handleGoogleSignOut() here, as the page reload will manage the state.
         throw new Error("Your session has expired. Please sign in again.");
     }
 }

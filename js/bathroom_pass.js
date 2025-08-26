@@ -741,19 +741,21 @@ function handleAddToQueueClick() {
     } else if (appState.passHolder && name === appState.passHolder) {
         updateQueueMessage(`${name} is currently signed out and cannot be added to the queue.`);
     } else {
-        appState.queue.push(name);
-        updateQueueMessage(`${name} has been added to the queue.`);
-        
-        // --- THE FIX: Change this line ---
-        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-        
-        updateQueueDisplay();
+    appState.queue.push(name);
+    // --- ADD THIS LINE ---
+    localStorage.setItem('passQueue', JSON.stringify(appState.queue));
+    updateQueueMessage(`${name} has been added to the queue.`);
 
-        if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
-            const nextPerson = appState.queue.shift();
-            preparePassForNextInQueue(nextPerson);
-            updateQueueDisplay();
-        }
+    nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
+    updateQueueDisplay();
+
+    if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
+        const nextPerson = appState.queue.shift();
+        // --- ADD THIS LINE ---
+        localStorage.setItem('passQueue', JSON.stringify(appState.queue));
+        preparePassForNextInQueue(nextPerson);
+        updateQueueDisplay();
+    }
     }
     updateQueueControls();
 }
@@ -767,12 +769,14 @@ function handleRemoveFromQueueClick() {
     } else if (!appState.selectedQueueName) {
         updateQueueMessage('Please select a name from the list to remove.');
     } else {
-        const index = appState.queue.indexOf(appState.selectedQueueName);
-        if (index > -1) {
-            const removedName = appState.selectedQueueName;
-            appState.queue.splice(index, 1);
-            updateQueueMessage(`Removed ${removedName} from the queue.`);
-            updateQueueDisplay(); 
+         const index = appState.queue.indexOf(appState.selectedQueueName);
+    if (index > -1) {
+        const removedName = appState.selectedQueueName;
+        appState.queue.splice(index, 1);
+        // --- ADD THIS LINE ---
+        localStorage.setItem('passQueue', JSON.stringify(appState.queue));
+        updateQueueMessage(`Removed ${removedName} from the queue.`);
+        updateQueueDisplay(); 
         } else {
             updateQueueMessage('Error: Name not found in queue.'); 
         }
@@ -944,6 +948,14 @@ function showLateSignInView() {
  * MODIFIED: Now correctly checks for tardiness on initial load to prevent color flashing.
  */
 async function initializePageSpecificApp() {
+    // --- ADD THIS BLOCK AT THE TOP ---
+    // Restore the queue from localStorage on page load.
+    const savedQueue = localStorage.getItem('passQueue');
+    if (savedQueue) {
+        appState.queue = JSON.parse(savedQueue);
+        console.log("Restored queue from previous session:", appState.queue);
+    }
+    // --- END ADD ---
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
@@ -1046,7 +1058,8 @@ function resetPageSpecificAppState() {
         clearInterval(appState.ui.pollingIntervalId);
         appState.ui.pollingIntervalId = null;
     }
-    
+    localStorage.removeItem('passQueue');
+
     appState.timer = { seconds: 0, minutes: 0, intervalId: null, isTardy: false };
     appState.passHolder = null;
     appState.queue = [];
