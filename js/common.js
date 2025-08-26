@@ -532,6 +532,7 @@ async function attemptSilentSignIn() {
                 if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
                 
                 setupProfileMenu()
+                console.log("setting up profile menu");
 
                 if (signInPage) signInPage.style.display = 'none';
                 if (appContent) {
