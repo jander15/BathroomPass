@@ -954,6 +954,8 @@ async function initializePageSpecificApp() {
     if (savedQueue) {
         appState.queue = JSON.parse(savedQueue);
         console.log("Restored queue from previous session:", appState.queue);
+        updateQueueDisplay();
+
     }
     // --- END ADD ---
     // --- Initial UI & State Setup ---
