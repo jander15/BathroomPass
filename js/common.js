@@ -168,6 +168,26 @@ function removeOptions(selectElement) {
 }
 
 /**
+ * NEW: Attaches event listeners to the profile menu dropdown.
+ * This is separated so it can be called by both manual and silent sign-in flows.
+ */
+function setupProfileMenu() {
+    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
+        profilePicture.addEventListener('click', (event) => {
+            event.stopPropagation();
+            profileDropdown.classList.toggle('hidden');
+        });
+        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+        bodyElement.addEventListener('click', (event) => {
+            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+                profileDropdown.classList.add('hidden');
+            }
+        });
+    }
+}
+
+
+/**
  * Populates a dropdown (select) element with options.
  * @param {string} dropdownId - The ID of the select element.
  * @param {Array<string>} arr - An array of strings to populate the dropdown.
@@ -443,20 +463,8 @@ function initGoogleSignIn() {
         googleSignInButton.appendChild(customButton);
     }
 
-    // --- Set up profile menu and sign-out functionality ---
-    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
-        profilePicture.addEventListener('click', (event) => {
-            event.stopPropagation();
-            profileDropdown.classList.toggle('hidden');
-        });
-        dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-        bodyElement.addEventListener('click', (event) => {
-            if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
-    }
-}
+    setupProfileMenu();
+
 
 /**
  * MODIFIED: Handles Google Sign-Out and clears the stored email.
@@ -522,6 +530,8 @@ async function attemptSilentSignIn() {
                 if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
+                
+                setupProfileMenu();
 
                 if (signInPage) signInPage.style.display = 'none';
                 if (appContent) {
