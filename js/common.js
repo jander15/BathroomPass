@@ -462,9 +462,9 @@ function initGoogleSignIn() {
         };
         googleSignInButton.appendChild(customButton);
     }
+    setupProfileMenu()
 
-    setupProfileMenu();
-
+}
 
 /**
  * MODIFIED: Handles Google Sign-Out and clears the stored email.
@@ -531,7 +531,7 @@ async function attemptSilentSignIn() {
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
                 
-                setupProfileMenu();
+                setupProfileMenu()
 
                 if (signInPage) signInPage.style.display = 'none';
                 if (appContent) {
