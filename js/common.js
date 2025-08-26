@@ -272,11 +272,15 @@ async function sendAuthenticatedRequest(payload, isRetry = false) {
             appState.currentUser.idToken = refreshResponse.idToken;
             return await sendAuthenticatedRequest(payload, true);
         } else {
+            // --- MODIFICATION START ---
             const failureReason = refreshResponse.details || 'unknown_frontend_error';
-            console.error(`Token refresh failed. Reason: ${failureReason}`);
+            // Log the specific reason from the backend for easier debugging.
+            console.error(`Token refresh failed. Reason from backend: ${failureReason}`);
             handleGoogleSignOut();
+            // Display a more helpful error message to the user.
             throw new Error(`Your session has expired (${failureReason}). Please sign in again.`);
-        }
+            // --- MODIFICATION END ---
+}
     } catch (e) {
         console.error("A critical error occurred during the refresh attempt:", e);
         handleGoogleSignOut();
