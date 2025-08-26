@@ -407,6 +407,7 @@ async function handleSignIn(authCode) {
 
                 if (bodyElement) bodyElement.classList.remove('justify-center');
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+                setupProfileMenu();
 
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
@@ -462,7 +463,6 @@ function initGoogleSignIn() {
         };
         googleSignInButton.appendChild(customButton);
     }
-    setupProfileMenu()
 
 }
 
