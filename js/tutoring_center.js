@@ -46,9 +46,7 @@ async function handleFormSubmit(event) {
         studentName: normalizeName(studentName),
         className: classDropdown.value,
         durationMinutes: duration,
-        notes: notes,
-        // THE FIX: Directly reference the globally stored teacher name.
-        teacherName: appState.currentUser.name 
+        notes: notes
     };
 
     // --- ADD THIS LINE FOR DEBUGGING ---
