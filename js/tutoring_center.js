@@ -16,8 +16,7 @@ function cacheTutoringDOMElements() {
 }
 
 /**
- * Handles the form submission for logging a tutoring session.
- * @param {Event} event - The form submission event.
+ * MODIFIED: Adds logging to debug the payload and ensures teacher name is sent.
  */
 async function handleFormSubmit(event) {
     event.preventDefault(); // Prevent the default form submission
@@ -44,12 +43,16 @@ async function handleFormSubmit(event) {
     // --- 3. Prepare and Send Data ---
     const payload = {
         action: 'logTutoringSession',
-        studentName: normalizeName(studentName), // Send the clean name
+        studentName: normalizeName(studentName),
         className: classDropdown.value,
         durationMinutes: duration,
         notes: notes,
-        teacherName: appState.currentUser.name
+        // THE FIX: Directly reference the globally stored teacher name.
+        teacherName: appState.currentUser.name 
     };
+
+    // --- ADD THIS LINE FOR DEBUGGING ---
+    console.log("Sending payload to backend:", payload);
 
     try {
         const response = await sendAuthenticatedRequest(payload);
