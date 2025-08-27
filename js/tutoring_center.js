@@ -155,7 +155,7 @@ async function initializePageSpecificApp() {
     }
     if (submitBtn) submitBtn.disabled = true;
 
-    try {
+        try {
         // --- AUTHORIZATION CHECK ---
         const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
         console.log("Authorization response from server:", authResponse);
@@ -165,14 +165,15 @@ async function initializePageSpecificApp() {
             return; // Stop the initialization process
         }
 
-        // If authorized, proceed to load the page content.
-        tutoringContent.classList.remove('hidden');
+        // If authorized, show the form and load student data.
+        tutoringForm.classList.remove('hidden');
         studentLookup.placeholder = "Loading students...";
-
+        
         const response = await sendAuthenticatedRequest({ action: 'getStudentMasterList' });
         if (response.result === 'success' && response.students) {
             masterStudentList = response.students.sort((a, b) => a.StudentName.localeCompare(b.StudentName));
-
+            
+            // Update UI now that data is loaded
             studentLookup.placeholder = "Start typing a student's name...";
             studentLookup.disabled = false;
             submitBtn.disabled = false;
@@ -183,12 +184,13 @@ async function initializePageSpecificApp() {
         showAccessDenied();
         console.error("Initialization or Authorization failed:", error);
     } finally {
-        // --- ADD THIS BLOCK ---
         // This runs after the try/catch, guaranteeing the overlay is hidden.
         if (authorizationOverlay) {
             authorizationOverlay.classList.add('hidden');
         }
     }
+
+
 
     // Event listeners
     studentLookup.addEventListener('input', () => {
