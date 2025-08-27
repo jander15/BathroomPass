@@ -1,7 +1,7 @@
 // js/tutoring_center.js
 
 // --- DOM Element Caching ---
-let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList;
+let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, tutoringContent, pageHeader;
 let masterStudentList = []; // Now stores objects: { StudentName: "...", Class: "..." }
 let selectedStudents = [];  // Now stores the same objects
 
@@ -16,13 +16,15 @@ function cacheTutoringDOMElements() {
     tutoringForm = document.getElementById('tutoringForm');
     submitBtn = document.getElementById('submitBtn');
     selectedStudentsList = document.getElementById('selectedStudentsList');
+    tutoringContent = document.getElementById('tutoringContent');
+    pageHeader = document.querySelector('#appContent h1'); 
 }
 
 /**
  * Renders the list of currently selected students as "pills".
  */
 function renderSelectedStudents() {
-    selectedStudentsList.innerHTML = '';
+    selectedStudentsList.innerHTML = ''; // Clear the list
     selectedStudents.forEach(student => {
         const pill = document.createElement('div');
         pill.className = 'bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full flex items-center';
@@ -33,10 +35,10 @@ function renderSelectedStudents() {
         const removeBtn = document.createElement('button');
         removeBtn.textContent = '×';
         removeBtn.className = 'ml-2 font-bold hover:text-red-300';
-        removeBtn.type = 'button';
+        removeBtn.type = 'button'; // Prevent form submission
         removeBtn.onclick = () => {
             selectedStudents = selectedStudents.filter(s => s.StudentName !== student.StudentName);
-            renderSelectedStudents();
+            renderSelectedStudents(); // Re-render the list
         };
         
         pill.appendChild(nameSpan);
@@ -64,7 +66,7 @@ function renderStudentResults(filteredStudents) {
                 selectedStudents.push(student);
                 renderSelectedStudents();
             }
-            studentLookup.value = '';
+            studentLookup.value = ''; // Clear the input after selection
             studentResults.classList.add('hidden');
         });
         studentResults.appendChild(item);
