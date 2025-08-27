@@ -1,12 +1,12 @@
 // js/tutoring_center.js
 
 // --- DOM Element Caching ---
-let classDropdown, studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn;
+let classDropdown, studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList;
 let masterStudentList = []; // To store the full list of students
-let selectedStudentName = ''; // To store the chosen student
+let selectedStudents = [];  // MODIFIED: Now an array to hold multiple students
 
 /**
- * Caches all DOM elements specific to the Tutoring Center page.
+ * Caches all DOM elements for the page.
  */
 function cacheTutoringDOMElements() {
     classDropdown = document.getElementById('classDropdown');
@@ -16,14 +16,41 @@ function cacheTutoringDOMElements() {
     notesInput = document.getElementById('notesInput');
     tutoringForm = document.getElementById('tutoringForm');
     submitBtn = document.getElementById('submitBtn');
+    selectedStudentsList = document.getElementById('selectedStudentsList');
 }
 
 /**
- * Renders the filtered list of students based on the user's input.
- * @param {string[]} filteredStudents - The array of student names to display.
+ * Renders the list of currently selected students as "pills".
+ */
+function renderSelectedStudents() {
+    selectedStudentsList.innerHTML = ''; // Clear the list
+    selectedStudents.forEach(name => {
+        const pill = document.createElement('div');
+        pill.className = 'bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full flex items-center';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '×';
+        removeBtn.className = 'ml-2 font-bold hover:text-red-300';
+        removeBtn.type = 'button'; // Prevent form submission
+        removeBtn.onclick = () => {
+            selectedStudents = selectedStudents.filter(s => s !== name);
+            renderSelectedStudents(); // Re-render the list
+        };
+        
+        pill.appendChild(nameSpan);
+        pill.appendChild(removeBtn);
+        selectedStudentsList.appendChild(pill);
+    });
+}
+
+/**
+ * Renders the search results dropdown.
  */
 function renderStudentResults(filteredStudents) {
-    studentResults.innerHTML = ''; // Clear previous results
+    studentResults.innerHTML = '';
     if (filteredStudents.length === 0) {
         studentResults.classList.add('hidden');
         return;
@@ -34,8 +61,11 @@ function renderStudentResults(filteredStudents) {
         item.textContent = name;
         item.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
         item.addEventListener('click', () => {
-            studentLookup.value = name;
-            selectedStudentName = name;
+            if (!selectedStudents.includes(name)) {
+                selectedStudents.push(name);
+                renderSelectedStudents();
+            }
+            studentLookup.value = ''; // Clear the input after selection
             studentResults.classList.add('hidden');
         });
         studentResults.appendChild(item);
@@ -45,7 +75,7 @@ function renderStudentResults(filteredStudents) {
 }
 
 /**
- * Handles the form submission for logging a tutoring session.
+ * Handles the form submission.
  */
 async function handleFormSubmit(event) {
     event.preventDefault();
@@ -53,8 +83,8 @@ async function handleFormSubmit(event) {
     const duration = parseInt(durationInput.value, 10);
     const notes = notesInput.value.trim();
 
-    if (!selectedStudentName) {
-        showErrorAlert("Please select a student from the list.");
+    if (selectedStudents.length === 0) {
+        showErrorAlert("Please select at least one student.");
         return;
     }
     if (isNaN(duration) || duration <= 0) {
@@ -68,7 +98,7 @@ async function handleFormSubmit(event) {
 
     const payload = {
         action: 'logTutoringSession',
-        studentName: selectedStudentName,
+        studentNames: selectedStudents, // MODIFIED: Send the array of names
         className: classDropdown.value,
         durationMinutes: duration,
         notes: notes,
@@ -78,9 +108,10 @@ async function handleFormSubmit(event) {
     try {
         const response = await sendAuthenticatedRequest(payload);
         if (response.result === 'success') {
-            showSuccessAlert("Tutoring session logged successfully!");
-            tutoringForm.reset(); // Resets all form fields
-            selectedStudentName = ''; // Clear the selected name
+            showSuccessAlert(`Tutoring session logged successfully for ${selectedStudents.length} student(s)!`);
+            tutoringForm.reset();
+            selectedStudents = [];
+            renderSelectedStudents();
         } else {
             throw new Error(response.error);
         }
@@ -101,7 +132,6 @@ async function initializePageSpecificApp() {
     submitBtn.disabled = true;
 
     try {
-        // Fetch the master student list from the backend
         const response = await sendAuthenticatedRequest({ action: 'getStudentMasterList' });
         if (response.result === 'success' && response.students) {
             masterStudentList = response.students.sort();
@@ -110,7 +140,6 @@ async function initializePageSpecificApp() {
             throw new Error("Could not load master student list.");
         }
         
-        // Fetch class data for the class dropdown
         await fetchAllStudentData();
         populateCourseDropdownFromData();
         populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION);
@@ -122,18 +151,17 @@ async function initializePageSpecificApp() {
         studentLookup.disabled = true;
     }
 
-    // Event listener for the lookup input
     studentLookup.addEventListener('input', () => {
         const query = studentLookup.value.toLowerCase();
+        selectedStudentName = ''; // Clear single selection when user types
         if (query.length === 0) {
             studentResults.classList.add('hidden');
             return;
         }
-        const filtered = masterStudentList.filter(name => name.toLowerCase().includes(query));
-        renderStudentResults(filtered.slice(0, 10)); // Show max 10 results
+        const filtered = masterStudentList.filter(name => name.toLowerCase().includes(query) && !selectedStudents.includes(name));
+        renderStudentResults(filtered.slice(0, 10));
     });
 
-    // Closed results when clicking outside
     document.addEventListener('click', (event) => {
         if (!studentLookup.contains(event.target)) {
             studentResults.classList.add('hidden');
@@ -148,8 +176,9 @@ async function initializePageSpecificApp() {
  */
 function resetPageSpecificAppState() {
     masterStudentList = [];
-    selectedStudentName = '';
+    selectedStudents = [];
     if (tutoringForm) tutoringForm.reset();
+    renderSelectedStudents();
     if (studentLookup) studentLookup.disabled = true;
     if (submitBtn) submitBtn.disabled = true;
     if (classDropdown) {
