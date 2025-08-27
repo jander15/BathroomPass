@@ -46,10 +46,11 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="studentDropdown" class="block text-sm font-medium text-gray-700">Student:</label>
-                    <select id="studentDropdown" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </select>
+                <div class="relative">
+                    <label for="studentLookup" class="block text-sm font-medium text-gray-700">Student:</label>
+                    <input type="text" id="studentLookup" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Start typing a name...">
+                    <div id="studentResults" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        </div>
                 </div>
 
                 <div>
