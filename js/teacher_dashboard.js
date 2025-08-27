@@ -677,34 +677,79 @@ async function initializePageSpecificApp() {
         attendanceReportTab.addEventListener('click', () => { switchTab('attendance'); renderAttendanceReport(); });
         classTrendsTab.addEventListener('click', () => { switchTab('classTrends'); renderClassTrendsReport(); });
 
+        // --- REFACTORED EVENT LISTENERS ---
+
+        // Listener 1: Handles the accordion rows for both reports.
         dashboardContent.addEventListener('click', (event) => {
-            let popover = document.getElementById('travelPopover');
-            if (!popover) {
-                popover = document.createElement('div');
-                popover.id = 'travelPopover';
-                document.body.appendChild(popover);
-            }
-            const infoIcon = event.target.closest('.info-icon');
-            const editButton = event.target.closest('.edit-btn');
             const accordionRow = event.target.closest('[data-accordion-toggle="true"]');
-            if (!infoIcon) {
-                popover.classList.remove('visible');
-            }
-            if (infoIcon) {
-                event.stopPropagation();
-                const { departing, arriving } = infoIcon.dataset;
-                popover.innerHTML = `<div class="font-bold text-gray-700">Travel Details</div><div class="text-sm mt-1"><strong>From:</strong> ${departing}</div><div class="text-sm"><strong>To:</strong> ${arriving}</div>`;
-                const rect = infoIcon.getBoundingClientRect();
-                popover.style.top = `${rect.top + window.scrollY}px`;
-                popover.style.left = `${rect.right + window.scrollX + 10}px`;
-                popover.classList.toggle('visible');
+            if (!accordionRow) return; // Exit if the click was not on an accordion row.
+
+            event.stopPropagation();
+            const nextElement = accordionRow.nextElementSibling;
+
+            // If a details row already exists, remove it and we're done.
+            if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
+                nextElement.remove();
                 return;
             }
+
+            // Otherwise, create and insert the new details row.
+            const records = JSON.parse(accordionRow.dataset.records || '[]');
+            if (records.length === 0) return;
+
+            const wrapperRow = document.createElement('tr');
+            wrapperRow.className = 'details-wrapper-row';
+            const wrapperCell = document.createElement('td');
+            wrapperCell.colSpan = accordionRow.cells.length;
+            wrapperCell.className = 'p-2 bg-gray-50';
+
+            // (The detailed table creation logic remains the same as your original code)
+            const detailsTable = document.createElement('table');
+            detailsTable.className = 'min-w-full';
+            const detailsHead = document.createElement('thead');
+            detailsHead.innerHTML = `<tr class="bg-gray-200 text-sm"><th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th><th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th><th class="py-1 px-2 border-b text-right w-12">Edit</th></tr>`;
+            detailsTable.appendChild(detailsHead);
+            const detailsBody = document.createElement('tbody');
+            records.forEach(row => {
+                const detailTr = document.createElement('tr');
+                let typeDisplay = "N/A", durationDisplay = "N/A";
+                if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
+                if (row.Type === 'late') {
+                    typeDisplay = "Late Sign In";
+                    detailTr.classList.add(COLORS.late.moderate);
+                } else if (row.Type === 'travel') {
+                    typeDisplay = `Travel <span class="info-icon" data-departing="${row.DepartingTeacher}" data-arriving="${row.ArrivingTeacher}">i</span>`;
+                    detailTr.classList.add('bg-cyan-100');
+                } else if (row.Type === 'bathroom') {
+                    typeDisplay = "Bathroom";
+                    if (row.Seconds > DURATION_THRESHOLDS.moderate) {
+                        detailTr.classList.add(COLORS.long.moderate);
+                    } else {
+                        detailTr.classList.add(COLORS.normal);
+                    }
+                }
+                const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
+                detailTr.innerHTML = `<td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td><td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td><td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
+                detailsBody.appendChild(detailTr);
+            });
+            detailsTable.appendChild(detailsBody);
+            wrapperCell.appendChild(detailsTable);
+            wrapperRow.appendChild(wrapperCell);
+            accordionRow.insertAdjacentElement('afterend', wrapperRow);
+        });
+
+        // Listener 2: Handles the Edit button clicks and the info icon popover.
+        dashboardContent.addEventListener('click', (event) => {
+            const editButton = event.target.closest('.edit-btn');
+            const infoIcon = event.target.closest('.info-icon');
+
+            // Handle Edit Button
             if (editButton) {
                 event.stopPropagation();
                 const timestamp = editButton.dataset.timestamp;
                 const record = appState.data.allSignOuts.find(r => r.Date === timestamp);
                 if (record) {
+                    // (The logic for showing the edit modal is unchanged from your original code)
                     const studentsInClass = appState.data.allNamesFromSheet.filter(s => s.Class === record.Class).map(s => s.Name).sort();
                     const uniqueStudents = [...new Set(studentsInClass)];
                     editStudentName.innerHTML = '';
@@ -734,54 +779,32 @@ async function initializePageSpecificApp() {
                 }
                 return;
             }
-            if (accordionRow) {
+
+            // Handle Info Icon Popover
+            let popover = document.getElementById('travelPopover');
+            if (infoIcon) {
                 event.stopPropagation();
-                const nextElement = accordionRow.nextElementSibling;
-                if (nextElement && nextElement.classList.contains('details-wrapper-row')) {
-                    nextElement.remove();
-                    return;
+                if (!popover) {
+                    popover = document.createElement('div');
+                    popover.id = 'travelPopover';
+                    document.body.appendChild(popover);
                 }
-                if (accordionRow.dataset.records) {
-                    const records = JSON.parse(accordionRow.dataset.records || '[]');
-                    if (records.length === 0) return;
-                    const wrapperRow = document.createElement('tr');
-                    wrapperRow.className = 'details-wrapper-row';
-                    const wrapperCell = document.createElement('td');
-                    wrapperCell.colSpan = accordionRow.cells.length;
-                    wrapperCell.className = 'p-2 bg-gray-50';
-                    const detailsTable = document.createElement('table');
-                    detailsTable.className = 'min-w-full';
-                    const detailsHead = document.createElement('thead');
-                    detailsHead.innerHTML = `<tr class="bg-gray-200 text-sm"><th class="py-1 px-2 border-b text-left">Date</th><th class="py-1 px-2 border-b text-left">Time</th><th class="py-1 px-2 border-b text-left">Type</th><th class="py-1 px-2 border-b text-left">Duration</th><th class="py-1 px-2 border-b text-right w-12">Edit</th></tr>`;
-                    detailsTable.appendChild(detailsHead);
-                    const detailsBody = document.createElement('tbody');
-                    records.forEach(row => {
-                        const detailTr = document.createElement('tr');
-                        let typeDisplay = "N/A", durationDisplay = "N/A";
-                        if (typeof row.Seconds === 'number') durationDisplay = formatSecondsToMMSS(row.Seconds);
-                        if (row.Type === 'late') {
-                            typeDisplay = "Late Sign In";
-                            detailTr.classList.add(COLORS.late.moderate);
-                        } else if (row.Type === 'travel') {
-                            typeDisplay = `Travel <span class="info-icon" data-departing="${row.DepartingTeacher}" data-arriving="${row.ArrivingTeacher}">i</span>`;
-                            detailTr.classList.add('bg-cyan-100');
-                        } else if (row.Type === 'bathroom') {
-                            typeDisplay = "Bathroom";
-                            if (row.Seconds > DURATION_THRESHOLDS.moderate) {
-                                detailTr.classList.add(COLORS.long.moderate);
-                            } else {
-                                detailTr.classList.add(COLORS.normal);
-                            }
-                        }
-                        const editButtonHtml = `<button class="text-gray-500 hover:text-blue-600 edit-btn p-1" data-timestamp="${row.Date}" title="Edit Entry"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>`;
-                        detailTr.innerHTML = `<td class="py-2 px-2 border-b">${formatDate(row.Date)}</td><td class="py-2 px-2 border-b">${formatTime(row.Date)}</td><td class="py-2 px-2 border-b">${typeDisplay}</td><td class="py-2 px-2 border-b">${durationDisplay}</td><td class="py-2 px-2 border-b text-right">${editButtonHtml}</td>`;
-                        detailsBody.appendChild(detailTr);
-                    });
-                    detailsTable.appendChild(detailsBody);
-                    wrapperCell.appendChild(detailsTable);
-                    wrapperRow.appendChild(wrapperCell);
-                    accordionRow.insertAdjacentElement('afterend', wrapperRow);
-                }
+                const { departing, arriving } = infoIcon.dataset;
+                popover.innerHTML = `<div class="font-bold text-gray-700">Travel Details</div><div class="text-sm mt-1"><strong>From:</strong> ${departing}</div><div class="text-sm"><strong>To:</strong> ${arriving}</div>`;
+                const rect = infoIcon.getBoundingClientRect();
+                popover.style.top = `${rect.top + window.scrollY}px`;
+                popover.style.left = `${rect.right + window.scrollX + 10}px`;
+                popover.classList.toggle('visible');
+            } else if (popover) {
+                popover.classList.remove('visible');
+            }
+        });
+
+        // Listener 3: Handles closing the popover when clicking anywhere else on the page.
+        document.body.addEventListener('click', (event) => {
+            let popover = document.getElementById('travelPopover');
+            if (popover && !event.target.closest('.info-icon')) {
+                popover.classList.remove('visible');
             }
         });
 
