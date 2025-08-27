@@ -133,7 +133,7 @@ async function initializePageSpecificApp() {
         renderStudentResults(filtered.slice(0, 10)); // Show max 10 results
     });
 
-    // Close results when clicking outside
+    // Closed results when clicking outside
     document.addEventListener('click', (event) => {
         if (!studentLookup.contains(event.target)) {
             studentResults.classList.add('hidden');
