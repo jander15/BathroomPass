@@ -46,7 +46,9 @@ const appState = {
         isPassEnabled: true,
         currentClassPeriod: null,
         lastPageRefresh: null, // Add this
-        lastPoll: null         // Add this
+        lastPoll: null,         // Add this
+        isProfileMenuSetup: false // --- ADD THIS LINE ---
+
 
     },
     sortState: {
@@ -172,17 +174,25 @@ function removeOptions(selectElement) {
  * This is separated so it can be called by both manual and silent sign-in flows.
  */
 function setupProfileMenu() {
-    if (profilePicture && dropdownSignOutButton && profileMenuContainer && profileDropdown && bodyElement) {
+    if (appState.ui.isProfileMenuSetup) {
+        return; // Don't set up again if it's already done.
+    }
+
+    if (profilePicture && dropdownSignOutButton && profileDropdown && bodyElement) {
         profilePicture.addEventListener('click', (event) => {
             event.stopPropagation();
             profileDropdown.classList.toggle('hidden');
         });
+
         dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
+
         bodyElement.addEventListener('click', (event) => {
             if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
                 profileDropdown.classList.add('hidden');
             }
         });
+
+        appState.ui.isProfileMenuSetup = true; // Mark as set up.
     }
 }
 
@@ -531,8 +541,7 @@ async function attemptSilentSignIn() {
                 if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
                 if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
                 
-                setupProfileMenu()
-                console.log("setting up profile menu");
+                
 
                 if (signInPage) signInPage.style.display = 'none';
                 if (appContent) {
@@ -541,6 +550,8 @@ async function attemptSilentSignIn() {
                 }
                 if (bodyElement) bodyElement.classList.remove('justify-center');
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+                setupProfileMenu()
+                console.log("setting up profile menu");
 
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
