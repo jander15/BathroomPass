@@ -142,20 +142,15 @@ function showAccessDenied() {
 }
 
 /**
- * Initializes the Tutoring Center page with an authorization check.
+ * MODIFIED: Correctly manages the visibility of the overlay and form.
  */
 async function initializePageSpecificApp() {
     cacheTutoringDOMElements();
     
-    // Hide content and disable form by default
-    tutoringContent.classList.add('hidden');
-    if (studentLookup) {
-        studentLookup.placeholder = "Authorizing...";
-        studentLookup.disabled = true;
-    }
-    if (submitBtn) submitBtn.disabled = true;
+    // The overlay is now visible by default in the HTML.
+    // The form is hidden by default in the HTML.
 
-        try {
+    try {
         // --- AUTHORIZATION CHECK ---
         const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
         console.log("Authorization response from server:", authResponse);
