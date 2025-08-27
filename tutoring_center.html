@@ -39,6 +39,11 @@
         <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Log a Tutoring Session</h1>
         
         <div id="tutoringContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-2xl space-y-6">
+             <div id="authorizationOverlay" class="absolute inset-0 bg-gray-50 bg-opacity-75 flex flex-col items-center justify-center rounded-lg z-20">
+                <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+                <p class="text-gray-700 text-lg mt-4">Checking Tutor Authorization...</p>
+            </div>
+            
             <form id="tutoringForm" class="space-y-4">
                 <div class="relative">
                     <label for="studentLookup" class="block text-sm font-medium text-gray-700">Student:</label>

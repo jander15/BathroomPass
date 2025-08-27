@@ -18,6 +18,8 @@ function cacheTutoringDOMElements() {
     selectedStudentsList = document.getElementById('selectedStudentsList');
     tutoringContent = document.getElementById('tutoringContent');
     pageHeader = document.querySelector('#appContent h1'); 
+    authorizationOverlay = document.getElementById('authorizationOverlay');
+
 }
 
 /**
@@ -166,12 +168,11 @@ async function initializePageSpecificApp() {
         // If authorized, proceed to load the page content.
         tutoringContent.classList.remove('hidden');
         studentLookup.placeholder = "Loading students...";
-        
+
         const response = await sendAuthenticatedRequest({ action: 'getStudentMasterList' });
         if (response.result === 'success' && response.students) {
             masterStudentList = response.students.sort((a, b) => a.StudentName.localeCompare(b.StudentName));
-            
-            // Update UI now that data is loaded
+
             studentLookup.placeholder = "Start typing a student's name...";
             studentLookup.disabled = false;
             submitBtn.disabled = false;
@@ -181,6 +182,12 @@ async function initializePageSpecificApp() {
     } catch (error) {
         showAccessDenied();
         console.error("Initialization or Authorization failed:", error);
+    } finally {
+        // --- ADD THIS BLOCK ---
+        // This runs after the try/catch, guaranteeing the overlay is hidden.
+        if (authorizationOverlay) {
+            authorizationOverlay.classList.add('hidden');
+        }
     }
 
     // Event listeners
