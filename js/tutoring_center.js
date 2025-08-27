@@ -131,17 +131,42 @@ async function handleFormSubmit(event) {
 }
 
 /**
- * Initializes the Tutoring Center page.
+ * A function to display an access denied message.
+ */
+function showAccessDenied() {
+    if (tutoringContent) tutoringContent.classList.add('hidden');
+    if (pageHeader) pageHeader.textContent = "Access Denied";
+    showErrorAlert("You are not authorized to use this tool. Please contact an administrator.");
+}
+
+/**
+ * Initializes the Tutoring Center page with an authorization check.
  */
 async function initializePageSpecificApp() {
     cacheTutoringDOMElements();
     
-    // Set initial loading state
-    studentLookup.placeholder = "Loading students...";
-    studentLookup.disabled = true;
-    submitBtn.disabled = true;
+    // Hide content and disable form by default
+    tutoringContent.classList.add('hidden');
+    if (studentLookup) {
+        studentLookup.placeholder = "Authorizing...";
+        studentLookup.disabled = true;
+    }
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
+        // --- AUTHORIZATION CHECK ---
+        const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
+        console.log("Authorization response from server:", authResponse);
+
+        if (!authResponse.isAuthorized) {
+            showAccessDenied();
+            return; // Stop the initialization process
+        }
+
+        // If authorized, proceed to load the page content.
+        tutoringContent.classList.remove('hidden');
+        studentLookup.placeholder = "Loading students...";
+        
         const response = await sendAuthenticatedRequest({ action: 'getStudentMasterList' });
         if (response.result === 'success' && response.students) {
             masterStudentList = response.students.sort((a, b) => a.StudentName.localeCompare(b.StudentName));
@@ -154,10 +179,11 @@ async function initializePageSpecificApp() {
             throw new Error("Could not load master student list.");
         }
     } catch (error) {
-        showErrorAlert(`Could not initialize page: ${error.message}`);
-        studentLookup.placeholder = "Failed to load students.";
+        showAccessDenied();
+        console.error("Initialization or Authorization failed:", error);
     }
 
+    // Event listeners
     studentLookup.addEventListener('input', () => {
         const query = studentLookup.value.toLowerCase();
         if (query.length === 0) {
@@ -172,12 +198,12 @@ async function initializePageSpecificApp() {
     });
 
     document.addEventListener('click', (event) => {
-        if (!studentLookup.contains(event.target)) {
+        if (studentLookup && !studentLookup.contains(event.target)) {
             studentResults.classList.add('hidden');
         }
     });
     
-    tutoringForm.addEventListener('submit', handleFormSubmit);
+    if (tutoringForm) tutoringForm.addEventListener('submit', handleFormSubmit);
 }
 
 /**
@@ -187,10 +213,12 @@ function resetPageSpecificAppState() {
     masterStudentList = [];
     selectedStudents = [];
     if (tutoringForm) tutoringForm.reset();
-    renderSelectedStudents();
+    if (selectedStudentsList) renderSelectedStudents();
     if (studentLookup) {
         studentLookup.disabled = true;
         studentLookup.placeholder = "Please sign in to load students.";
     }
     if (submitBtn) submitBtn.disabled = true;
+    if (pageHeader) pageHeader.textContent = "Log a Tutoring Session";
+    if (tutoringContent) tutoringContent.classList.add('hidden');
 }
