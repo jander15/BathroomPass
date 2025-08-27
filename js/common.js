@@ -42,6 +42,7 @@ const appState = {
         currentRightView: 'lateSignIn',
         currentDashboardTab: 'signOut',
         pollingIntervalId: null,
+        tokenRefreshIntervalId: null, // --- ADD THIS LINE ---
         isDataLoaded: false, 
         isPassEnabled: true,
         currentClassPeriod: null,
@@ -419,6 +420,11 @@ async function handleSignIn(authCode) {
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
                 setupProfileMenu();
 
+                // Start the proactive refresh timer. It will run once now, and then every 45 mins.
+                if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
+                proactiveTokenRefresh(); // Run once immediately on sign-in
+                appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000); // 45 minutes
+
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
                 }
@@ -483,6 +489,8 @@ function handleGoogleSignOut() {
     // --- NEW: Clear stored email on sign-out ---
     localStorage.removeItem('lastUserEmail');
 
+    if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
+
     console.log('User signed out.');
     
     appState.currentUser = { email: '', name: '', profilePic: '', idToken: '' };
@@ -498,6 +506,40 @@ function handleGoogleSignOut() {
 
     if (typeof resetPageSpecificAppState === 'function') {
         resetPageSpecificAppState();
+    }
+}
+
+/**
+ * NEW: Proactively refreshes the user's ID token in the background before it expires.
+ */
+async function proactiveTokenRefresh() {
+    console.log("Proactively refreshing session token (running every 45 mins)...");
+    if (!appState.currentUser.email) {
+        console.warn("Cannot refresh token; no user is signed in.");
+        return;
+    }
+
+    try {
+        const refreshPayload = {
+            action: ACTION_REFRESH_TOKEN,
+            userEmail: appState.currentUser.email
+        };
+        const tokenData = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(refreshPayload)
+        }).then(res => res.json());
+
+        if (tokenData.result === 'success' && tokenData.idToken) {
+            console.log("Proactive token refresh successful.");
+            appState.currentUser.idToken = tokenData.idToken;
+        } else {
+            throw new Error(tokenData.details || "Backend rejected the proactive refresh.");
+        }
+    } catch (error) {
+        console.error("Proactive token refresh failed:", error.message);
+        // Don't log the user out here. Let the main sync handle the final failure.
+        // This silent failure will allow the auto-page-reload to take over as the final fallback.
     }
 }
 
@@ -552,6 +594,11 @@ async function attemptSilentSignIn() {
                 if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
                 setupProfileMenu()
                 console.log("setting up profile menu");
+
+                // Start the proactive refresh timer. It will run once now, and then every 45 mins.
+                if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
+                proactiveTokenRefresh(); // Run once immediately on sign-in
+                appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000); // 45 minutes
 
                 if (typeof initializePageSpecificApp === 'function') {
                     initializePageSpecificApp();
