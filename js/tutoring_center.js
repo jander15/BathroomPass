@@ -142,14 +142,13 @@ function renderHistoryReport() {
 
     let filteredLog = [...tutoringLog];
 
+    // (Filtering logic remains the same)
     const studentFilter = historyStudentFilter.value;
     if (studentFilter && studentFilter !== 'all') {
         filteredLog = filteredLog.filter(entry => entry.StudentName === studentFilter);
     }
-
     const dateFilter = historyDateFilter.value;
     if (dateFilter) {
-        // This logic is from a previous step and is correct
         const filterDateStr = new Date(dateFilter).toLocaleDateString();
         filteredLog = filteredLog.filter(entry => new Date(entry.Timestamp).toLocaleDateString() === filterDateStr);
     }
@@ -166,15 +165,12 @@ function renderHistoryReport() {
         const tr = document.createElement('tr');
         tr.className = 'border-t';
 
-        // --- THE FIX: Make date parsing more robust ---
-        // This handles non-standard formats like "...at HH:MM:SS..." from some servers
-        const parsableTimestamp = typeof entry.Timestamp === 'string'
-            ? entry.Timestamp.replace(" at", "")
-            : entry.Timestamp;
+        // --- STEP 1: LOG THE RAW TIMESTAMP ---
+        console.log('Original Timestamp from Server:', entry.Timestamp);
+        // --- END LOGGING ---
 
-        const entryDate = new Date(parsableTimestamp);
+        const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
-        // --- END FIX ---
         
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
