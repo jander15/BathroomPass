@@ -58,12 +58,6 @@ function switchTab(tab) {
     }
 }
 
-// --- "New Log" Specific Functions ---
-function renderSelectedStudents() { /* (Unchanged) */ }
-function renderStudentResults(filteredStudents) { /* (Unchanged) */ }
-async function handleFormSubmit(event) { /* (Unchanged) */ }
-
-// --- "History" Specific Functions ---
 /**
  * MODIFIED: This version removes the filters for debugging purposes.
  */
@@ -105,9 +99,6 @@ function renderHistoryReport() {
     historyMessage.classList.add('hidden');
 }
 
-function openEditModal(entry) { /* (Unchanged) */ }
-async function saveEdit() { /* (Unchanged) */ }
-async function deleteEntry() { /* (Unchanged) */ }
 
 // --- Main Initialization & Authorization ---
 function showAccessDenied() {
@@ -189,9 +180,28 @@ async function initializePageSpecificApp() {
     saveEditBtn.addEventListener('click', saveEdit);
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', deleteEntry);
-    studentLookup.addEventListener('input', () => { /* (Unchanged) */ });
-    document.addEventListener('click', (event) => { /* (Unchanged) */ });
-}
+    studentLookup.addEventListener('input', () => {
+        const searchTerm = studentLookup.value.toLowerCase();
+        if (searchTerm.length < 2) {
+            studentResults.classList.add('hidden');
+            return;
+        }
+        const filteredStudents = masterStudentList.filter(student =>
+            student.StudentName.toLowerCase().includes(searchTerm) &&
+            !selectedStudents.some(s => s.StudentName === student.StudentName)
+        );
+        renderStudentResults(filteredStudents);
+    });
+
+    // Hides the results list if you click anywhere else on the page
+    document.addEventListener('click', (event) => {
+        // If the click is outside the lookup input and the results box...
+        if (!studentLookup.contains(event.target) && !studentResults.contains(event.target)) {
+            // ...hide the results.
+            studentResults.classList.add('hidden');
+        }
+    });
+    }
 
 function resetPageSpecificAppState() {
     tutoringLog = [];
