@@ -40,6 +40,23 @@ function cacheDOMElements() {
     deleteEntryBtn = document.getElementById('deleteEntryBtn');
 }
 
+// --- Helper & Formatting Functions ---
+function getWeekRange() {
+    const now = new Date();
+    const first = now.getDate() - now.getDay();
+    const firstDay = new Date(new Date().setDate(first));
+    const lastDay = new Date(new Date().setDate(first + 6));
+    return { start: firstDay, end: lastDay };
+}
+
+function getMonthRange() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start: firstDay, end: lastDay };
+}
+
+
 // --- Tab Switching Logic ---
 function switchTab(tab) {
     const isHistory = tab === 'history';
@@ -134,6 +151,7 @@ async function handleFormSubmit(event) {
     }
 }
 
+
 // --- "History" Specific Functions ---
 function renderHistoryReport() {
     historyTable.classList.add('hidden');
@@ -142,16 +160,39 @@ function renderHistoryReport() {
 
     let filteredLog = [...tutoringLog];
 
-    // (Filtering logic remains the same)
+    // Apply student filter
     const studentFilter = historyStudentFilter.value;
     if (studentFilter && studentFilter !== 'all') {
         filteredLog = filteredLog.filter(entry => entry.StudentName === studentFilter);
     }
+
+    // Apply date filter
     const dateFilter = historyDateFilter.value;
-    if (dateFilter) {
-        const filterDateStr = new Date(dateFilter).toLocaleDateString();
-        filteredLog = filteredLog.filter(entry => new Date(entry.Timestamp).toLocaleDateString() === filterDateStr);
+    if (dateFilter !== 'all_time') {
+        let startDate, endDate;
+        const today = new Date();
+
+        if (dateFilter === 'today') {
+            startDate = new Date(today.setHours(0, 0, 0, 0));
+            endDate = new Date(new Date().setHours(23, 59, 59, 999));
+        } else if (dateFilter === 'this_week') {
+            const range = getWeekRange();
+            startDate = new Date(range.start.setHours(0, 0, 0, 0));
+            endDate = new Date(range.end.setHours(23, 59, 59, 999));
+        } else if (dateFilter === 'this_month') {
+            const range = getMonthRange();
+            startDate = new Date(range.start.setHours(0, 0, 0, 0));
+            endDate = new Date(range.end.setHours(23, 59, 59, 999));
+        }
+        
+        if(startDate && endDate) {
+            filteredLog = filteredLog.filter(entry => {
+                const entryDate = new Date(entry.Timestamp);
+                return entryDate >= startDate && entryDate <= endDate;
+            });
+        }
     }
+
 
     if (filteredLog.length === 0) {
         historyMessage.textContent = "No log entries found for the selected filters.";
@@ -160,25 +201,21 @@ function renderHistoryReport() {
 
     historyTableBody.innerHTML = '';
     filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
-
+    
     filteredLog.forEach((entry, index) => {
-        // --- Defensive Check ---
         if (!entry.Timestamp || !entry.StudentName) {
             console.warn(`Log entry at index ${index} is missing Timestamp or StudentName.`, entry);
-            return; // Skip rendering this invalid row
+            return; 
         }
 
         const tr = document.createElement('tr');
         tr.className = 'border-t';
-
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
-
-        // Use || 'N/A' to prevent rendering 'undefined'
         const studentName = entry.StudentName || 'N/A';
         const duration = entry.DurationMinutes ? `${entry.DurationMinutes} min` : 'N/A';
         const notes = entry.Notes || '';
-
+        
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
             <td class="p-2">${studentName}</td>
@@ -204,7 +241,6 @@ function openEditModal(entry) {
     editNotes.value = entry.Notes || '';
     editModal.classList.remove('hidden');
 }
-
 async function saveEdit() {
     const payload = {
         action: 'editTutoringLogEntry',
@@ -224,7 +260,6 @@ async function saveEdit() {
         editModal.classList.add('hidden');
     }
 }
-
 async function deleteEntry() {
     if (!confirm("Are you sure you want to delete this log entry? This cannot be undone.")) return;
     try {
@@ -238,6 +273,7 @@ async function deleteEntry() {
         editModal.classList.add('hidden');
     }
 }
+
 
 // --- Main Initialization & Authorization ---
 function showAccessDenied() {
@@ -282,6 +318,7 @@ async function initializePageSpecificApp() {
 
         const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
         populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
+        historyDateFilter.value = 'all_time';
 
     } catch (error) {
         showAccessDenied();
@@ -305,7 +342,6 @@ async function initializePageSpecificApp() {
     saveEditBtn.addEventListener('click', saveEdit);
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', deleteEntry);
-    
     studentLookup.addEventListener('input', () => {
         const searchTerm = studentLookup.value.toLowerCase();
         if (searchTerm.length < 2) {
@@ -318,7 +354,6 @@ async function initializePageSpecificApp() {
         );
         renderStudentResults(filteredStudents);
     });
-    
     document.addEventListener('click', (event) => {
         if (!studentLookup.contains(event.target) && !studentResults.contains(event.target)) {
             studentResults.classList.add('hidden');
