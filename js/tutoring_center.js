@@ -7,7 +7,7 @@ let tutoringLog = [];
 let currentEditTimestamp = null;
 
 // --- DOM Element Caching ---
-let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader, authSpinner, authorizationOverlay;
+let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader, authSpinner;
 let newLogTab, historyTab, newLogContent, historyContent, tutoringContainer;
 let historyStudentFilter, historyDateFilter, historyMessage, historyTable, historyTableBody;
 let editModal, editStudentName, editDuration, editNotes, saveEditBtn, cancelEditBtn, deleteEntryBtn;
@@ -24,7 +24,7 @@ function cacheDOMElements() {
     
     // Page Structure
     pageHeader = document.querySelector('#appContent h1');
-    authorizationOverlay = document.getElementById('authorizationOverlay');
+    authSpinner = document.getElementById('authSpinner'); // Corrected from authorizationOverlay
     newLogTab = document.getElementById('newLogTab');
     historyTab = document.getElementById('historyTab');
     newLogContent = document.getElementById('newLogContent');
@@ -70,8 +70,50 @@ function switchTab(tab) {
 }
 
 // --- "New Log" Specific Functions ---
-function renderSelectedStudents() { /* (This function is unchanged from your previous version) */ }
-function renderStudentResults(filtered) { /* (This function is unchanged from your previous version) */ }
+function renderSelectedStudents() {
+    selectedStudentsList.innerHTML = '';
+    selectedStudents.forEach(student => {
+        const pill = document.createElement('div');
+        pill.className = 'bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full flex items-center';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = student.StudentName;
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '×';
+        removeBtn.className = 'ml-2 font-bold hover:text-red-300';
+        removeBtn.type = 'button';
+        removeBtn.onclick = () => {
+            selectedStudents = selectedStudents.filter(s => s.StudentName !== student.StudentName);
+            renderSelectedStudents();
+        };
+        pill.appendChild(nameSpan);
+        pill.appendChild(removeBtn);
+        selectedStudentsList.appendChild(pill);
+    });
+}
+
+function renderStudentResults(filteredStudents) {
+    studentResults.innerHTML = '';
+    if (filteredStudents.length === 0) {
+        studentResults.classList.add('hidden');
+        return;
+    }
+    filteredStudents.forEach(student => {
+        const item = document.createElement('div');
+        item.textContent = student.StudentName;
+        item.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+        item.addEventListener('click', () => {
+            if (!selectedStudents.some(s => s.StudentName === student.StudentName)) {
+                selectedStudents.push(student);
+                renderSelectedStudents();
+            }
+            studentLookup.value = '';
+            studentResults.classList.add('hidden');
+        });
+        studentResults.appendChild(item);
+    });
+    studentResults.classList.remove('hidden');
+}
+
 async function handleFormSubmit(event) {
     event.preventDefault();
     const duration = parseInt(durationInput.value, 10);
@@ -92,11 +134,9 @@ async function handleFormSubmit(event) {
         tutoringForm.reset();
         selectedStudents = [];
         renderSelectedStudents();
-        // Fetch the updated log for the history tab
         const logResponse = await sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' });
         if (logResponse.result === 'success') {
             tutoringLog = logResponse.log;
-            // Also update the student filter in the history tab with any new names
             const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
             populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
         }
@@ -146,7 +186,7 @@ function renderHistoryReport() {
             <td class="p-2 truncate" title="${entry.Notes}">${entry.Notes || ''}</td>
             <td class="p-2 text-right">
                 <button class="text-gray-500 hover:text-blue-600 edit-btn" data-timestamp="${entry.Timestamp}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    <svg class.name = 'w-5 h-5' fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                 </button>
             </td>
         `;
@@ -209,7 +249,7 @@ function showAccessDenied() {
 
 async function initializePageSpecificApp() {
     cacheDOMElements();
-    authSpinner.classList.remove('hidden');
+    authSpinner.parentElement.classList.remove('hidden');
 
     try {
         const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
@@ -225,8 +265,8 @@ async function initializePageSpecificApp() {
             sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' })
         ]);
 
-        if (studentsResponse.result === 'success') masterStudentList = studentsResponse.students.sort((a,b) => a.StudentName.localeCompare(b.StudentName));
-        if (logResponse.result === 'success') tutoringLog = logResponse.log;
+        if (studentsResponse.result === 'success' && studentsResponse.students) masterStudentList = studentsResponse.students.sort((a,b) => a.StudentName.localeCompare(b.StudentName));
+        if (logResponse.result === 'success' && logResponse.log) tutoringLog = logResponse.log;
 
         studentLookup.placeholder = "Start typing a student's name...";
         studentLookup.disabled = false;
@@ -239,7 +279,7 @@ async function initializePageSpecificApp() {
         showAccessDenied();
         console.error("Initialization failed:", error);
     } finally {
-        authSpinner.parentElement.classList.add('hidden'); // Hide the overlay
+        authSpinner.parentElement.classList.add('hidden');
     }
 
     // --- Event Listeners ---
@@ -259,55 +299,25 @@ async function initializePageSpecificApp() {
     saveEditBtn.addEventListener('click', saveEdit);
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', deleteEntry);
-    studentLookup.addEventListener('input', () => { /* (Unchanged) */ });
-    document.addEventListener('click', (event) => { /* (Unchanged) */ });
+    studentLookup.addEventListener('input', () => {
+        const query = studentLookup.value.toLowerCase();
+        if (query.length === 0) { studentResults.classList.add('hidden'); return; }
+        const selectedNames = selectedStudents.map(s => s.StudentName);
+        const filtered = masterStudentList.filter(student => student.StudentName.toLowerCase().includes(query) && !selectedNames.includes(student.StudentName));
+        renderStudentResults(filtered.slice(0, 10));
+    });
+    document.addEventListener('click', (event) => {
+        if (studentLookup && !studentLookup.contains(event.target)) {
+            studentResults.classList.add('hidden');
+        }
+    });
 }
 
 function resetPageSpecificAppState() {
     tutoringLog = [];
+    masterStudentList = [];
+    selectedStudents = [];
+    if (tutoringForm) tutoringForm.reset();
+    if (selectedStudentsList) renderSelectedStudents();
     if (pageHeader) pageHeader.textContent = "Tutoring Center";
-}
-
-// Re-add renderSelectedStudents and renderStudentResults for completeness
-function renderSelectedStudents() {
-    selectedStudentsList.innerHTML = '';
-    selectedStudents.forEach(student => {
-        const pill = document.createElement('div');
-        pill.className = 'bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full flex items-center';
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = student.StudentName;
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = '×';
-        removeBtn.className = 'ml-2 font-bold hover:text-red-300';
-        removeBtn.type = 'button';
-        removeBtn.onclick = () => {
-            selectedStudents = selectedStudents.filter(s => s.StudentName !== student.StudentName);
-            renderSelectedStudents();
-        };
-        pill.appendChild(nameSpan);
-        pill.appendChild(removeBtn);
-        selectedStudentsList.appendChild(pill);
-    });
-}
-function renderStudentResults(filteredStudents) {
-    studentResults.innerHTML = '';
-    if (filteredStudents.length === 0) {
-        studentResults.classList.add('hidden');
-        return;
-    }
-    filteredStudents.forEach(student => {
-        const item = document.createElement('div');
-        item.textContent = student.StudentName;
-        item.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
-        item.addEventListener('click', () => {
-            if (!selectedStudents.some(s => s.StudentName === student.StudentName)) {
-                selectedStudents.push(student);
-                renderSelectedStudents();
-            }
-            studentLookup.value = '';
-            studentResults.classList.add('hidden');
-        });
-        studentResults.appendChild(item);
-    });
-    studentResults.classList.remove('hidden');
 }

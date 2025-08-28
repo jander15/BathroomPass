@@ -23,6 +23,11 @@
         </div>
     </div>
 
+    <div id="tutorAuthOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col items-center justify-center z-30">
+        <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+        <p class="text-white text-lg mt-4">Checking Tutor Authorization...</p>
+    </div>
+
     <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
             <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500">
@@ -48,11 +53,6 @@
 
             <!-- New Log Entry View -->
             <div id="newLogContent" class="p-6">
-                <div id="authorizationOverlay" class="relative bg-gray-50 p-6 rounded-b-lg">
-                    <div id="authSpinner" class="absolute inset-0 bg-gray-50 bg-opacity-95 flex flex-col items-center justify-center rounded-lg z-20">
-                        <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
-                        <p class="text-gray-700 text-lg mt-4">Checking Tutor Authorization...</p>
-                    </div>
                     <form id="tutoringForm" class="space-y-4 hidden">
                         <!-- Student Lookup, Duration, Notes, etc. -->
                         <div class="relative">
@@ -76,7 +76,6 @@
                             <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Log Session</button>
                         </div>
                     </form>
-                </div>
             </div>
 
             <!-- History View -->
