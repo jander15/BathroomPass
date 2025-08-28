@@ -12,11 +12,11 @@
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
+    <!-- Sign-In and Profile Menu (Unchanged) -->
     <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
         <h1 class="text-4xl font-bold text-white mb-8">Tutoring Center Log</h1>
         <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
         <div id="googleSignInButton"></div>
-        <p class="text-red-500 mt-4 hidden" id="signInError">Sign-in failed. Please try again.</p>
         <div id="loadingOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col items-center justify-center">
             <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
             <p class="text-white text-lg mt-4">Authenticating...</p>
@@ -25,56 +25,124 @@
 
     <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
         <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
-            <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500 transition-all duration-200">
+            <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500">
             <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
-                <div class="px-4 py-2 text-sm font-medium text-center" id="dropdownUserName"></div>
-                <div class="px-4 pb-2 text-xs text-center text-gray-600" id="dropdownUserEmail"></div>
+                <div class="px-4 py-2" id="dropdownUserName"></div>
+                <div class="px-4 pb-2 text-xs" id="dropdownUserEmail"></div>
                 <hr class="my-1">
-                <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                    Sign Out of Google
-                </button>
+                <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Sign Out</button>
             </div>
         </div>
         
-        <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Log a Tutoring Session</h1>
+        <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Tutoring Center</h1>
         
-        <div id="tutoringContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-2xl space-y-6 relative">
-            <div id="authorizationOverlay" class="absolute inset-0 bg-gray-50 bg-opacity-95 flex flex-col items-center justify-center rounded-lg z-20">
-                <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
-                <p class="text-gray-700 text-lg mt-4">Checking Tutor Authorization...</p>
+        <!-- Main Content Area with Tabs -->
+        <div id="tutoringContainer" class="bg-gray-50 rounded-lg shadow-xl w-full max-w-4xl">
+            <!-- Tab Buttons -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button id="newLogTab" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">New Log Entry</button>
+                    <button id="historyTab" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">History</button>
+                </nav>
             </div>
-            
-            <form id="tutoringForm" class="space-y-4 hidden">
-                <div class="relative">
-                    <label for="studentLookup" class="block text-sm font-medium text-gray-700">Student:</label>
-                    <input type="text" id="studentLookup" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    <div id="studentResults" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+
+            <!-- New Log Entry View -->
+            <div id="newLogContent" class="p-6">
+                <div id="authorizationOverlay" class="relative bg-gray-50 p-6 rounded-b-lg">
+                    <div id="authSpinner" class="absolute inset-0 bg-gray-50 bg-opacity-95 flex flex-col items-center justify-center rounded-lg z-20">
+                        <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+                        <p class="text-gray-700 text-lg mt-4">Checking Tutor Authorization...</p>
+                    </div>
+                    <form id="tutoringForm" class="space-y-4 hidden">
+                        <!-- Student Lookup, Duration, Notes, etc. -->
+                        <div class="relative">
+                            <label for="studentLookup" class="block text-sm font-medium text-gray-700">Student Lookup:</label>
+                            <input type="text" id="studentLookup" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm">
+                            <div id="studentResults" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"></div>
                         </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Selected Students:</label>
-                    <div id="selectedStudentsList" class="mt-1 p-2 border border-gray-200 rounded-md min-h-[50px] bg-gray-100 flex flex-wrap gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Selected Students:</label>
+                            <div id="selectedStudentsList" class="mt-1 p-2 border border-gray-200 rounded-md min-h-[50px] bg-gray-100 flex flex-wrap gap-2"></div>
                         </div>
+                        <div>
+                            <label for="durationInput" class="block text-sm font-medium text-gray-700">Duration (minutes):</label>
+                            <input type="number" id="durationInput" min="1" step="1" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 30">
+                        </div>
+                        <div>
+                            <label for="notesInput" class="block text-sm font-medium text-gray-700">Notes:</label>
+                            <textarea id="notesInput" rows="4" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm" placeholder="Enter notes..."></textarea>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Log Session</button>
+                        </div>
+                    </form>
                 </div>
+            </div>
 
-
-                <div>
-                    <label for="durationInput" class="block text-sm font-medium text-gray-700">Duration (in minutes):</label>
-                    <input type="number" id="durationInput" min="1" step="1" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., 30">
+            <!-- History View -->
+            <div id="historyContent" class="hidden p-6 space-y-4">
+                <!-- Filters -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="historyStudentFilter" class="block text-sm font-medium text-gray-700">Filter by Student:</label>
+                        <select id="historyStudentFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm"></select>
+                    </div>
+                    <div>
+                        <label for="historyDateFilter" class="block text-sm font-medium text-gray-700">Filter by Date:</label>
+                        <input type="date" id="historyDateFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm">
+                    </div>
                 </div>
-
-                <div>
-                    <label for="notesInput" class="block text-sm font-medium text-gray-700">Notes:</label>
-                    <textarea id="notesInput" rows="4" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter any relevant notes here..."></textarea>
+                <!-- Report Table -->
+                <div class="overflow-x-auto">
+                    <p id="historyMessage" class="text-center text-gray-600">Loading history...</p>
+                    <table id="historyTable" class="min-w-full bg-white hidden">
+                        <thead>
+                            <tr class="bg-gray-100 text-left text-sm font-semibold">
+                                <th class="p-2 border-b">Date</th>
+                                <th class="p-2 border-b">Student</th>
+                                <th class="p-2 border-b">Class</th>
+                                <th class="p-2 border-b">Duration</th>
+                                <th class="p-2 border-b">Notes</th>
+                                <th class="p-2 border-b text-right">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="flex justify-end pt-2">
-                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none transition-colors duration-200">
-                        Log Session
-                    </button>
+    <!-- Edit Modal (similar to Teacher Dashboard) -->
+    <div id="editModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75"></div>
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                <div class="p-6">
+                    <h3 class="text-lg font-medium text-gray-900">Edit Tutoring Log Entry</h3>
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <label for="editStudentName" class="block text-sm text-gray-700">Student Name</label>
+                            <input type="text" id="editStudentName" class="mt-1 w-full p-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label for="editDuration" class="block text-sm text-gray-700">Duration (minutes)</label>
+                            <input type="number" id="editDuration" class="mt-1 w-full p-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label for="editNotes" class="block text-sm text-gray-700">Notes</label>
+                            <textarea id="editNotes" rows="3" class="mt-1 w-full p-2 border rounded-md"></textarea>
+                        </div>
+                    </div>
                 </div>
-            </form>
+                <div class="bg-gray-50 px-6 py-3 flex justify-between items-center">
+                    <button type="button" id="deleteEntryBtn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Delete</button>
+                    <div>
+                        <button type="button" id="cancelEditBtn" class="px-4 py-2 bg-white border rounded-md hover:bg-gray-100">Cancel</button>
+                        <button type="button" id="saveEditBtn" class="ml-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
