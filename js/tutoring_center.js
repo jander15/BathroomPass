@@ -7,7 +7,7 @@ let tutoringLog = [];
 let currentEditTimestamp = null;
 
 // --- DOM Element Caching ---
-let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader, authSpinner;
+let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader, tutorAuthOverlay;
 let newLogTab, historyTab, newLogContent, historyContent, tutoringContainer;
 let historyStudentFilter, historyDateFilter, historyMessage, historyTable, historyTableBody;
 let editModal, editStudentName, editDuration, editNotes, saveEditBtn, cancelEditBtn, deleteEntryBtn;
@@ -24,7 +24,7 @@ function cacheDOMElements() {
     
     // Page Structure
     pageHeader = document.querySelector('#appContent h1');
-    authSpinner = document.getElementById('authSpinner'); // Corrected from authorizationOverlay
+    tutorAuthOverlay = document.getElementById('tutorAuthOverlay'); // Corrected from authorizationOverlay
     newLogTab = document.getElementById('newLogTab');
     historyTab = document.getElementById('historyTab');
     newLogContent = document.getElementById('newLogContent');
@@ -249,7 +249,7 @@ function showAccessDenied() {
 
 async function initializePageSpecificApp() {
     cacheDOMElements();
-    authSpinner.parentElement.classList.remove('hidden');
+    tutorAuthOverlay.parentElement.classList.remove('hidden');
 
     try {
         const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
@@ -279,7 +279,7 @@ async function initializePageSpecificApp() {
         showAccessDenied();
         console.error("Initialization failed:", error);
     } finally {
-        authSpinner.parentElement.classList.add('hidden');
+        tutorAuthOverlay.parentElement.classList.add('hidden');
     }
 
     // --- Event Listeners ---
