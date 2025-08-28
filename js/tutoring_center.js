@@ -160,23 +160,30 @@ function renderHistoryReport() {
 
     historyTableBody.innerHTML = '';
     filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
-    
-    filteredLog.forEach(entry => {
+
+    filteredLog.forEach((entry, index) => {
+        // --- Defensive Check ---
+        if (!entry.Timestamp || !entry.StudentName) {
+            console.warn(`Log entry at index ${index} is missing Timestamp or StudentName.`, entry);
+            return; // Skip rendering this invalid row
+        }
+
         const tr = document.createElement('tr');
         tr.className = 'border-t';
 
-        // --- STEP 1: LOG THE RAW TIMESTAMP ---
-        console.log('Original Timestamp from Server:', entry.Timestamp);
-        // --- END LOGGING ---
-
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
-        
+
+        // Use || 'N/A' to prevent rendering 'undefined'
+        const studentName = entry.StudentName || 'N/A';
+        const duration = entry.DurationMinutes ? `${entry.DurationMinutes} min` : 'N/A';
+        const notes = entry.Notes || '';
+
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
-            <td class="p-2">${entry.StudentName}</td>
-            <td class="p-2">${entry.DurationMinutes} min</td>
-            <td class="p-2 truncate" title="${entry.Notes}">${entry.Notes || ''}</td>
+            <td class="p-2">${studentName}</td>
+            <td class="p-2">${duration}</td>
+            <td class="p-2 truncate" title="${notes}">${notes}</td>
             <td class="p-2 text-right">
                 <button class="text-gray-500 hover:text-blue-600 edit-btn" data-timestamp="${entry.Timestamp}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
