@@ -149,6 +149,7 @@ function renderHistoryReport() {
 
     const dateFilter = historyDateFilter.value;
     if (dateFilter) {
+        // This logic is from a previous step and is correct
         const filterDateStr = new Date(dateFilter).toLocaleDateString();
         filteredLog = filteredLog.filter(entry => new Date(entry.Timestamp).toLocaleDateString() === filterDateStr);
     }
@@ -164,8 +165,16 @@ function renderHistoryReport() {
     filteredLog.forEach(entry => {
         const tr = document.createElement('tr');
         tr.className = 'border-t';
-        const entryDate = new Date(entry.Timestamp);
+
+        // --- THE FIX: Make date parsing more robust ---
+        // This handles non-standard formats like "...at HH:MM:SS..." from some servers
+        const parsableTimestamp = typeof entry.Timestamp === 'string'
+            ? entry.Timestamp.replace(" at", "")
+            : entry.Timestamp;
+
+        const entryDate = new Date(parsableTimestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
+        // --- END FIX ---
         
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
