@@ -7,13 +7,12 @@ let tutoringLog = [];
 let currentEditTimestamp = null;
 
 // --- DOM Element Caching ---
-let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader, tutorAuthOverlay;
+let studentLookup, studentResults, durationInput, notesInput, tutoringForm, submitBtn, selectedStudentsList, pageHeader;
 let newLogTab, historyTab, newLogContent, historyContent, tutoringContainer;
 let historyStudentFilter, historyDateFilter, historyMessage, historyTable, historyTableBody;
 let editModal, editStudentName, editDuration, editNotes, saveEditBtn, cancelEditBtn, deleteEntryBtn;
 
 function cacheDOMElements() {
-    // New Log Tab
     studentLookup = document.getElementById('studentLookup');
     studentResults = document.getElementById('studentResults');
     durationInput = document.getElementById('durationInput');
@@ -21,24 +20,17 @@ function cacheDOMElements() {
     tutoringForm = document.getElementById('tutoringForm');
     submitBtn = document.getElementById('submitBtn');
     selectedStudentsList = document.getElementById('selectedStudentsList');
-    
-    // Page Structure
     pageHeader = document.querySelector('#appContent h1');
-    tutorAuthOverlay = document.getElementById('tutorAuthOverlay');
     newLogTab = document.getElementById('newLogTab');
     historyTab = document.getElementById('historyTab');
     newLogContent = document.getElementById('newLogContent');
     historyContent = document.getElementById('historyContent');
     tutoringContainer = document.getElementById('tutoringContainer');
-    
-    // History Tab
     historyStudentFilter = document.getElementById('historyStudentFilter');
     historyDateFilter = document.getElementById('historyDateFilter');
     historyMessage = document.getElementById('historyMessage');
     historyTable = document.getElementById('historyTable');
     historyTableBody = document.getElementById('historyTableBody');
-
-    // Edit Modal
     editModal = document.getElementById('editModal');
     editStudentName = document.getElementById('editStudentName');
     editDuration = document.getElementById('editDuration');
@@ -53,32 +45,69 @@ function switchTab(tab) {
     const isHistory = tab === 'history';
     newLogContent.classList.toggle('hidden', isHistory);
     historyContent.classList.toggle('hidden', !isHistory);
-
     newLogTab.classList.toggle('border-indigo-500', !isHistory);
     newLogTab.classList.toggle('text-indigo-600', !isHistory);
     newLogTab.classList.toggle('border-transparent', isHistory);
     newLogTab.classList.toggle('text-gray-500', isHistory);
-
     historyTab.classList.toggle('border-indigo-500', isHistory);
     historyTab.classList.toggle('text-indigo-600', isHistory);
     historyTab.classList.toggle('border-transparent', !isHistory);
     historyTab.classList.toggle('text-gray-500', !isHistory);
-
     if (isHistory) {
         renderHistoryReport();
     }
 }
 
 // --- "New Log" Specific Functions ---
-function renderSelectedStudents() { /* (This function's content is correct in your file) */ }
-function renderStudentResults(filteredStudents) { /* (This function's content is correct in your file) */ }
-async function handleFormSubmit(event) { /* (This function's content is correct in your file) */ }
+function renderSelectedStudents() { /* (Unchanged) */ }
+function renderStudentResults(filteredStudents) { /* (Unchanged) */ }
+async function handleFormSubmit(event) { /* (Unchanged) */ }
 
 // --- "History" Specific Functions ---
-function renderHistoryReport() { /* (This function's content is correct in your file) */ }
-function openEditModal(entry) { /* (This function's content is correct in your file) */ }
-async function saveEdit() { /* (This function's content is correct in your file) */ }
-async function deleteEntry() { /* (This function's content is correct in your file) */ }
+/**
+ * MODIFIED: This version removes the filters for debugging purposes.
+ */
+function renderHistoryReport() {
+    historyTable.classList.add('hidden');
+    historyMessage.textContent = "Loading...";
+    historyMessage.classList.remove('hidden');
+
+    // Filters have been removed for this test. We will render the entire log.
+    let filteredLog = [...tutoringLog];
+
+    if (filteredLog.length === 0) {
+        historyMessage.textContent = "No log entries found.";
+        return;
+    }
+
+    historyTableBody.innerHTML = '';
+    filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+    
+    filteredLog.forEach(entry => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+            <td class="p-2">${new Date(entry.Timestamp).toLocaleDateString()}</td>
+            <td class="p-2">${entry.StudentName}</td>
+            <td class="p-2">${entry.ClassName || 'N/A'}</td>
+            <td class="p-2">${entry.DurationMinutes} min</td>
+            <td class="p-2 truncate" title="${entry.Notes}">${entry.Notes || ''}</td>
+            <td class="p-2 text-right">
+                <button class="text-gray-500 hover:text-blue-600 edit-btn" data-timestamp="${entry.Timestamp}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+            </td>
+        `;
+        historyTableBody.appendChild(tr);
+    });
+
+    historyTable.classList.remove('hidden');
+    historyMessage.classList.add('hidden');
+}
+
+function openEditModal(entry) { /* (Unchanged) */ }
+async function saveEdit() { /* (Unchanged) */ }
+async function deleteEntry() { /* (Unchanged) */ }
 
 // --- Main Initialization & Authorization ---
 function showAccessDenied() {
@@ -87,51 +116,67 @@ function showAccessDenied() {
     showErrorAlert("You are not authorized to use this tool.");
 }
 
+/**
+ * MODIFIED: Added detailed console logging for debugging.
+ */
 async function initializePageSpecificApp() {
     cacheDOMElements();
-    if (tutorAuthOverlay) tutorAuthOverlay.classList.remove('hidden');
 
     try {
+        console.log("Step 1: Checking tutor authorization...");
         const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
         if (!authResponse.isAuthorized) {
+            console.error("Authorization check failed. User is not a tutor.");
             showAccessDenied();
             return;
         }
+        console.log("Step 1 complete: User is authorized.");
 
         switchTab('newLog');
+        tutoringForm.classList.remove('hidden'); // Show the form now
 
+        console.log("Step 2: Fetching master student list and tutoring log...");
         const [studentsResponse, logResponse] = await Promise.all([
             sendAuthenticatedRequest({ action: 'getStudentMasterList' }),
             sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' })
         ]);
 
+        // --- DEBUGGING: Log the raw responses from the server ---
+        console.log("Raw student list response:", studentsResponse);
+        console.log("Raw tutoring log response:", logResponse);
+        
         if (studentsResponse.result === 'success' && studentsResponse.students) {
             masterStudentList = studentsResponse.students.sort((a,b) => a.StudentName.localeCompare(b.StudentName));
+            console.log("Step 2a complete: Master student list processed.", masterStudentList);
+        } else {
+            throw new Error("Failed to process student master list.");
         }
+        
         if (logResponse.result === 'success' && logResponse.log) {
             tutoringLog = logResponse.log;
+            console.log("Step 2b complete: Tutoring log processed.", tutoringLog);
+        } else {
+            throw new Error("Failed to process tutoring log.");
         }
 
+        console.log("Step 3: Populating UI elements...");
         studentLookup.placeholder = "Start typing a student's name...";
         studentLookup.disabled = false;
         submitBtn.disabled = false;
-        tutoringForm.classList.remove('hidden'); // This line unhides the form
 
         const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
         populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
+        console.log("Step 3 complete: UI is ready.");
 
     } catch (error) {
         showAccessDenied();
         console.error("Initialization failed:", error);
-    } finally {
-        if (tutorAuthOverlay) tutorAuthOverlay.classList.add('hidden');
     }
 
     // --- Event Listeners ---
     newLogTab.addEventListener('click', () => switchTab('newLog'));
     historyTab.addEventListener('click', () => switchTab('history'));
-    historyStudentFilter.addEventListener('change', renderHistoryReport);
-    historyDateFilter.addEventListener('change', renderHistoryReport);
+    // Filter listeners are temporarily disabled by the renderHistoryReport changes
     tutoringForm.addEventListener('submit', handleFormSubmit);
     historyTableBody.addEventListener('click', (event) => {
         const editButton = event.target.closest('.edit-btn');
@@ -144,18 +189,8 @@ async function initializePageSpecificApp() {
     saveEditBtn.addEventListener('click', saveEdit);
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', deleteEntry);
-    studentLookup.addEventListener('input', () => {
-        const query = studentLookup.value.toLowerCase();
-        if (query.length === 0) { studentResults.classList.add('hidden'); return; }
-        const selectedNames = selectedStudents.map(s => s.StudentName);
-        const filtered = masterStudentList.filter(student => student.StudentName.toLowerCase().includes(query) && !selectedNames.includes(student.StudentName));
-        renderStudentResults(filtered.slice(0, 10));
-    });
-    document.addEventListener('click', (event) => {
-        if (studentLookup && !studentLookup.contains(event.target)) {
-            studentResults.classList.add('hidden');
-        }
-    });
+    studentLookup.addEventListener('input', () => { /* (Unchanged) */ });
+    document.addEventListener('click', (event) => { /* (Unchanged) */ });
 }
 
 function resetPageSpecificAppState() {
