@@ -58,161 +58,7 @@ function switchTab(tab) {
     }
 }
 
-/**
- * MODIFIED: This version removes the filters for debugging purposes.
- */
-function renderHistoryReport() {
-    historyTable.classList.add('hidden');
-    historyMessage.textContent = "Loading...";
-    historyMessage.classList.remove('hidden');
-
-    // Filters have been removed for this test. We will render the entire log.
-    let filteredLog = [...tutoringLog];
-
-    if (filteredLog.length === 0) {
-        historyMessage.textContent = "No log entries found.";
-        return;
-    }
-
-    historyTableBody.innerHTML = '';
-    filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
-    
-    filteredLog.forEach(entry => {
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
-        tr.innerHTML = `
-            <td class="p-2">${new Date(entry.Timestamp).toLocaleDateString()}</td>
-            <td class="p-2">${entry.StudentName}</td>
-            <td class="p-2">${entry.ClassName || 'N/A'}</td>
-            <td class="p-2">${entry.DurationMinutes} min</td>
-            <td class="p-2 truncate" title="${entry.Notes}">${entry.Notes || ''}</td>
-            <td class="p-2 text-right">
-                <button class="text-gray-500 hover:text-blue-600 edit-btn" data-timestamp="${entry.Timestamp}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                </button>
-            </td>
-        `;
-        historyTableBody.appendChild(tr);
-    });
-
-    historyTable.classList.remove('hidden');
-    historyMessage.classList.add('hidden');
-}
-
-
-// --- Main Initialization & Authorization ---
-function showAccessDenied() {
-    if (tutoringContainer) tutoringContainer.classList.add('hidden');
-    if (pageHeader) pageHeader.textContent = "Access Denied";
-    showErrorAlert("You are not authorized to use this tool.");
-}
-
-/**
- * MODIFIED: Added detailed console logging for debugging.
- */
-async function initializePageSpecificApp() {
-    cacheDOMElements();
-
-    try {
-        console.log("Step 1: Checking tutor authorization...");
-        const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
-        if (!authResponse.isAuthorized) {
-            console.error("Authorization check failed. User is not a tutor.");
-            showAccessDenied();
-            return;
-        }
-        console.log("Step 1 complete: User is authorized.");
-
-        switchTab('newLog');
-        tutoringForm.classList.remove('hidden'); // Show the form now
-
-        console.log("Step 2: Fetching master student list and tutoring log...");
-        const [studentsResponse, logResponse] = await Promise.all([
-            sendAuthenticatedRequest({ action: 'getStudentMasterList' }),
-            sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' })
-        ]);
-
-        // --- DEBUGGING: Log the raw responses from the server ---
-        console.log("Raw student list response:", studentsResponse);
-        console.log("Raw tutoring log response:", logResponse);
-        
-        if (studentsResponse.result === 'success' && studentsResponse.students) {
-            masterStudentList = studentsResponse.students.sort((a,b) => a.StudentName.localeCompare(b.StudentName));
-            console.log("Step 2a complete: Master student list processed.", masterStudentList);
-        } else {
-            throw new Error("Failed to process student master list.");
-        }
-        
-        if (logResponse.result === 'success' && logResponse.log) {
-            tutoringLog = logResponse.log;
-            console.log("Step 2b complete: Tutoring log processed.", tutoringLog);
-        } else {
-            throw new Error("Failed to process tutoring log.");
-        }
-
-        console.log("Step 3: Populating UI elements...");
-        studentLookup.placeholder = "Start typing a student's name...";
-        studentLookup.disabled = false;
-        submitBtn.disabled = false;
-
-        const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
-        populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
-        console.log("Step 3 complete: UI is ready.");
-
-    } catch (error) {
-        showAccessDenied();
-        console.error("Initialization failed:", error);
-    }
-
-    // --- Event Listeners ---
-    newLogTab.addEventListener('click', () => switchTab('newLog'));
-    historyTab.addEventListener('click', () => switchTab('history'));
-    // Filter listeners are temporarily disabled by the renderHistoryReport changes
-    tutoringForm.addEventListener('submit', handleFormSubmit);
-    historyTableBody.addEventListener('click', (event) => {
-        const editButton = event.target.closest('.edit-btn');
-        if (editButton) {
-            const timestamp = editButton.dataset.timestamp;
-            const entry = tutoringLog.find(e => e.Timestamp === timestamp);
-            if (entry) openEditModal(entry);
-        }
-    });
-    saveEditBtn.addEventListener('click', saveEdit);
-    cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-    deleteEntryBtn.addEventListener('click', deleteEntry);
-    studentLookup.addEventListener('input', () => {
-        const searchTerm = studentLookup.value.toLowerCase();
-        if (searchTerm.length < 2) {
-            studentResults.classList.add('hidden');
-            return;
-        }
-        const filteredStudents = masterStudentList.filter(student =>
-            student.StudentName.toLowerCase().includes(searchTerm) &&
-            !selectedStudents.some(s => s.StudentName === student.StudentName)
-        );
-        renderStudentResults(filteredStudents);
-    });
-
-    // Hides the results list if you click anywhere else on the page
-    document.addEventListener('click', (event) => {
-        // If the click is outside the lookup input and the results box...
-        if (!studentLookup.contains(event.target) && !studentResults.contains(event.target)) {
-            // ...hide the results.
-            studentResults.classList.add('hidden');
-        }
-    });
-    }
-
-function resetPageSpecificAppState() {
-    tutoringLog = [];
-    masterStudentList = [];
-    selectedStudents = [];
-    if (tutoringForm) tutoringForm.reset();
-    if (selectedStudentsList) renderSelectedStudents();
-    if (pageHeader) pageHeader.textContent = "Tutoring Center";
-}
-
-// (Full content for helper functions is included below for completeness)
+// --- "New Log" Specific Functions ---
 function renderSelectedStudents() {
     if (!selectedStudentsList) return;
     selectedStudentsList.innerHTML = '';
@@ -287,6 +133,8 @@ async function handleFormSubmit(event) {
         submitBtn.textContent = "Log Session";
     }
 }
+
+// --- "History" Specific Functions ---
 function renderHistoryReport() {
     historyTable.classList.add('hidden');
     historyMessage.textContent = "Loading...";
@@ -301,7 +149,6 @@ function renderHistoryReport() {
 
     const dateFilter = historyDateFilter.value;
     if (dateFilter) {
-        // Correctly compare dates by ignoring the time part
         const filterDateStr = new Date(dateFilter).toLocaleDateString();
         filteredLog = filteredLog.filter(entry => new Date(entry.Timestamp).toLocaleDateString() === filterDateStr);
     }
@@ -312,14 +159,11 @@ function renderHistoryReport() {
     }
 
     historyTableBody.innerHTML = '';
-    // Sort by most recent first
     filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
     
     filteredLog.forEach(entry => {
         const tr = document.createElement('tr');
         tr.className = 'border-t';
-
-        // --- THE FIX: Create a new Date object from the timestamp ---
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
         
@@ -341,6 +185,7 @@ function renderHistoryReport() {
     historyTable.classList.remove('hidden');
     historyMessage.classList.add('hidden');
 }
+
 function openEditModal(entry) {
     currentEditTimestamp = entry.Timestamp;
     editStudentName.value = entry.StudentName;
@@ -348,11 +193,11 @@ function openEditModal(entry) {
     editNotes.value = entry.Notes || '';
     editModal.classList.remove('hidden');
 }
+
 async function saveEdit() {
     const payload = {
         action: 'editTutoringLogEntry',
         entryTimestamp: currentEditTimestamp,
-        newStudentName: editStudentName.value,
         newDuration: editDuration.value,
         newNotes: editNotes.value
     };
@@ -368,6 +213,7 @@ async function saveEdit() {
         editModal.classList.add('hidden');
     }
 }
+
 async function deleteEntry() {
     if (!confirm("Are you sure you want to delete this log entry? This cannot be undone.")) return;
     try {
@@ -380,4 +226,100 @@ async function deleteEntry() {
     } finally {
         editModal.classList.add('hidden');
     }
+}
+
+// --- Main Initialization & Authorization ---
+function showAccessDenied() {
+    if (tutoringContainer) tutoringContainer.classList.add('hidden');
+    if (pageHeader) pageHeader.textContent = "Access Denied";
+    showErrorAlert("You are not authorized to use this tool.");
+}
+
+async function initializePageSpecificApp() {
+    cacheDOMElements();
+
+    try {
+        const authResponse = await sendAuthenticatedRequest({ action: 'checkTutorAuthorization' });
+        if (!authResponse.isAuthorized) {
+            showAccessDenied();
+            return;
+        }
+
+        switchTab('newLog');
+        tutoringForm.classList.remove('hidden');
+
+        const [studentsResponse, logResponse] = await Promise.all([
+            sendAuthenticatedRequest({ action: 'getStudentMasterList' }),
+            sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' })
+        ]);
+        
+        if (studentsResponse.result === 'success' && studentsResponse.students) {
+            masterStudentList = studentsResponse.students.sort((a,b) => a.StudentName.localeCompare(b.StudentName));
+        } else {
+            throw new Error("Failed to process student master list.");
+        }
+        
+        if (logResponse.result === 'success' && logResponse.log) {
+            tutoringLog = logResponse.log;
+        } else {
+            throw new Error("Failed to process tutoring log.");
+        }
+
+        studentLookup.placeholder = "Start typing a student's name...";
+        studentLookup.disabled = false;
+        submitBtn.disabled = false;
+
+        const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
+        populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
+
+    } catch (error) {
+        showAccessDenied();
+        console.error("Initialization failed:", error);
+    }
+
+    // --- Event Listeners ---
+    newLogTab.addEventListener('click', () => switchTab('newLog'));
+    historyTab.addEventListener('click', () => switchTab('history'));
+    historyStudentFilter.addEventListener('change', renderHistoryReport);
+    historyDateFilter.addEventListener('change', renderHistoryReport);
+    tutoringForm.addEventListener('submit', handleFormSubmit);
+    historyTableBody.addEventListener('click', (event) => {
+        const editButton = event.target.closest('.edit-btn');
+        if (editButton) {
+            const timestamp = editButton.dataset.timestamp;
+            const entry = tutoringLog.find(e => e.Timestamp === timestamp);
+            if (entry) openEditModal(entry);
+        }
+    });
+    saveEditBtn.addEventListener('click', saveEdit);
+    cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
+    deleteEntryBtn.addEventListener('click', deleteEntry);
+    
+    studentLookup.addEventListener('input', () => {
+        const searchTerm = studentLookup.value.toLowerCase();
+        if (searchTerm.length < 2) {
+            studentResults.classList.add('hidden');
+            return;
+        }
+        const filteredStudents = masterStudentList.filter(student =>
+            student.StudentName.toLowerCase().includes(searchTerm) &&
+            !selectedStudents.some(s => s.StudentName === student.StudentName)
+        );
+        renderStudentResults(filteredStudents);
+    });
+    
+    document.addEventListener('click', (event) => {
+        if (!studentLookup.contains(event.target) && !studentResults.contains(event.target)) {
+            studentResults.classList.add('hidden');
+        }
+    });
+}
+
+function resetPageSpecificAppState() {
+    tutoringLog = [];
+    masterStudentList = [];
+    selectedStudents = [];
+    if (tutoringForm) tutoringForm.reset();
+    if (selectedStudentsList) renderSelectedStudents();
+    if (pageHeader) pageHeader.textContent = "Tutoring Center";
 }
