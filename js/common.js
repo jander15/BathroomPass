@@ -403,32 +403,8 @@ async function handleSignIn(authCode) {
 
             console.log("User signed in and tokens exchanged successfully!");
 
-            setTimeout(() => {
-                if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-                if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-                if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-                if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
+            updateUIAfterSignIn();
 
-                if (signInPage) signInPage.style.display = 'none'; 
-                
-                if (appContent) {
-                    appContent.classList.remove('hidden');
-                    appContent.style.display = 'flex';
-                }
-
-                if (bodyElement) bodyElement.classList.remove('justify-center');
-                if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
-                setupProfileMenu();
-
-                // Start the proactive refresh timer. It will run once now, and then every 45 mins.
-                if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
-                proactiveTokenRefresh(); // Run once immediately on sign-in
-                appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000); // 45 minutes
-
-                if (typeof initializePageSpecificApp === 'function') {
-                    initializePageSpecificApp();
-                }
-            }, 100);
 
         } else {
             throw new Error(tokenData.error || "Failed to exchange authorization code.");
@@ -577,33 +553,7 @@ async function attemptSilentSignIn() {
             appState.currentUser.idToken = tokenData.idToken;
 
             // Transition the UI to the main app view
-            setTimeout(() => {
-                if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-                if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-                if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-                if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
-                
-                
-
-                if (signInPage) signInPage.style.display = 'none';
-                if (appContent) {
-                    appContent.classList.remove('hidden');
-                    appContent.style.display = 'flex';
-                }
-                if (bodyElement) bodyElement.classList.remove('justify-center');
-                if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
-                setupProfileMenu()
-                console.log("setting up profile menu");
-
-                // Start the proactive refresh timer. It will run once now, and then every 45 mins.
-                if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
-                proactiveTokenRefresh(); // Run once immediately on sign-in
-                appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000); // 45 minutes
-
-                if (typeof initializePageSpecificApp === 'function') {
-                    initializePageSpecificApp();
-                }
-            }, 100);
+            updateUIAfterSignIn();
 
             return true; // Silent sign-in succeeded
         } else {
@@ -616,6 +566,37 @@ async function attemptSilentSignIn() {
         return false; // Silent sign-in failed
     } finally {
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    }
+}
+
+/**
+ * Updates all user-specific UI elements after a successful sign-in.
+ */
+function updateUIAfterSignIn() {
+    if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
+    if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
+    if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
+    if (infoBarTeacher) infoBarTeacher.textContent = `Teacher: ${appState.currentUser.name}`;
+
+    if (signInPage) signInPage.style.display = 'none';
+
+    if (appContent) {
+        appContent.classList.remove('hidden');
+        appContent.style.display = 'flex';
+    }
+
+    if (bodyElement) bodyElement.classList.remove('justify-center');
+    if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
+    setupProfileMenu();
+
+    // Start the proactive refresh timer
+    if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
+    proactiveTokenRefresh(); // Run once immediately
+    appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000); // 45 minutes
+
+    // Initialize the page-specific logic
+    if (typeof initializePageSpecificApp === 'function') {
+        initializePageSpecificApp();
     }
 }
 
