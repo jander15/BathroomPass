@@ -242,6 +242,13 @@ function openEditModal(entry) {
     editModal.classList.remove('hidden');
 }
 async function saveEdit() {
+    // --- START PROCESSING ---
+    saveEditBtn.disabled = true;
+    deleteEntryBtn.disabled = true;
+    cancelEditBtn.disabled = true;
+    saveEditBtn.textContent = "Saving...";
+    // --- END PROCESSING ---
+
     const payload = {
         action: 'editTutoringLogEntry',
         entryTimestamp: currentEditTimestamp,
@@ -257,11 +264,26 @@ async function saveEdit() {
     } catch (error) {
         showErrorAlert(`Update failed: ${error.message}`);
     } finally {
+        // --- RESTORE BUTTONS ---
+        saveEditBtn.disabled = false;
+        deleteEntryBtn.disabled = false;
+        cancelEditBtn.disabled = false;
+        saveEditBtn.textContent = "Save";
         editModal.classList.add('hidden');
+        // --- END RESTORE ---
     }
 }
+
 async function deleteEntry() {
     if (!confirm("Are you sure you want to delete this log entry? This cannot be undone.")) return;
+
+    // --- START PROCESSING ---
+    saveEditBtn.disabled = true;
+    deleteEntryBtn.disabled = true;
+    cancelEditBtn.disabled = true;
+    deleteEntryBtn.textContent = "Deleting...";
+    // --- END PROCESSING ---
+    
     try {
         await sendAuthenticatedRequest({ action: 'deleteTutoringLogEntry', entryTimestamp: currentEditTimestamp });
         tutoringLog = tutoringLog.filter(entry => entry.Timestamp !== currentEditTimestamp);
@@ -270,7 +292,13 @@ async function deleteEntry() {
     } catch (error) {
         showErrorAlert(`Delete failed: ${error.message}`);
     } finally {
+        // --- RESTORE BUTTONS ---
+        saveEditBtn.disabled = false;
+        deleteEntryBtn.disabled = false;
+        cancelEditBtn.disabled = false;
+        deleteEntryBtn.textContent = "Delete";
         editModal.classList.add('hidden');
+        // --- END RESTORE ---
     }
 }
 
