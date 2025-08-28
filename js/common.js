@@ -26,7 +26,7 @@ const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
 const infoBarTeacher = document.getElementById('infoBarTeacher');
 
-
+let googleLibraryLoaded = false;
 
 // --- Global State Management ---
 // This object will hold the shared application state.
@@ -624,6 +624,15 @@ async function attemptSilentSignIn() {
  * It ensures that our sign-in logic only runs after Google's library is fully loaded.
  */
 async function onGoogleLibraryLoad() {
+    // --- THE FIX: Guard Clause ---
+    // If this function has already run, log it and stop.
+    if (googleLibraryLoaded) {
+        console.warn("onGoogleLibraryLoad called more than once. Ignoring subsequent calls.");
+        return;
+    }
+    googleLibraryLoaded = true;
+    // --- END FIX ---
+
     // First, try to sign in silently.
     const silentSignInSuccess = await attemptSilentSignIn();
 
