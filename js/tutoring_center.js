@@ -278,31 +278,43 @@ async function handleFormSubmit(event) {
     }
 }
 function renderHistoryReport() {
-    if (!historyTable) return;
     historyTable.classList.add('hidden');
     historyMessage.textContent = "Loading...";
     historyMessage.classList.remove('hidden');
+
     let filteredLog = [...tutoringLog];
+
     const studentFilter = historyStudentFilter.value;
     if (studentFilter && studentFilter !== 'all') {
         filteredLog = filteredLog.filter(entry => entry.StudentName === studentFilter);
     }
+
     const dateFilter = historyDateFilter.value;
     if (dateFilter) {
+        // Correctly compare dates by ignoring the time part
         const filterDateStr = new Date(dateFilter).toLocaleDateString();
         filteredLog = filteredLog.filter(entry => new Date(entry.Timestamp).toLocaleDateString() === filterDateStr);
     }
+
     if (filteredLog.length === 0) {
         historyMessage.textContent = "No log entries found for the selected filters.";
         return;
     }
+
     historyTableBody.innerHTML = '';
+    // Sort by most recent first
     filteredLog.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+    
     filteredLog.forEach(entry => {
         const tr = document.createElement('tr');
         tr.className = 'border-t';
+
+        // --- THE FIX: Create a new Date object from the timestamp ---
+        const entryDate = new Date(entry.Timestamp);
+        const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
+        
         tr.innerHTML = `
-            <td class="p-2">${new Date(entry.Timestamp).toLocaleDateString()}</td>
+            <td class="p-2">${formattedDate}</td>
             <td class="p-2">${entry.StudentName}</td>
             <td class="p-2">${entry.ClassName || 'N/A'}</td>
             <td class="p-2">${entry.DurationMinutes} min</td>
@@ -315,6 +327,7 @@ function renderHistoryReport() {
         `;
         historyTableBody.appendChild(tr);
     });
+
     historyTable.classList.remove('hidden');
     historyMessage.classList.add('hidden');
 }
