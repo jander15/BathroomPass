@@ -140,7 +140,6 @@ function renderHistoryReport() {
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
             <td class="p-2">${entry.StudentName}</td>
-            <td class="p-2">${entry.ClassName || 'N/A'}</td>
             <td class="p-2">${entry.DurationMinutes} min</td>
             <td class="p-2 truncate" title="${entry.Notes}">${entry.Notes || ''}</td>
             <td class="p-2 text-right">
@@ -219,11 +218,19 @@ async function initializePageSpecificApp() {
     historyDateFilter.addEventListener('change', renderHistoryReport);
     tutoringForm.addEventListener('submit', handleFormSubmit);
     historyTableBody.addEventListener('click', (event) => {
+        // This code runs whenever you click anywhere inside the table body
         const editButton = event.target.closest('.edit-btn');
+
+        // This 'if' statement checks if the thing you clicked was the edit button
         if (editButton) {
+            console.log("edit button clicked")
             const timestamp = editButton.dataset.timestamp;
             const entry = tutoringLog.find(e => e.Timestamp === timestamp);
-            if (entry) openEditModal(entry);
+            if (entry) {
+                // If everything works, it calls this function to open the modal
+                console.log("opening edit modal")
+                openEditModal(entry);
+            }
         }
     });
     saveEditBtn.addEventListener('click', saveEdit);
