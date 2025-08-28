@@ -573,6 +573,8 @@ async function attemptSilentSignIn() {
  * Updates all user-specific UI elements after a successful sign-in.
  */
 function updateUIAfterSignIn() {
+    console.log("User data to display:", appState.currentUser);
+
     if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
     if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
     if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
