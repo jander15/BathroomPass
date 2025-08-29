@@ -124,11 +124,23 @@ async function initializePageSpecificApp() {
     try {
         // Step 1: Check if the current user is an admin.
         const authResponse = await sendAuthenticatedRequest({ action: 'checkAdminAuthorization' });
+        
+        // --- ADD THIS BLOCK TO DISPLAY SERVER LOGS ---
+        if (authResponse.logs && authResponse.logs.length > 0) {
+            console.group("Server Logs from 'checkAdminAuthorization'");
+            authResponse.logs.forEach(log => console.log(log));
+            console.groupEnd();
+        }
+        // --- END BLOCK ---
+        
         if (!authResponse.isAuthorized) {
             adminContainer.classList.add('hidden');
             showErrorAlert("Access Denied: You are not authorized to view this page.");
             return;
         }
+
+
+
 
         // Step 2: Fetch all tutoring logs.
         // You will need to create a new backend action for this.
