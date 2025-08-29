@@ -122,36 +122,24 @@ async function initializePageSpecificApp() {
     cacheDOMElements();
 
     try {
-        // Step 1: Check if the current user is an admin.
-        const authResponse = await sendAuthenticatedRequest({ action: 'checkAdminAuthorization' });
-        
-        // --- ADD THIS BLOCK TO DISPLAY SERVER LOGS ---
-        if (authResponse.logs && authResponse.logs.length > 0) {
-            console.group("Server Logs from 'checkAdminAuthorization'");
-            authResponse.logs.forEach(log => console.log(log));
-            console.groupEnd();
+        // Step 1: Make a single call to get both authorization and data.
+        const response = await sendAuthenticatedRequest({ action: 'getAdminDashboardData' });
+
+        if (response.result !== 'success') {
+            throw new Error(response.error || "Failed to get data from server.");
         }
-        // --- END BLOCK ---
-        
-        if (!authResponse.isAuthorized) {
+
+        // Step 2: Check the authorization status from the single response.
+        if (!response.isAuthorized) {
             adminContainer.classList.add('hidden');
             showErrorAlert("Access Denied: You are not authorized to view this page.");
             return;
         }
 
-
-
-
-        // Step 2: Fetch all tutoring logs.
-        // You will need to create a new backend action for this.
-        const logResponse = await sendAuthenticatedRequest({ action: 'getAllTutoringLogs' });
-        if (logResponse.result === 'success' && logResponse.logs) {
-            allTutoringLogs = logResponse.logs;
-        } else {
-            throw new Error(logResponse.error || "Failed to fetch tutoring logs.");
-        }
-
-        // Step 3: Populate filter dropdowns based on the full log data.
+        // Step 3: If authorized, use the log data from the same response.
+        allTutoringLogs = response.logs;
+        
+        // Step 4: Populate filter dropdowns based on the full log data.
         const uniqueTutors = [...new Set(allTutoringLogs.map(entry => entry.TeacherEmail))].sort();
         populateDropdown('tutorFilter', uniqueTutors, "All Tutors", "all");
         
@@ -164,7 +152,7 @@ async function initializePageSpecificApp() {
         // Initial render of the report
         renderAdminReport();
 
-        // Step 4: Add event listeners to all filters to re-render the report on change.
+        // Step 5: Add event listeners to all filters to re-render the report on change.
         tutorFilter.addEventListener('change', renderAdminReport);
         studentFilter.addEventListener('change', renderAdminReport);
         periodFilter.addEventListener('change', renderAdminReport);
