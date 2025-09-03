@@ -120,29 +120,62 @@ function renderStudentResults(filteredStudents) {
     });
     studentResults.classList.remove('hidden');
 }
+
 async function handleFormSubmit(event) {
     event.preventDefault();
     const duration = parseInt(durationInput.value, 10);
     const notes = notesInput.value.trim();
-    if (selectedStudents.length === 0 || isNaN(duration) || duration <0) {
-        showErrorAlert("Please select at least one student and enter a valid duration.");
+
+    if (selectedStudents.length === 0 || isNaN(duration) || duration < 0) {
+        showErrorAlert("Please select at least one student and enter a valid, non-negative duration.");
         return;
     }
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Logging...";
     const studentsPayload = selectedStudents.map(s => ({ studentName: s.StudentName, className: s.Class }));
+
     try {
-        await sendAuthenticatedRequest({ action: 'logTutoringSession', students: studentsPayload, durationMinutes: duration, notes, teacherEmail: appState.currentUser.email });
+        // --- START: MODIFIED LOGIC ---
+        
+        // 1. Send the data to the server as usual.
+        await sendAuthenticatedRequest({ 
+            action: 'logTutoringSession', 
+            students: studentsPayload, 
+            durationMinutes: duration, 
+            notes, 
+            teacherEmail: appState.currentUser.email 
+        });
+
         showSuccessAlert(`Session logged for ${selectedStudents.length} student(s)!`);
+
+        // 2. Create new log entry objects on the frontend.
+        const newEntries = selectedStudents.map(student => ({
+            Timestamp: new Date().toISOString(), // Use current time as an accurate timestamp
+            TeacherEmail: appState.currentUser.email,
+            ClassName: student.Class,
+            StudentName: student.StudentName,
+            DurationMinutes: duration,
+            Notes: notes
+        }));
+
+        // 3. Add the new entries to the beginning of our local log array.
+        tutoringLog.unshift(...newEntries);
+
+        // 4. Immediately re-render the history report with the new data.
+        renderHistoryReport();
+
+        // 5. Update the student filter dropdown with any new names.
+        const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
+        populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
+
+        // 6. Reset the form for the next entry.
         tutoringForm.reset();
         selectedStudents = [];
         renderSelectedStudents();
-        const logResponse = await sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' });
-        if (logResponse.result === 'success') {
-            tutoringLog = logResponse.log;
-            const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
-            populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
-        }
+
+        // --- END: MODIFIED LOGIC ---
+
     } catch (error) {
         showErrorAlert(`Error: ${error.message}`);
     } finally {
@@ -213,7 +246,7 @@ function renderHistoryReport() {
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
         const studentName = entry.StudentName || 'N/A';
-        const duration = entry.DurationMinutes ? `${entry.DurationMinutes} min` : 'N/A';
+        const duration = typeof entry.DurationMinutes === 'number' ? `${entry.DurationMinutes} min` : 'N/A';
         const notes = entry.Notes || '';
         
         tr.innerHTML = `
