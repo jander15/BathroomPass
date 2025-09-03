@@ -265,7 +265,7 @@ function renderHistoryReport() {
             <td class="p-2">${formattedDate}</td>
             <td class="p-2">${studentName}</td>
             <td class="p-2">${duration}</td>
-            <td class="p-2 truncate" title="${notes}">${notes}</td>
+            <td class="p-2">${notesCellHtml}</td>
             <td class="p-2 text-right">
                 <button class="text-gray-500 hover:text-blue-600 edit-btn" data-timestamp="${entry.Timestamp}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
@@ -424,14 +424,6 @@ async function initializePageSpecificApp() {
     historyStudentFilter.addEventListener('change', renderHistoryReport);
     historyDateFilter.addEventListener('change', renderHistoryReport);
     tutoringForm.addEventListener('submit', handleFormSubmit);
-    historyTableBody.addEventListener('click', (event) => {
-        const editButton = event.target.closest('.edit-btn');
-        if (editButton) {
-            const timestamp = editButton.dataset.timestamp;
-            const entry = tutoringLog.find(e => e.Timestamp === timestamp);
-            if (entry) openEditModal(entry);
-        }
-    });
     saveEditBtn.addEventListener('click', saveEdit);
     cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     deleteEntryBtn.addEventListener('click', deleteEntry);
