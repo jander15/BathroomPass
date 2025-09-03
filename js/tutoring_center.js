@@ -38,6 +38,9 @@ function cacheDOMElements() {
     saveEditBtn = document.getElementById('saveEditBtn');
     cancelEditBtn = document.getElementById('cancelEditBtn');
     deleteEntryBtn = document.getElementById('deleteEntryBtn');
+    noteModal = document.getElementById('noteModal');
+    noteModalContent = document.getElementById('noteModalContent');
+    closeNoteModalBtn = document.getElementById('closeNoteModalBtn');
 }
 
 // --- Helper & Formatting Functions ---
@@ -243,6 +246,15 @@ function renderHistoryReport() {
 
         const tr = document.createElement('tr');
         tr.className = 'border-t';
+        // --- START: MODIFIED NOTES LOGIC ---
+        const hasNotes = entry.Notes && entry.Notes.trim() !== '';
+        
+        // Create a "View" button if there are notes, otherwise show "N/A"
+        const notesCellHtml = hasNotes
+            ? `<button class="text-blue-600 hover:underline view-note-btn" data-note="${encodeURIComponent(entry.Notes)}">View</button>`
+            : '<span class="text-gray-400">N/A</span>';
+        // --- END: MODIFIED NOTES LOGIC ---
+
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
         const studentName = entry.StudentName || 'N/A';
@@ -387,6 +399,26 @@ async function initializePageSpecificApp() {
     }
 
     // --- Event Listeners ---
+    // --- START: ADD EVENT LISTENERS FOR NOTE MODAL ---
+    historyTableBody.addEventListener('click', (event) => {
+        const viewNoteButton = event.target.closest('.view-note-btn');
+        const editButton = event.target.closest('.edit-btn');
+        
+        if (viewNoteButton) {
+            const noteText = decodeURIComponent(viewNoteButton.dataset.note);
+            noteModalContent.textContent = noteText;
+            noteModal.classList.remove('hidden');
+        } else if (editButton) {
+            const timestamp = editButton.dataset.timestamp;
+            const entry = tutoringLog.find(e => e.Timestamp === timestamp);
+            if (entry) openEditModal(entry);
+        }
+    });
+
+    closeNoteModalBtn.addEventListener('click', () => {
+        noteModal.classList.add('hidden');
+    });
+    // --- END: ADD EVENT LISTENERS ---
     newLogTab.addEventListener('click', () => switchTab('newLog'));
     historyTab.addEventListener('click', () => switchTab('history'));
     historyStudentFilter.addEventListener('change', renderHistoryReport);
