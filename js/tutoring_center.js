@@ -124,7 +124,7 @@ async function handleFormSubmit(event) {
     event.preventDefault();
     const duration = parseInt(durationInput.value, 10);
     const notes = notesInput.value.trim();
-    if (selectedStudents.length === 0 || isNaN(duration) || duration <= 0) {
+    if (selectedStudents.length === 0 || isNaN(duration) || duration <0) {
         showErrorAlert("Please select at least one student and enter a valid duration.");
         return;
     }
