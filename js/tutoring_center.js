@@ -301,11 +301,23 @@ async function saveEdit() {
         newNotes: editNotes.value
     };
     try {
+        // 1. Send the update to the server.
         await sendAuthenticatedRequest(payload);
-        const logResponse = await sendAuthenticatedRequest({ action: 'getTutoringLogForTutor' });
-        if (logResponse.result === 'success') tutoringLog = logResponse.log;
+
+        // --- START: MODIFIED LOGIC ---
+        // 2. Find the entry in our local 'tutoringLog' array.
+        const entryToUpdate = tutoringLog.find(e => e.Timestamp === currentEditTimestamp);
+        if (entryToUpdate) {
+            // 3. Update its properties directly.
+            entryToUpdate.DurationMinutes = parseInt(editDuration.value, 10);
+            entryToUpdate.Notes = editNotes.value;
+        }
+        
+        // 4. Re-render the report with the updated local data.
         renderHistoryReport();
         showSuccessAlert("Entry updated.");
+        // --- END: MODIFIED LOGIC ---
+
     } catch (error) {
         showErrorAlert(`Update failed: ${error.message}`);
     } finally {
