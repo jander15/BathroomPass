@@ -613,12 +613,41 @@ async function initializePageSpecificApp() {
         });
 
         reloadDataBtn.addEventListener('click', async () => {
-            await fetchAllSignOutData();
-            const activeTab = appState.ui.currentDashboardTab;
-            if (activeTab === 'signOut') renderSignOutReport();
-            else if (activeTab === 'attendance') renderAttendanceReport();
-            else if (activeTab === 'classTrends') renderClassTrendsReport();
-        });
+    // 1. Show a loading/processing state to the user
+    reloadDataBtn.textContent = "Reloading...";
+    reloadDataBtn.disabled = true;
+
+    try {
+        // 2. Re-fetch the master student and course list
+        await fetchAllStudentData();
+
+        // 3. Re-populate the course dropdowns with the fresh data
+        populateCourseDropdownFromData();
+        populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
+        populateDropdown('attendanceClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+        populateDropdown('trendsClassDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+        populateDropdown('classOverrideDropdown', appState.data.courses, "Auto", "AUTO");
+
+        // 4. Re-fetch the sign-out log data
+        await fetchAllSignOutData();
+
+        // 5. Re-render whichever report tab is currently active
+        const activeTab = appState.ui.currentDashboardTab;
+        if (activeTab === 'signOut') renderSignOutReport();
+        else if (activeTab === 'attendance') renderAttendanceReport();
+        else if (activeTab === 'classTrends') renderClassTrendsReport();
+        
+        showSuccessAlert("All data has been refreshed from the server.");
+
+    } catch (error) {
+        showErrorAlert("Failed to refresh data. Please check the console for errors.");
+        console.error("Error during manual data refresh:", error);
+    } finally {
+        // 6. Restore the button to its normal state
+        reloadDataBtn.textContent = "Reload All Data";
+        reloadDataBtn.disabled = false;
+    }
+});
 
         passStatusToggle.addEventListener('change', async () => {
             const isEnabled = passStatusToggle.checked;
