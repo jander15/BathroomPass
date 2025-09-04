@@ -115,14 +115,12 @@ function renderAdminReport() {
             : '<span class="text-gray-400">N/A</span>';
 
         tr.innerHTML = `
-            <td class="p-2">${formattedDate}</td>
-            <td class="p-2">${entry.TeacherEmail || 'N/A'}</td>
-            <td class="p-2">${entry.StudentName || 'N/A'}</td>
-            <td class="p-2">${entry.ClassName || 'N/A'}</td>
-            <td class="p-2">${typeof entry.DurationMinutes === 'number' ? `${entry.DurationMinutes} min` : 'N/A'}</td>
-            <td class="p-2">${notesCellHtml}</td>
-        `;
-        reportTableBody.appendChild(tr);
+    <td class="p-2">${formattedDate}</td>
+    <td class="p-2">${entry.TeacherEmail || 'N/A'}</td>
+    <td class="p-2">${entry.StudentName || 'N/A'}</td>
+    <td class="p-2">${entry.ClassName || 'N/A'}</td>
+    <td class="p-2">${typeof entry.DurationMinutes === 'number' ? `${entry.DurationMinutes} min` : 'N/A'}</td>
+    <td class="p-2">${notesCellHtml}</td>`;
     });
 }
 
