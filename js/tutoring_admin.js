@@ -7,7 +7,7 @@ let allTutoringLogs = [];
 let reportMessage, reportTable, reportTableBody;
 let tutorFilter, studentFilter, periodFilter, dateFilter;
 let adminContainer; // Add this
-let noteModal, noteModalContent, closeNoteModalBtn; // These were missing from cacheDOMElements
+let noteModal, noteModalContent, closeNoteModalBtn,reloadDataBtn; // These were missing from cacheDOMElements
 
 
 function cacheDOMElements() {
@@ -22,6 +22,8 @@ function cacheDOMElements() {
     noteModal = document.getElementById('noteModal');
     noteModalContent = document.getElementById('noteModalContent');
     closeNoteModalBtn = document.getElementById('closeNoteModalBtn');
+    reloadDataBtn = document.getElementById('reloadDataBtn'); // Cache the new button
+
 }
 
 // --- Helper & Formatting Functions ---
@@ -40,6 +42,43 @@ function getMonthRange() {
     return { start: firstDay, end: lastDay };
 }
 
+
+async function reloadData() {
+    reloadDataBtn.disabled = true;
+    reloadDataBtn.textContent = "Reloading...";
+    reportMessage.textContent = "Loading fresh data from the server...";
+    reportMessage.classList.remove('hidden');
+    reportTable.classList.add('hidden');
+
+    try {
+        const response = await sendAuthenticatedRequest({ action: 'getAdminDashboardData' });
+        if (response.result !== 'success' || !response.isAuthorized) {
+            throw new Error(response.error || "Failed to get admin data.");
+        }
+        
+        allTutoringLogs = response.logs;
+
+        // Repopulate filters
+        const uniqueTutors = [...new Set(allTutoringLogs.map(entry => entry.TeacherEmail))].sort();
+        populateDropdown('tutorFilter', uniqueTutors, "All Tutors", "all");
+        
+        const uniqueStudents = [...new Set(allTutoringLogs.map(entry => entry.StudentName))].sort();
+        populateDropdown('studentFilter', uniqueStudents, "All Students", "all");
+
+        const uniquePeriods = [...new Set(allTutoringLogs.map(entry => entry.ClassName))].filter(p => p).sort();
+        populateDropdown('periodFilter', uniquePeriods, "All Periods", "all");
+        
+        renderAdminReport();
+        showSuccessAlert("Data successfully reloaded.");
+
+    } catch (error) {
+        showErrorAlert(`Failed to reload data: ${error.message}`);
+        console.error("Data reload failed:", error);
+    } finally {
+        reloadDataBtn.disabled = false;
+        reloadDataBtn.textContent = "Reload Data";
+    }
+}
 
 // --- Main Report Rendering Function ---
 function renderAdminReport() {
@@ -132,43 +171,22 @@ async function initializePageSpecificApp() {
     cacheDOMElements();
 
     try {
-        // Step 1: Make a single call to get both authorization and data.
-        const response = await sendAuthenticatedRequest({ action: 'getAdminDashboardData' });
-
-        if (response.result !== 'success') {
-            throw new Error(response.error || "Failed to get data from server.");
-        }
-
-        // Step 2: Check the authorization status from the single response.
-        if (!response.isAuthorized) {
+        const authResponse = await sendAuthenticatedRequest({ action: 'checkAdminAuthorization' });
+        if (!authResponse.isAuthorized) {
             adminContainer.classList.add('hidden');
             showErrorAlert("Access Denied: You are not authorized to view this page.");
             return;
         }
 
-        // Step 3: If authorized, use the log data from the same response.
-        allTutoringLogs = response.logs;
-        
-        // Step 4: Populate filter dropdowns based on the full log data.
-        const uniqueTutors = [...new Set(allTutoringLogs.map(entry => entry.TeacherEmail))].sort();
-        populateDropdown('tutorFilter', uniqueTutors, "All Tutors", "all");
-        
-        const uniqueStudents = [...new Set(allTutoringLogs.map(entry => entry.StudentName))].sort();
-        populateDropdown('studentFilter', uniqueStudents, "All Students", "all");
+        await reloadData(); // Initial data load is now handled by our reusable function
 
-        const uniquePeriods = [...new Set(allTutoringLogs.map(entry => entry.ClassName))].filter(p => p).sort(); // Filter out empty strings
-        populateDropdown('periodFilter', uniquePeriods, "All Periods", "all");
-        
-        // Initial render of the report
-        renderAdminReport();
-
-         // --- START: ADD/MODIFY EVENT LISTENERS ---
+        // --- Event Listeners ---
         tutorFilter.addEventListener('change', renderAdminReport);
         studentFilter.addEventListener('change', renderAdminReport);
         periodFilter.addEventListener('change', renderAdminReport);
         dateFilter.addEventListener('change', renderAdminReport);
+        reloadDataBtn.addEventListener('click', reloadData); // Add listener for the new button
 
-        // Add a listener to the table body for the note buttons
         reportTableBody.addEventListener('click', (event) => {
             const viewNoteButton = event.target.closest('.view-note-btn');
             if (viewNoteButton) {
@@ -178,11 +196,9 @@ async function initializePageSpecificApp() {
             }
         });
 
-        // Add a listener for the close button on the modal
         closeNoteModalBtn.addEventListener('click', () => {
             noteModal.classList.add('hidden');
         });
-        // --- END: ADD/MODIFY EVENT LISTENERS ---
 
     } catch (error) {
         console.error("Initialization failed:", error);
