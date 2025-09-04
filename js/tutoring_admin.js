@@ -7,6 +7,8 @@ let allTutoringLogs = [];
 let reportMessage, reportTable, reportTableBody;
 let tutorFilter, studentFilter, periodFilter, dateFilter;
 let adminContainer; // Add this
+let noteModal, noteModalContent, closeNoteModalBtn; // These were missing from cacheDOMElements
+
 
 function cacheDOMElements() {
     reportMessage = document.getElementById('reportMessage');
@@ -17,6 +19,9 @@ function cacheDOMElements() {
     periodFilter = document.getElementById('periodFilter');
     dateFilter = document.getElementById('dateFilter');
     adminContainer = document.getElementById('adminContainer');
+    noteModal = document.getElementById('noteModal');
+    noteModalContent = document.getElementById('noteModalContent');
+    closeNoteModalBtn = document.getElementById('closeNoteModalBtn');
 }
 
 // --- Helper & Formatting Functions ---
