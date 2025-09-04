@@ -292,75 +292,67 @@ function openEditModal(entry) {
     editModal.classList.remove('hidden');
 }
 async function saveEdit() {
-    // --- START PROCESSING ---
     saveEditBtn.disabled = true;
     deleteEntryBtn.disabled = true;
     cancelEditBtn.disabled = true;
     saveEditBtn.textContent = "Saving...";
-    // --- END PROCESSING ---
 
     const payload = {
         action: 'editTutoringLogEntry',
         entryTimestamp: currentEditTimestamp,
+        studentName: editStudentName.value, // Add student name to the payload
         newDuration: editDuration.value,
         newNotes: editNotes.value
     };
     try {
-        // 1. Send the update to the server.
         await sendAuthenticatedRequest(payload);
 
-        // --- START: MODIFIED LOGIC ---
-        // 2. Find the entry in our local 'tutoringLog' array.
         const entryToUpdate = tutoringLog.find(e => e.Timestamp === currentEditTimestamp);
         if (entryToUpdate) {
-            // 3. Update its properties directly.
             entryToUpdate.DurationMinutes = parseInt(editDuration.value, 10);
             entryToUpdate.Notes = editNotes.value;
         }
         
-        // 4. Re-render the report with the updated local data.
         renderHistoryReport();
         showSuccessAlert("Entry updated.");
-        // --- END: MODIFIED LOGIC ---
 
     } catch (error) {
         showErrorAlert(`Update failed: ${error.message}`);
     } finally {
-        // --- RESTORE BUTTONS ---
         saveEditBtn.disabled = false;
         deleteEntryBtn.disabled = false;
         cancelEditBtn.disabled = false;
         saveEditBtn.textContent = "Save";
         editModal.classList.add('hidden');
-        // --- END RESTORE ---
     }
 }
 
 async function deleteEntry() {
     if (!confirm("Are you sure you want to delete this log entry? This cannot be undone.")) return;
 
-    // --- START PROCESSING ---
     saveEditBtn.disabled = true;
     deleteEntryBtn.disabled = true;
     cancelEditBtn.disabled = true;
     deleteEntryBtn.textContent = "Deleting...";
-    // --- END PROCESSING ---
     
     try {
-        await sendAuthenticatedRequest({ action: 'deleteTutoringLogEntry', entryTimestamp: currentEditTimestamp });
+        await sendAuthenticatedRequest({ 
+            action: 'deleteTutoringLogEntry', 
+            entryTimestamp: currentEditTimestamp,
+            studentName: editStudentName.value // Add student name to the payload
+        });
+
         tutoringLog = tutoringLog.filter(entry => entry.Timestamp !== currentEditTimestamp);
         renderHistoryReport();
         showSuccessAlert("Entry deleted.");
     } catch (error) {
         showErrorAlert(`Delete failed: ${error.message}`);
     } finally {
-        // --- RESTORE BUTTONS ---
         saveEditBtn.disabled = false;
         deleteEntryBtn.disabled = false;
         cancelEditBtn.disabled = false;
         deleteEntryBtn.textContent = "Delete";
         editModal.classList.add('hidden');
-        // --- END RESTORE ---
     }
 }
 
