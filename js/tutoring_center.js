@@ -139,10 +139,8 @@ async function handleFormSubmit(event) {
     const studentsPayload = selectedStudents.map(s => ({ studentName: s.StudentName, className: s.Class }));
 
     try {
-        // --- START: MODIFIED LOGIC ---
-        
-        // 1. Send the data to the server as usual.
-        await sendAuthenticatedRequest({ 
+        // 1. Send the data to the server and get the official new entries back.
+        const response = await sendAuthenticatedRequest({ 
             action: 'logTutoringSession', 
             students: studentsPayload, 
             durationMinutes: duration, 
@@ -150,39 +148,26 @@ async function handleFormSubmit(event) {
             teacherEmail: appState.currentUser.email 
         });
 
+        if (response.result !== 'success' || !response.newEntries) {
+            throw new Error(response.error || "Server did not return the new entries.");
+        }
+
         showSuccessAlert(`Session logged for ${selectedStudents.length} student(s)!`);
 
-        // 2. Create new log entry objects on the frontend.
-        const baseDate = new Date(); // Get the starting time once.
-        const newEntries = selectedStudents.map((student, index) => {
-            // Create a new date object for each entry and add the index as milliseconds.
-            const uniqueDate = new Date(baseDate.getTime() + index);
-            return {
-                Timestamp: uniqueDate.toISOString(), // This is now guaranteed to be unique.
-                TeacherEmail: appState.currentUser.email,
-                ClassName: student.Class,
-                StudentName: student.StudentName,
-                DurationMinutes: duration,
-                Notes: notes
-            };
-        });
+        // 2. Add the server-confirmed entries to the beginning of our local log array.
+        tutoringLog.unshift(...response.newEntries);
 
-        // 3. Add the new entries to the beginning of our local log array.
-        tutoringLog.unshift(...newEntries);
-
-        // 4. Immediately re-render the history report with the new data.
+        // 3. Immediately re-render the history report with the official data.
         renderHistoryReport();
 
-        // 5. Update the student filter dropdown with any new names.
+        // 4. Update the student filter dropdown with any new names.
         const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
         populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
 
-        // 6. Reset the form for the next entry.
+        // 5. Reset the form.
         tutoringForm.reset();
         selectedStudents = [];
         renderSelectedStudents();
-
-        // --- END: MODIFIED LOGIC ---
 
     } catch (error) {
         showErrorAlert(`Error: ${error.message}`);
