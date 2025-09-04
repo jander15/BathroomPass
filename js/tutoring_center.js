@@ -153,14 +153,19 @@ async function handleFormSubmit(event) {
         showSuccessAlert(`Session logged for ${selectedStudents.length} student(s)!`);
 
         // 2. Create new log entry objects on the frontend.
-        const newEntries = selectedStudents.map(student => ({
-            Timestamp: new Date().toISOString(), // Use current time as an accurate timestamp
-            TeacherEmail: appState.currentUser.email,
-            ClassName: student.Class,
-            StudentName: student.StudentName,
-            DurationMinutes: duration,
-            Notes: notes
-        }));
+        const baseDate = new Date(); // Get the starting time once.
+        const newEntries = selectedStudents.map((student, index) => {
+            // Create a new date object for each entry and add the index as milliseconds.
+            const uniqueDate = new Date(baseDate.getTime() + index);
+            return {
+                Timestamp: uniqueDate.toISOString(), // This is now guaranteed to be unique.
+                TeacherEmail: appState.currentUser.email,
+                ClassName: student.Class,
+                StudentName: student.StudentName,
+                DurationMinutes: duration,
+                Notes: notes
+            };
+        });
 
         // 3. Add the new entries to the beginning of our local log array.
         tutoringLog.unshift(...newEntries);
