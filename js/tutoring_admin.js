@@ -122,6 +122,8 @@ function renderAdminReport() {
     <td class="p-2">${typeof entry.DurationMinutes === 'number' ? `${entry.DurationMinutes} min` : 'N/A'}</td>
     <td class="p-2">${notesCellHtml}</td>`;
     });
+    reportTableBody.appendChild(tr);
+
 }
 
 
