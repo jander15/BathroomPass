@@ -103,7 +103,10 @@ function renderAdminReport() {
         
         const entryDate = new Date(entry.Timestamp);
         const formattedDate = !isNaN(entryDate) ? entryDate.toLocaleDateString() : "Invalid Date";
-        
+        const hasNotes = entry.Notes && entry.Notes.trim() !== '';
+        const notesCellHtml = hasNotes
+            ? `<button class="text-blue-600 hover:underline view-note-btn" data-note="${encodeURIComponent(entry.Notes)}">View</button>`
+            : '<span class="text-gray-400">N/A</span>';
         tr.innerHTML = `
             <td class="p-2">${formattedDate}</td>
             <td class="p-2">${entry.TeacherEmail || 'N/A'}</td>
@@ -152,11 +155,27 @@ async function initializePageSpecificApp() {
         // Initial render of the report
         renderAdminReport();
 
-        // Step 5: Add event listeners to all filters to re-render the report on change.
+         // --- START: ADD/MODIFY EVENT LISTENERS ---
         tutorFilter.addEventListener('change', renderAdminReport);
         studentFilter.addEventListener('change', renderAdminReport);
         periodFilter.addEventListener('change', renderAdminReport);
         dateFilter.addEventListener('change', renderAdminReport);
+
+        // Add a listener to the table body for the note buttons
+        reportTableBody.addEventListener('click', (event) => {
+            const viewNoteButton = event.target.closest('.view-note-btn');
+            if (viewNoteButton) {
+                const noteText = decodeURIComponent(viewNoteButton.dataset.note);
+                noteModalContent.textContent = noteText;
+                noteModal.classList.remove('hidden');
+            }
+        });
+
+        // Add a listener for the close button on the modal
+        closeNoteModalBtn.addEventListener('click', () => {
+            noteModal.classList.add('hidden');
+        });
+        // --- END: ADD/MODIFY EVENT LISTENERS ---
 
     } catch (error) {
         console.error("Initialization failed:", error);
