@@ -300,12 +300,25 @@ async function saveEdit() {
     const payload = {
         action: 'editTutoringLogEntry',
         entryTimestamp: currentEditTimestamp,
-        studentName: editStudentName.value, // Add student name to the payload
+        studentName: editStudentName.value,
         newDuration: editDuration.value,
         newNotes: editNotes.value
     };
     try {
-        await sendAuthenticatedRequest(payload);
+        // --- START: MODIFIED LOGIC ---
+        const response = await sendAuthenticatedRequest(payload);
+
+        // Check for and display any logs from the server
+        if (response.logs && response.logs.length > 0) {
+            console.group("Server Logs for 'saveEdit'");
+            response.logs.forEach(log => console.log(log));
+            console.groupEnd();
+        }
+
+        if(response.result !== 'success') {
+            throw new Error(response.error || "Server rejected the edit.");
+        }
+        // --- END: MODIFIED LOGIC ---
 
         const entryToUpdate = tutoringLog.find(e => e.Timestamp === currentEditTimestamp);
         if (entryToUpdate) {
@@ -336,11 +349,24 @@ async function deleteEntry() {
     deleteEntryBtn.textContent = "Deleting...";
     
     try {
-        await sendAuthenticatedRequest({ 
+        // --- START: MODIFIED LOGIC ---
+        const response = await sendAuthenticatedRequest({ 
             action: 'deleteTutoringLogEntry', 
             entryTimestamp: currentEditTimestamp,
-            studentName: editStudentName.value // Add student name to the payload
+            studentName: editStudentName.value
         });
+
+        // Check for and display any logs from the server
+        if (response.logs && response.logs.length > 0) {
+            console.group("Server Logs for 'deleteEntry'");
+            response.logs.forEach(log => console.log(log));
+            console.groupEnd();
+        }
+
+        if(response.result !== 'success') {
+            throw new Error(response.error || "Server rejected the deletion.");
+        }
+        // --- END: MODIFIED LOGIC ---
 
         tutoringLog = tutoringLog.filter(entry => entry.Timestamp !== currentEditTimestamp);
         renderHistoryReport();
