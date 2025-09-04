@@ -53,33 +53,37 @@
         
         <div id="adminContainer" class="bg-gray-50 rounded-lg shadow-xl w-full max-w-6xl">
             <div id="reportContent" class="p-6 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-4 rounded-lg border">
-                    <div>
-                        <label for="tutorFilter" class="block text-sm font-medium text-gray-700">Filter by Tutor:</label>
-                        <select id="tutorFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm"></select>
+                <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 bg-white p-3 rounded-lg border">
+                    <div class="flex items-center">
+                        <label for="tutorFilter" class="mr-2 text-sm font-medium text-gray-700">Tutor:</label>
+                        <select id="tutorFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
                     </div>
-                    <div>
-                        <label for="studentFilter" class="block text-sm font-medium text-gray-700">Filter by Student:</label>
-                        <select id="studentFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm"></select>
+
+                    <div class="flex items-center">
+                        <label for="studentFilter" class="mr-2 text-sm font-medium text-gray-700">Student:</label>
+                        <select id="studentFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
                     </div>
-                    <div>
-                        <label for="periodFilter" class="block text-sm font-medium text-gray-700">Filter by Period:</label>
-                        <select id="periodFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm"></select>
+
+                    <div class="flex items-center">
+                        <label for="periodFilter" class="mr-2 text-sm font-medium text-gray-700">Period:</label>
+                        <select id="periodFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
                     </div>
-                    <div>
-                        <label for="dateFilter" class="block text-sm font-medium text-gray-700">Filter by Date:</label>
-                        <select id="dateFilter" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm">
+
+                    <div class="flex items-center">
+                        <label for="dateFilter" class="mr-2 text-sm font-medium text-gray-700">Date:</label>
+                        <select id="dateFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm">
                             <option value="all_time">All Time</option>
                             <option value="today">Today</option>
                             <option value="this_week">This Week</option>
                             <option value="this_month">This Month</option>
                         </select>
                     </div>
-                    <div>
-                        <button id="reloadDataBtn" class="w-full px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            Reload Data
-                        </button>
-                    </div>
+
+                    <button id="reloadDataBtn" class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Reload Data
+                    </button>
+
+                </div>
                 </div>
                 <div class="overflow-x-auto">
                     <p id="reportMessage" class="text-center text-gray-600">Loading report data...</p>
