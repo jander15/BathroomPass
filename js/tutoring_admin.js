@@ -109,7 +109,7 @@ function renderAdminReport() {
             <td class="p-2">${entry.TeacherEmail || 'N/A'}</td>
             <td class="p-2">${entry.StudentName || 'N/A'}</td>
             <td class="p-2">${entry.ClassName || 'N/A'}</td>
-            <td class="p-2">${entry.DurationMinutes ? `${entry.DurationMinutes} min` : 'N/A'}</td>
+            <td class="p-2">${typeof entry.DurationMinutes === 'number' ? `${entry.DurationMinutes} min` : 'N/A'}</td>
             <td class="p-2 truncate" title="${entry.Notes || ''}">${entry.Notes || ''}</td>
         `;
         reportTableBody.appendChild(tr);
