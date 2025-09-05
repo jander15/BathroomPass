@@ -136,7 +136,7 @@ async function handleFormSubmit(event) {
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Logging...";
-    const studentsPayload = selectedStudents.map(s => ({ studentName: s.StudentName, className: s.Class }));
+    const studentsPayload = selectedStudents.map(s => ({ studentName: s.StudentName, className: s.ClassName }));
 
     try {
         // 1. Send the data to the server and get the official new entries back.
