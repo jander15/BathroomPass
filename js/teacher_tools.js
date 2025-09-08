@@ -133,7 +133,8 @@ function generateInitialChart() {
     initializeSortable();
 }
 
-/** * Groups students who have been manually selected by clicking.
+/**
+ * Groups students who have been manually selected by clicking.
  */
 function generateSelectiveChart() {
     const selectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat.selected'))
@@ -169,20 +170,32 @@ function generateSelectiveChart() {
     const unselectedIndividualGroups = unselectedNames.map(name => [name]);
     const finalChartLayout = [...generatedGroups, ...unselectedIndividualGroups];
 
-    renderChart(finalChartLayout);
+    // MODIFIED: Pass the list of selected names to the render function
+    renderChart(finalChartLayout, selectedNames);
     initializeSortable();
 }
 
-/** Creates an individual student seat element. */
-function createSeatElement(studentName) {
+/** * MODIFIED: Creates an individual student seat element.
+ * Now accepts an `isSelected` flag to apply the selected style upon creation.
+ */
+function createSeatElement(studentName, isSelected = false) {
     const seat = document.createElement('div');
     seat.textContent = studentName;
     seat.className = 'seat draggable-item bg-white p-2 border border-gray-300 rounded-md shadow-sm text-center text-sm flex items-center justify-center min-h-[60px] font-semibold cursor-pointer';
+
+    if (isSelected) {
+        seat.classList.add('selected');
+        seat.style.backgroundColor = '#dcfce7'; // Tailwind's green-100
+        seat.style.borderColor = '#22c55e';   // Tailwind's green-500
+    }
+    
     return seat;
 }
 
-/** Creates a group container element. */
-function createGroupContainerElement(group, color) {
+/** * MODIFIED: Creates a group container element.
+ * Now passes the `selectedNames` list down to `createSeatElement`.
+ */
+function createGroupContainerElement(group, color, selectedNames = []) {
     const container = document.createElement('div');
     container.className = 'group-container draggable-item';
     container.style.backgroundColor = color.bg;
@@ -195,13 +208,16 @@ function createGroupContainerElement(group, color) {
     container.style.gridColumn = `span ${cols}`;
 
     group.forEach(studentName => {
-        container.appendChild(createSeatElement(studentName));
+        const isSelected = selectedNames.includes(studentName);
+        container.appendChild(createSeatElement(studentName, isSelected));
     });
     return container;
 }
 
-/** Renders the entire chart from an array of groups. */
-function renderChart(groups) {
+/** * MODIFIED: Renders the entire chart from an array of groups.
+ * Now accepts `selectedNames` to preserve the selected state after re-rendering.
+ */
+function renderChart(groups, selectedNames = []) {
     seatingChartGrid.innerHTML = '';
     shuffleArray(groups);
 
@@ -210,11 +226,13 @@ function renderChart(groups) {
 
     actualGroups.forEach((group, index) => {
         const color = groupColors[index % groupColors.length];
-        seatingChartGrid.appendChild(createGroupContainerElement(group, color));
+        seatingChartGrid.appendChild(createGroupContainerElement(group, color, selectedNames));
     });
 
     individuals.forEach(group => {
-        seatingChartGrid.appendChild(createSeatElement(group[0]));
+        const studentName = group[0];
+        const isSelected = selectedNames.includes(studentName);
+        seatingChartGrid.appendChild(createSeatElement(studentName, isSelected));
     });
 }
 
@@ -240,23 +258,18 @@ async function initializePageSpecificApp() {
         generateInitialChart();
     });
 
-    // --- FINAL FIX: Use 'mousedown' to avoid conflict with Draggable.js ---
     seatingChartGrid.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
         if (seat) {
-            // Prevent the browser's default behavior for mousedown, like starting a text selection.
             event.preventDefault();
-            
-            // Toggle a class for our logic to find selected students
             seat.classList.toggle('selected');
 
-            // Directly manipulate styles for a guaranteed visual change
             if (seat.classList.contains('selected')) {
-                seat.style.backgroundColor = '#dcfce7'; // Tailwind's green-100
-                seat.style.borderColor = '#22c55e';   // Tailwind's green-500
+                seat.style.backgroundColor = '#dcfce7';
+                seat.style.borderColor = '#22c55e';
             } else {
-                seat.style.backgroundColor = ''; // Reverts to the stylesheet's color (white)
-                seat.style.borderColor = '';   // Reverts to the stylesheet's color
+                seat.style.backgroundColor = '';
+                seat.style.borderColor = '';
             }
         }
     });
@@ -278,7 +291,7 @@ async function initializePageSpecificApp() {
 }
 
 /** Resets the page state when the user signs out. */
-function resetPageSpecificApp() {
+function resetPageSpecificAppState() {
     if (sortableInstance) {
         sortableInstance.destroy();
         sortableInstance = null;
