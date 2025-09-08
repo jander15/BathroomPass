@@ -111,8 +111,7 @@ function createStudentGroupsByCount(students, groupCount) {
 }
 
 /**
- * NEW: Generates the initial chart for a class, defaulting to pairs.
- * This function groups ALL students, ignoring selection.
+ * Generates the initial chart for a class, defaulting to pairs.
  */
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
@@ -128,15 +127,13 @@ function generateInitialChart() {
 
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
     
-    // Default to pairs (group size of 2) for the initial layout
     const initialGroups = createStudentGroupsBySize(students, 2);
     
     renderChart(initialGroups);
     initializeSortable();
 }
 
-/** * MODIFIED: Renamed to generateSelectiveChart.
- * This function now ONLY groups students who have been manually selected by clicking.
+/** * Groups students who have been manually selected by clicking.
  */
 function generateSelectiveChart() {
     const selectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat.selected'))
@@ -184,7 +181,7 @@ function createSeatElement(studentName) {
     return seat;
 }
 
-/** Creates a group container element with dynamic grid styling and column span. */
+/** Creates a group container element. */
 function createGroupContainerElement(group, color) {
     const container = document.createElement('div');
     container.className = 'group-container draggable-item';
@@ -226,7 +223,6 @@ async function initializePageSpecificApp() {
     cacheToolsDOMElements();
     groupBtns.forEach(btn => btn.disabled = true);
     
-    // MODIFIED: Generate buttons now call the selective grouping function.
     groupBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             updateActiveButton(e.currentTarget);
@@ -234,7 +230,6 @@ async function initializePageSpecificApp() {
         });
     });
     
-    // MODIFIED: Class dropdown now generates the initial paired chart.
     classDropdown.addEventListener('change', () => {
         const selectedClass = classDropdown.value;
         if (selectedClass && selectedClass !== DEFAULT_CLASS_OPTION) {
@@ -242,14 +237,27 @@ async function initializePageSpecificApp() {
             groupCountInput.max = studentCount;
         }
         updateActiveButton(generatePairsBtn);
-        generateInitialChart(); // Renders the initial paired layout
+        generateInitialChart();
     });
 
-    // NEW: Add a single event listener to the grid for toggling selection.
-    seatingChartGrid.addEventListener('click', (event) => {
+    // --- FINAL FIX: Use 'mousedown' to avoid conflict with Draggable.js ---
+    seatingChartGrid.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
         if (seat) {
+            // Prevent the browser's default behavior for mousedown, like starting a text selection.
+            event.preventDefault();
+            
+            // Toggle a class for our logic to find selected students
             seat.classList.toggle('selected');
+
+            // Directly manipulate styles for a guaranteed visual change
+            if (seat.classList.contains('selected')) {
+                seat.style.backgroundColor = '#dcfce7'; // Tailwind's green-100
+                seat.style.borderColor = '#22c55e';   // Tailwind's green-500
+            } else {
+                seat.style.backgroundColor = ''; // Reverts to the stylesheet's color (white)
+                seat.style.borderColor = '';   // Reverts to the stylesheet's color
+            }
         }
     });
 
@@ -270,7 +278,7 @@ async function initializePageSpecificApp() {
 }
 
 /** Resets the page state when the user signs out. */
-function resetPageSpecificAppState() {
+function resetPageSpecificApp() {
     if (sortableInstance) {
         sortableInstance.destroy();
         sortableInstance = null;
