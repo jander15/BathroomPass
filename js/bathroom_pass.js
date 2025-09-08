@@ -112,8 +112,15 @@ async function syncAppState() {
             console.log(`Class changed from ${oldClassName} to ${liveState.currentClass}`);
 
             // If a student was out when the class changed, auto-sign them in.
-            if (oldClassName && appState.passHolder) {
+           if (oldClassName && appState.passHolder) {
                 showSuccessAlert(`Class period ended. Auto-signing in ${appState.passHolder}.`);
+
+                // Immediately stop the timer to prevent race conditions.
+                if (appState.timer.intervalId) {
+                    clearInterval(appState.timer.intervalId);
+                    appState.timer.intervalId = null;
+                }
+
                 await autoSignInStudent(appState.passHolder, oldClassName);
             }
             // If no one was out, just clear the queue for the new period.
@@ -420,9 +427,6 @@ function setPassToAvailableState() {
  * MODIFIED: Signs in a student automatically with the correct duration calculation.
  */
 async function autoSignInStudent(studentName, className) {
-    if (appState.timer.intervalId) {
-        clearInterval(appState.timer.intervalId);
-    }
     
     // --- START: FIX ---
     // Calculate duration based on the actual start time, not the outdated appState variables.
@@ -457,6 +461,12 @@ async function autoSignInStudent(studentName, className) {
  */
 async function handleMainFormSubmit(event) {
     event.preventDefault();
+
+    // If there's no student signed out, do nothing. Prevents duplicate submissions.
+    if (!appState.passHolder) {
+        console.warn("handleMainFormSubmit called with no passHolder. Aborting.");
+        return;
+    }
     
     signInButton.disabled = true;
     signInButton.classList.add('opacity-50', 'cursor-not-allowed');
