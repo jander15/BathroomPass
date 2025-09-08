@@ -5,6 +5,7 @@ let classDropdown, chartMessage, seatingChartGrid, instructionsArea, toolsConten
 let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid, unselectedStudentsSection;
+let selectAllBtn, deselectAllBtn; // New buttons
 let groupBtns = [];
 let sortableInstance = null;
 
@@ -35,6 +36,8 @@ function cacheToolsDOMElements() {
     generateGroupsByCountBtn = document.getElementById('generateGroupsByCountBtn');
     unselectedStudentsGrid = document.getElementById('unselectedStudentsGrid');
     unselectedStudentsSection = document.getElementById('unselectedStudentsSection');
+    selectAllBtn = document.getElementById('selectAllBtn'); // Cache new button
+    deselectAllBtn = document.getElementById('deselectAllBtn'); // Cache new button
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
@@ -93,14 +96,13 @@ function shuffleArray(array) {
 }
 
 /**
- * MODIFIED: Creates student groups with a special exception for pairs.
+ * Creates student groups with a special exception for pairs.
  */
 function createStudentGroupsBySize(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
     const groups = [];
 
-    // Special, simpler logic for pairs
     if (groupSize === 2) {
         while (shuffledStudents.length > 0) {
             groups.push(shuffledStudents.splice(0, 2));
@@ -108,7 +110,6 @@ function createStudentGroupsBySize(students, groupSize) {
         return groups;
     }
 
-    // Balanced distribution logic for threes, fours, etc.
     const studentCount = students.length;
     if (studentCount === 0) {
         return [];
@@ -255,9 +256,7 @@ function createSeatElement(studentName, isSelected = false) {
 }
 
 /**
- * MODIFIED: Creates a group container element with specific layout rules.
- * - Pairs, Threes, and Fours now consistently span 2 columns in the main grid.
- * - Threes and Fours use an internal 2x2 grid layout for the student tiles.
+ * Creates a group container element.
  */
 function createGroupContainerElement(group, color, selectedNames = []) {
     const container = document.createElement('div');
@@ -266,20 +265,14 @@ function createGroupContainerElement(group, color, selectedNames = []) {
     container.style.borderColor = color.border;
 
     const size = group.length;
-    let internalCols;
-    let parentSpan;
-
+    let internalCols, parentSpan;
     if (size <= 4) {
-        // Pairs, Threes, and Fours will all have a 2-column internal grid
-        // and span 2 columns in the parent, ensuring 4 groups per row.
         internalCols = 2;
         parentSpan = 2;
     } else if (size <= 6) {
-        // Groups of 5 or 6 can be a 3x2 grid and will span 3 columns.
         internalCols = 3;
         parentSpan = 3;
     } else {
-        // Larger groups will span 4 columns.
         internalCols = 4;
         parentSpan = 4;
     }
@@ -330,6 +323,30 @@ async function initializePageSpecificApp() {
                 seat.style.borderColor = '';
             }
         }
+    });
+
+    // NEW: Event listener for the "Select All" button
+    selectAllBtn.addEventListener('click', () => {
+        const allSeats = toolsContent.querySelectorAll('.seat');
+        allSeats.forEach(seat => {
+            if (!seat.classList.contains('selected')) {
+                seat.classList.add('selected');
+                seat.style.backgroundColor = '#dcfce7';
+                seat.style.borderColor = '#22c55e';
+            }
+        });
+    });
+
+    // NEW: Event listener for the "Deselect All" button
+    deselectAllBtn.addEventListener('click', () => {
+        const allSeats = toolsContent.querySelectorAll('.seat');
+        allSeats.forEach(seat => {
+            if (seat.classList.contains('selected')) {
+                seat.classList.remove('selected');
+                seat.style.backgroundColor = '';
+                seat.style.borderColor = '';
+            }
+        });
     });
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
