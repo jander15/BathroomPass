@@ -219,3 +219,10 @@ iframe[name="iframe"] {
 .right-side-tab-btn {
     flex-grow: 1;
 }
+
+/* ADD THIS NEW RULE for selected seats */
+.seat.selected {
+    background-color: #dcfce7; /* Tailwind green-100 */
+    border-color: #22c55e;   /* Tailwind green-500 */
+    box-shadow: 0 0 0 2px #22c55e;
+}
