@@ -4,9 +4,9 @@
 let classDropdown, chartMessage, seatingChartGrid, instructionsArea, toolsContent;
 let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
-let unselectedStudentsGrid; 
+let unselectedStudentsGrid, unselectedStudentsSection; // Added section
 let groupBtns = [];
-let sortableInstance = null; // To hold the Draggable.js instance
+let sortableInstance = null;
 
 // --- Color Palette for Groups ---
 const groupColors = [
@@ -27,18 +27,19 @@ function cacheToolsDOMElements() {
     chartMessage = document.getElementById('chartMessage');
     seatingChartGrid = document.getElementById('seatingChartGrid');
     instructionsArea = document.getElementById('instructionsArea');
-    toolsContent = document.getElementById('toolsContent'); // Cache parent container
+    toolsContent = document.getElementById('toolsContent');
     generatePairsBtn = document.getElementById('generatePairsBtn');
     generateThreesBtn = document.getElementById('generateThreesBtn');
     generateFoursBtn = document.getElementById('generateFoursBtn');
     groupCountInput = document.getElementById('groupCountInput');
     generateGroupsByCountBtn = document.getElementById('generateGroupsByCountBtn');
     unselectedStudentsGrid = document.getElementById('unselectedStudentsGrid');
+    unselectedStudentsSection = document.getElementById('unselectedStudentsSection'); // Cache section
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
 /**
- * Initializes Draggable.js Sortable functionality, including the unselected students grid.
+ * Initializes Draggable.js Sortable functionality.
  */
 function initializeSortable() {
     if (sortableInstance) {
@@ -116,7 +117,7 @@ function createStudentGroupsByCount(students, groupCount) {
 }
 
 /**
- * Generates the initial chart for a class, defaulting to pairs.
+ * MODIFIED: Generates the initial chart, placing all students in the top grid.
  */
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
@@ -124,6 +125,7 @@ function generateInitialChart() {
         chartMessage.textContent = "Please select a class first.";
         seatingChartGrid.innerHTML = '';
         unselectedStudentsGrid.innerHTML = '';
+        unselectedStudentsSection.classList.add('hidden'); // Hide section
         return;
     }
 
@@ -134,16 +136,25 @@ function generateInitialChart() {
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
     
     const initialGroups = createStudentGroupsBySize(students, 2);
+
+    // Clear both grids and hide the bottom section
+    seatingChartGrid.innerHTML = '';
+    unselectedStudentsGrid.innerHTML = '';
+    unselectedStudentsSection.classList.add('hidden');
+
+    // Render all initial groups into the main top grid
+    initialGroups.forEach((group, index) => {
+        const color = groupColors[index % groupColors.length];
+        seatingChartGrid.appendChild(createGroupContainerElement(group, color));
+    });
     
-    renderChart(initialGroups);
     initializeSortable();
 }
 
 /**
- * Groups students who have been manually selected by clicking.
+ * MODIFIED: Groups selected students and moves unselected students to the bottom section.
  */
 function generateSelectiveChart() {
-    // --- THE FIX: Search for seats within the entire 'toolsContent' container ---
     const selectedNames = Array.from(toolsContent.querySelectorAll('.seat.selected'))
                                .map(seat => seat.textContent);
     const unselectedNames = Array.from(toolsContent.querySelectorAll('.seat:not(.selected)'))
@@ -174,10 +185,29 @@ function generateSelectiveChart() {
         generatedGroups = createStudentGroupsBySize(selectedNames, groupSize);
     }
     
-    const unselectedIndividualGroups = unselectedNames.map(name => [name]);
-    const finalChartLayout = [...generatedGroups, ...unselectedIndividualGroups];
+    // Clear both grids
+    seatingChartGrid.innerHTML = '';
+    unselectedStudentsGrid.innerHTML = '';
 
-    renderChart(finalChartLayout, selectedNames);
+    // Render new groups into the top grid
+    generatedGroups.forEach((group, index) => {
+        const color = groupColors[index % groupColors.length];
+        // Pass 'selectedNames' to ensure they stay highlighted
+        seatingChartGrid.appendChild(createGroupContainerElement(group, color, selectedNames));
+    });
+
+    // Render unselected students into the bottom grid
+    unselectedNames.forEach(name => {
+        unselectedStudentsGrid.appendChild(createSeatElement(name, false)); // They are unselected
+    });
+
+    // Show or hide the bottom section based on whether there are any unselected students
+    if (unselectedNames.length > 0) {
+        unselectedStudentsSection.classList.remove('hidden');
+    } else {
+        unselectedStudentsSection.classList.add('hidden');
+    }
+
     initializeSortable();
 }
 
@@ -220,30 +250,6 @@ function createGroupContainerElement(group, color, selectedNames = []) {
     return container;
 }
 
-/**
- * Renders the chart by splitting groups and individuals into separate containers.
- */
-function renderChart(groups, selectedNames = []) {
-    seatingChartGrid.innerHTML = '';
-    unselectedStudentsGrid.innerHTML = '';
-    
-    shuffleArray(groups);
-
-    const actualGroups = groups.filter(group => group.length > 1);
-    const individuals = groups.filter(group => group.length === 1);
-
-    actualGroups.forEach((group, index) => {
-        const color = groupColors[index % groupColors.length];
-        seatingChartGrid.appendChild(createGroupContainerElement(group, color, selectedNames));
-    });
-
-    individuals.forEach(group => {
-        const studentName = group[0];
-        const isSelected = selectedNames.includes(studentName);
-        unselectedStudentsGrid.appendChild(createSeatElement(studentName, isSelected));
-    });
-}
-
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
@@ -266,7 +272,6 @@ async function initializePageSpecificApp() {
         generateInitialChart();
     });
 
-    // Listener is on the parent 'toolsContent' to catch clicks from both grids
     toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
         if (seat) {
@@ -299,7 +304,7 @@ async function initializePageSpecificApp() {
     }
 }
 
-/** Resets the page state, including the new grid. */
+/** Resets the page state, including the new section. */
 function resetPageSpecificAppState() {
     if (sortableInstance) {
         sortableInstance.destroy();
@@ -311,6 +316,7 @@ function resetPageSpecificAppState() {
     }
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
+    if (unselectedStudentsSection) unselectedStudentsSection.classList.add('hidden');
     if (chartMessage) chartMessage.textContent = "Select a class and click a button to generate a chart.";
     if (groupBtns.length > 0) groupBtns.forEach(btn => { if(btn) btn.disabled = true });
 }
