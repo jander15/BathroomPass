@@ -255,7 +255,9 @@ function createSeatElement(studentName, isSelected = false) {
 }
 
 /**
- * Creates a group container element.
+ * MODIFIED: Creates a group container element with specific layout rules.
+ * - Pairs, Threes, and Fours now consistently span 2 columns in the main grid.
+ * - Threes and Fours use an internal 2x2 grid layout for the student tiles.
  */
 function createGroupContainerElement(group, color, selectedNames = []) {
     const container = document.createElement('div');
@@ -264,10 +266,26 @@ function createGroupContainerElement(group, color, selectedNames = []) {
     container.style.borderColor = color.border;
 
     const size = group.length;
-    let cols = (size <= 2) ? 2 : (size <= 6) ? 3 : 4;
-    
-    container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    container.style.gridColumn = `span ${cols}`;
+    let internalCols;
+    let parentSpan;
+
+    if (size <= 4) {
+        // Pairs, Threes, and Fours will all have a 2-column internal grid
+        // and span 2 columns in the parent, ensuring 4 groups per row.
+        internalCols = 2;
+        parentSpan = 2;
+    } else if (size <= 6) {
+        // Groups of 5 or 6 can be a 3x2 grid and will span 3 columns.
+        internalCols = 3;
+        parentSpan = 3;
+    } else {
+        // Larger groups will span 4 columns.
+        internalCols = 4;
+        parentSpan = 4;
+    }
+
+    container.style.gridTemplateColumns = `repeat(${internalCols}, 1fr)`;
+    container.style.gridColumn = `span ${parentSpan}`;
 
     group.forEach(studentName => {
         const isSelected = selectedNames.includes(studentName);
