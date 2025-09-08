@@ -65,7 +65,7 @@ function startInfoBarClock() {
 }
 
 /**
- * MODIFIED: Now clears the queue whenever the class period changes.
+ * MODIFIED: Now correctly calls the auto-sign-in function when a class changes.
  */
 async function syncAppState() {
     try {
@@ -106,23 +106,32 @@ async function syncAppState() {
 
         const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
         
+        // --- START: FIX ---
         if (classHasChanged) {
-            console.log(`Class changed from ${appState.ui.currentClassPeriod} to ${liveState.currentClass}`);
-            if (appState.ui.currentClassPeriod && !appState.passHolder) {
+            const oldClassName = appState.ui.currentClassPeriod;
+            console.log(`Class changed from ${oldClassName} to ${liveState.currentClass}`);
+
+            // If a student was out when the class changed, auto-sign them in.
+            if (oldClassName && appState.passHolder) {
+                showSuccessAlert(`Class period ended. Auto-signing in ${appState.passHolder}.`);
+                await autoSignInStudent(appState.passHolder, oldClassName);
+            }
+            // If no one was out, just clear the queue for the new period.
+            else if (oldClassName && !appState.passHolder) {
                 let alertMessage = "Class period changed. ";
-                // --- START: FIX ---
-                // If the class changes and no one is out, clear the queue.
                 if (appState.queue.length > 0) {
                     appState.queue = [];
-                    localStorage.removeItem('passQueue'); // Clear from storage
+                    localStorage.removeItem('passQueue');
                     updateQueueDisplay();
                     alertMessage += "The queue has been cleared.";
                 }
-                // --- END: FIX ---
                 showSuccessAlert(alertMessage.trim());
             }
+
+            // After handling the state from the old class, update the dropdowns for the new one.
             updateMainPassDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
         }
+        // --- END: FIX ---
         
         appState.ui.currentClassPeriod = liveState.currentClass;
         infoBarClass.textContent = liveState.currentClass ? `Class: ${liveState.currentClass}` : "Class: No Active Class";
@@ -139,7 +148,7 @@ async function syncAppState() {
 
 
 /**
- * REFACTORED: This function now ONLY populates the main pass, queue, and late sign-in dropdowns.
+ * Populates the main pass, queue, and late sign-in dropdowns.
  */
 function updateMainPassDropdownsForClass(currentClassName, travelingStudents = []) {
     if (currentClassName) {
@@ -245,7 +254,8 @@ async function loadInitialPassData() {
     }
 }
 
-/* UPDATED: Now calculates elapsed time from a start time for accuracy.
+/**
+ * Calculates elapsed time from a start time for accuracy.
  */
 function updateTimerDisplay() {
     if (!appState.timer.startTime) return;
@@ -267,7 +277,7 @@ function updateTimerDisplay() {
 }
 
 /**
- * UPDATED: Adds disabled appearance (opacity and cursor) to the sign-out button.
+ * Starts the timer and transitions the UI when a student signs out.
  */
 async function startPassTimerAndTransitionUI() {
     if (!appState.ui.isPassEnabled) {
@@ -342,10 +352,9 @@ async function startPassTimerAndTransitionUI() {
  */
 function resetMainPassUI() {
     appState.timer.intervalId = null; 
-    appState.timer.seconds = 0;
-    appState.timer.minutes = 0;
+    appState.timer.startTime = null; // Clear start time
     appState.timer.isTardy = false;
-    minutesSpan.textContent = appState.timer.minutes;
+    minutesSpan.textContent = 0;
     secondsSpan.textContent = "00";
     
     signOutButton.disabled = false;
@@ -408,13 +417,20 @@ function setPassToAvailableState() {
 }
 
 /**
- * Signs in a student automatically without user interaction, typically for class changes.
+ * MODIFIED: Signs in a student automatically with the correct duration calculation.
  */
 async function autoSignInStudent(studentName, className) {
     if (appState.timer.intervalId) {
         clearInterval(appState.timer.intervalId);
     }
-    const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
+    
+    // --- START: FIX ---
+    // Calculate duration based on the actual start time, not the outdated appState variables.
+    const timeOutSeconds = appState.timer.startTime
+        ? Math.round((new Date().getTime() - appState.timer.startTime) / 1000)
+        : 0;
+    // --- END: FIX ---
+
     const nameOnly = studentName.includes("(") ? studentName.substring(0, studentName.indexOf("(") - 1).trim() : studentName.trim();
 
     const payload = {
@@ -450,7 +466,10 @@ async function handleMainFormSubmit(event) {
 
     const nameOnly = appState.passHolder.includes("(") ? appState.passHolder.substring(0, appState.passHolder.indexOf("(")-1).trim() : appState.passHolder.trim();
     const classValue = appState.ui.currentClassPeriod;
-    const timeOutSeconds = (appState.timer.minutes * 60) + appState.timer.seconds;
+    
+    const timeOutSeconds = appState.timer.startTime
+        ? Math.round((new Date().getTime() - appState.timer.startTime) / 1000)
+        : 0;
 
     const payload = {
         action: ACTION_LOG_SIGN_IN,
@@ -629,7 +648,7 @@ function updateQueueMessage(message) {
 }
 
 /**
- * MODIFIED: Now also manages the border radius of the Late Sign In button.
+ * Manages the border radius of the Late Sign In button.
  */
 function updateQueueTabVisibility() {
     const isPassHolderOut = appState.passHolder !== null;
@@ -700,7 +719,7 @@ function toggleAddToQueueButtonVisibility() {
 }
 
 /**
- * MODIFIED: Resets the queue dropdown to the default prompt after adding a name.
+ * Resets the queue dropdown to the default prompt after adding a name.
  */
 function handleAddToQueueClick() {
     const name = nameQueueDropdown.value.trim();
@@ -905,7 +924,7 @@ function showLateSignInView() {
 
 
 /**
- * MODIFIED: Now filters the restored queue to only include students from the active class.
+ * Filters the restored queue to only include students from the active class.
  */
 async function initializePageSpecificApp() {
     // --- Initial UI & State Setup ---
@@ -940,8 +959,6 @@ async function initializePageSpecificApp() {
             await syncAppState();
             rightSideFormsContainer.classList.remove('hidden');
 
-            // --- START: FIX ---
-            // Restore and filter the queue AFTER the class and roster are known.
             const savedQueue = localStorage.getItem('passQueue');
             if (savedQueue) {
                 const restoredQueue = JSON.parse(savedQueue);
@@ -951,10 +968,8 @@ async function initializePageSpecificApp() {
                         .map(student => student.Name)
                 );
 
-                // Filter the restored queue to only include students in the current class
                 appState.queue = restoredQueue.filter(studentName => currentClassRoster.has(studentName));
                 
-                // If the queue changed, update localStorage
                 if(appState.queue.length !== restoredQueue.length) {
                     localStorage.setItem('passQueue', JSON.stringify(appState.queue));
                 }
@@ -962,7 +977,6 @@ async function initializePageSpecificApp() {
                 console.log("Restored and filtered queue:", appState.queue);
                 updateQueueDisplay();
             }
-            // --- END: FIX ---
 
             const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
             const currentClass = appState.ui.currentClassPeriod;
