@@ -65,11 +65,10 @@ function startInfoBarClock() {
 }
 
 /**
- * UPDATED: Now makes a single, combined request to the backend for efficiency.
+ * MODIFIED: Now clears the queue whenever the class period changes.
  */
 async function syncAppState() {
     try {
-        // Make a single call to the new, consolidated endpoint
         const syncData = await sendAuthenticatedRequest({ action: 'getLiveSyncData' });
 
         if (syncData.result !== 'success') {
@@ -78,14 +77,11 @@ async function syncAppState() {
 
         const { liveState, travelState, departingList } = syncData;
 
-        // --- START: New Timestamp Logic ---
         appState.ui.lastPoll = new Date();
         if (lastPollTimeSpan) {
             lastPollTimeSpan.textContent = appState.ui.lastPoll.toLocaleTimeString();
         }
-        // --- END: New Timestamp Logic ---
 
-        // --- Process Traveling and Departing Students (every poll) ---
         let activelyTravelingStudents = [];
         if (travelState.students) {
             const allTravelers = travelState.students || [];
@@ -108,18 +104,21 @@ async function syncAppState() {
         handleTravelSignOutChange();
         handleTravelSignInChange();
 
-        // --- Handle Class Changes and Main Pass Dropdowns (conditionally) ---
         const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
         
         if (classHasChanged) {
             console.log(`Class changed from ${appState.ui.currentClassPeriod} to ${liveState.currentClass}`);
             if (appState.ui.currentClassPeriod && !appState.passHolder) {
                 let alertMessage = "Class period changed. ";
+                // --- START: FIX ---
+                // If the class changes and no one is out, clear the queue.
                 if (appState.queue.length > 0) {
                     appState.queue = [];
+                    localStorage.removeItem('passQueue'); // Clear from storage
                     updateQueueDisplay();
                     alertMessage += "The queue has been cleared.";
                 }
+                // --- END: FIX ---
                 showSuccessAlert(alertMessage.trim());
             }
             updateMainPassDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
@@ -133,7 +132,7 @@ async function syncAppState() {
         console.error("Sync Error:", error);
         showErrorAlert("Failed to sync with server. Please check connection.");
         if (lastPollTimeSpan) {
-            lastPollTimeSpan.textContent = "Error!"; // Update on failure
+            lastPollTimeSpan.textContent = "Error!";
         }
     }
 }
@@ -141,13 +140,9 @@ async function syncAppState() {
 
 /**
  * REFACTORED: This function now ONLY populates the main pass, queue, and late sign-in dropdowns.
- * It's intended to be called only when the class period changes.
- * @param {string | null} currentClassName - The name of the class to populate students for.
- * @param {string[]} [travelingStudents=[]] - A list of students currently traveling to filter out.
  */
 function updateMainPassDropdownsForClass(currentClassName, travelingStudents = []) {
     if (currentClassName) {
-        // Get the roster for the current class
         const namesForCourseSet = new Set();
         appState.data.allNamesFromSheet.forEach(item => {
             if (item && item.Class === currentClassName && item.Name) {
@@ -156,15 +151,12 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
         });
         let sortedNames = Array.from(namesForCourseSet).sort();
 
-        // Filter out students who are currently on the travel sheet
         sortedNames = sortedNames.filter(name => !travelingStudents.includes(name));
 
-        // Populate class-specific dropdowns
         populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION);
         populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION);
         populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION);
 
-        // Enable the dropdowns if they aren't in use
         if (!appState.passHolder) {
             nameDropdown.removeAttribute("disabled");
             emojiDropdown.removeAttribute("disabled");
@@ -172,8 +164,6 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
 
-        // --- ADD THIS BLOCK ---
-        // If no student is currently out, update the UI to the "Available" state.
         if (!appState.passHolder) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
             studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
@@ -181,7 +171,6 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
         }
 
     } else {
-        // If there's no class, disable the class-specific dropdowns
         const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
         dropdownsToDisable.forEach(id => {
             const dd = document.getElementById(id);
@@ -191,12 +180,10 @@ function updateMainPassDropdownsForClass(currentClassName, travelingStudents = [
             }
         });
         if(emojiDropdown) emojiDropdown.setAttribute("disabled", "disabled");
-         // If there's no class, update the header and disable dropdowns.
-        if (!appState.passHolder) { // Only change if a student isn't out from a previous period
+        if (!appState.passHolder) {
             headerStatusSpan.textContent = "No Active Class";
         }
     }
-
 
     handleNameSelectionChange();
     handleLateNameSelectionChange();
@@ -212,7 +199,6 @@ function updateQueueControls() {
 
 /**
  * Updates the UI to reflect whether the pass system is enabled or disabled.
- * @param {boolean} isEnabled - The current status of the pass system.
  */
 function updatePassAvailability(isEnabled) {
     const previousState = appState.ui.isPassEnabled;
@@ -262,7 +248,7 @@ async function loadInitialPassData() {
 /* UPDATED: Now calculates elapsed time from a start time for accuracy.
  */
 function updateTimerDisplay() {
-    if (!appState.timer.startTime) return; // Don't run if startTime isn't set
+    if (!appState.timer.startTime) return;
 
     const now = new Date().getTime();
     const elapsedTime = Math.round((now - appState.timer.startTime) / 1000);
@@ -278,8 +264,6 @@ function updateTimerDisplay() {
 
     minutesSpan.textContent = minutes;
     secondsSpan.textContent = seconds < 10 ? "0" + seconds : seconds;
-
-    // We no longer need to manage appState.timer.minutes/seconds directly
 }
 
 /**
@@ -291,11 +275,9 @@ async function startPassTimerAndTransitionUI() {
         return;
     }
 
-    // --- START: UI Feedback Logic ---
     signOutButton.disabled = true;
     signOutButton.textContent = "Processing...";
-    signOutButton.classList.add('opacity-50', 'cursor-not-allowed'); // Add disabled styles
-    // --- END: UI Feedback Logic ---
+    signOutButton.classList.add('opacity-50', 'cursor-not-allowed');
 
     const studentName = nameDropdown.value;
     const className = appState.ui.currentClassPeriod;
@@ -314,22 +296,18 @@ async function startPassTimerAndTransitionUI() {
         console.error("Failed to log bathroom sign out:", error);
         showErrorAlert("Could not log sign-out to server. Please try again.");
         
-        // --- START: Reset Button on Failure ---
         signOutButton.disabled = false;
         signOutButton.textContent = "Sign Out";
-        signOutButton.classList.remove('opacity-50', 'cursor-not-allowed'); // Remove disabled styles
-        // --- END: Reset Button on Failure ---
-        return; // Stop the function if backend fails
+        signOutButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        return;
     }
     
-    // --- UI Transition and Timer Logic (runs only on success) ---
     if (!appState.timer.intervalId) {
         appState.timer.startTime = new Date().getTime();
         appState.timer.intervalId = setInterval(updateTimerDisplay, 1000);
         appState.timer.isTardy = false;
 
         signOutButton.style.display = "none";
-        // On success, we don't need to reset the button's text or styles because it's being hidden.
         signInButton.style.display = "block";
         
         nameDropdown.setAttribute("disabled", "disabled");
@@ -370,11 +348,9 @@ function resetMainPassUI() {
     minutesSpan.textContent = appState.timer.minutes;
     secondsSpan.textContent = "00";
     
-    // --- FIX: Reset the Sign Out Button State ---
     signOutButton.disabled = false;
     signOutButton.textContent = "Sign Out";
     signOutButton.classList.remove('opacity-50', 'cursor-not-allowed');
-    // --- End Fix ---
 
     signInButton.style.display = "none";
     signInButton.disabled = false;
@@ -425,7 +401,7 @@ function setPassToAvailableState() {
     emojiRight.textContent = ""; 
     emojiDropdown.value = NO_EMOJI_OPTION; 
     
-    nameQueueDropdown.value = ""; // Also corrected here for consistency
+    nameQueueDropdown.value = "";
     addToQueueButton.classList.add('hidden');
     removeFromQueueButton.classList.add('hidden');
     updateQueueControls();
@@ -549,7 +525,7 @@ async function handleLateSignInFormSubmit(event) {
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success') {
             showSuccessAlert(`${selectedLateName} has been signed in late successfully!`);
-            lateNameDropdown.value = ""; // THE FIX IS HERE
+            lateNameDropdown.value = "";
             handleLateNameSelectionChange();
         } else {
             throw new Error(data.error || 'Unknown error from server.');
@@ -577,10 +553,8 @@ async function handleTravelSignOutSubmit() {
     const payload = {
         action: ACTION_LOG_TRAVEL_SIGN_OUT,
         Name: selectedName.includes("(") ? selectedName.substring(0, selectedName.indexOf("(")-1).trim() : selectedName.trim(),
-        // ** START: Add current class and teacher info **
         Class: appState.ui.currentClassPeriod,
         TeacherEmail: appState.currentUser.email
-        // ** END: Add current class and teacher info **
     };
 
     try {
@@ -623,9 +597,8 @@ async function handleTravelSignInSubmit() {
         const data = await sendAuthenticatedRequest(payload);
         if (data.result === 'success') {
             showSuccessAlert(data.message);
-            // Reset the arriving section
             travelSignInName.value = DEFAULT_NAME_OPTION;
-            handleTravelSignInChange(); // This will hide the submit button again
+            handleTravelSignInChange();
         } else {
             throw new Error(data.error || 'Unknown error from server.');
         }
@@ -664,11 +637,9 @@ function updateQueueTabVisibility() {
 
     if (isPassHolderOut || isQueuePopulated) {
         queueViewBtn.classList.remove('hidden');
-        // When the Queue button is visible, the Late Sign In button has square corners.
         lateSignInViewBtn.classList.remove('rounded-tl-lg');
     } else {
         queueViewBtn.classList.add('hidden');
-        // When the Queue button is hidden, the Late Sign In button gets the rounded corner.
         lateSignInViewBtn.classList.add('rounded-tl-lg');
         
         if (appState.ui.currentRightView === 'queue') {
@@ -741,21 +712,19 @@ function handleAddToQueueClick() {
     } else if (appState.passHolder && name === appState.passHolder) {
         updateQueueMessage(`${name} is currently signed out and cannot be added to the queue.`);
     } else {
-    appState.queue.push(name);
-    // --- ADD THIS LINE ---
-    localStorage.setItem('passQueue', JSON.stringify(appState.queue));
-    updateQueueMessage(`${name} has been added to the queue.`);
-
-    nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
-    updateQueueDisplay();
-
-    if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
-        const nextPerson = appState.queue.shift();
-        // --- ADD THIS LINE ---
+        appState.queue.push(name);
         localStorage.setItem('passQueue', JSON.stringify(appState.queue));
-        preparePassForNextInQueue(nextPerson);
+        updateQueueMessage(`${name} has been added to the queue.`);
+
+        nameQueueDropdown.value = DEFAULT_NAME_OPTION; 
         updateQueueDisplay();
-    }
+
+        if (!appState.passHolder && appState.queue.length === 1 && appState.ui.isPassEnabled) { 
+            const nextPerson = appState.queue.shift();
+            localStorage.setItem('passQueue', JSON.stringify(appState.queue));
+            preparePassForNextInQueue(nextPerson);
+            updateQueueDisplay();
+        }
     }
     updateQueueControls();
 }
@@ -773,7 +742,6 @@ function handleRemoveFromQueueClick() {
     if (index > -1) {
         const removedName = appState.selectedQueueName;
         appState.queue.splice(index, 1);
-        // --- ADD THIS LINE ---
         localStorage.setItem('passQueue', JSON.stringify(appState.queue));
         updateQueueMessage(`Removed ${removedName} from the queue.`);
         updateQueueDisplay(); 
@@ -863,7 +831,6 @@ function handleTravelSignInChange() {
 function handleTravelDepartingClick() {
     travelDepartingSection.classList.remove('hidden');
     travelArrivingSection.classList.add('hidden');
-    // Style this button as active
     travelDepartingBtn.classList.add('border-white');
     travelArrivingBtn.classList.remove('border-white');
 }
@@ -874,7 +841,6 @@ function handleTravelDepartingClick() {
 function handleTravelArrivingClick() {
     travelArrivingSection.classList.remove('hidden');
     travelDepartingSection.classList.add('hidden');
-    // Style this button as active
     travelArrivingBtn.classList.add('border-white');
     travelDepartingBtn.classList.remove('border-white');
 }
@@ -891,11 +857,9 @@ function showTravelPassView() {
     lateSignInView.classList.add('hidden');
     appState.ui.currentRightView = 'travel';
 
-    // Style Travel button as active
     travelPassViewBtn.classList.add('bg-cyan-600');
     travelPassViewBtn.classList.remove('bg-cyan-500');
 
-    // Style other buttons as inactive
     queueViewBtn.classList.add('bg-purple-400', 'text-white');
     queueViewBtn.classList.remove('bg-purple-500');
     lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
@@ -911,11 +875,9 @@ function showQueueView() {
     lateSignInView.classList.add('hidden');
     appState.ui.currentRightView = 'queue';
 
-    // Style Queue button as active
     queueViewBtn.classList.add('bg-purple-500');
     queueViewBtn.classList.remove('bg-purple-400', 'text-white');
 
-    // Style other buttons as inactive
     travelPassViewBtn.classList.add('bg-cyan-500');
     travelPassViewBtn.classList.remove('bg-cyan-600');
     lateSignInViewBtn.classList.add('bg-yellow-200', 'text-gray-800');
@@ -931,11 +893,9 @@ function showLateSignInView() {
     queueArea.classList.add('hidden');
     appState.ui.currentRightView = 'lateSignIn';
 
-    // Style Late Sign In button as active
     lateSignInViewBtn.classList.add('bg-yellow-300');
     lateSignInViewBtn.classList.remove('bg-yellow-200');
 
-    // Style other buttons as inactive
     travelPassViewBtn.classList.add('bg-cyan-500');
     travelPassViewBtn.classList.remove('bg-cyan-600');
     queueViewBtn.classList.add('bg-purple-400', 'text-white');
@@ -945,19 +905,9 @@ function showLateSignInView() {
 
 
 /**
- * MODIFIED: Now correctly checks for tardiness on initial load to prevent color flashing.
+ * MODIFIED: Now filters the restored queue to only include students from the active class.
  */
 async function initializePageSpecificApp() {
-    // --- ADD THIS BLOCK AT THE TOP ---
-    // Restore the queue from localStorage on page load.
-    const savedQueue = localStorage.getItem('passQueue');
-    if (savedQueue) {
-        appState.queue = JSON.parse(savedQueue);
-        console.log("Restored queue from previous session:", appState.queue);
-        updateQueueDisplay();
-
-    }
-    // --- END ADD ---
     // --- Initial UI & State Setup ---
     alertDiv.classList.add("hidden");
     errorAlertDiv.classList.add("hidden");
@@ -979,8 +929,6 @@ async function initializePageSpecificApp() {
     // --- Main Data Loading and Polling Logic ---
     if (appState.currentUser.email && appState.currentUser.idToken) {
         startInfoBarClock();
-        // --- ADD THIS EVENT LISTENER ---
-        // This will trigger a sync immediately when the user returns to the tab.
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === 'visible') {
                 console.log("Tab is visible again, forcing a sync.");
@@ -991,6 +939,30 @@ async function initializePageSpecificApp() {
             await loadInitialPassData();
             await syncAppState();
             rightSideFormsContainer.classList.remove('hidden');
+
+            // --- START: FIX ---
+            // Restore and filter the queue AFTER the class and roster are known.
+            const savedQueue = localStorage.getItem('passQueue');
+            if (savedQueue) {
+                const restoredQueue = JSON.parse(savedQueue);
+                const currentClassRoster = new Set(
+                    appState.data.allNamesFromSheet
+                        .filter(student => student.Class === appState.ui.currentClassPeriod)
+                        .map(student => student.Name)
+                );
+
+                // Filter the restored queue to only include students in the current class
+                appState.queue = restoredQueue.filter(studentName => currentClassRoster.has(studentName));
+                
+                // If the queue changed, update localStorage
+                if(appState.queue.length !== restoredQueue.length) {
+                    localStorage.setItem('passQueue', JSON.stringify(appState.queue));
+                }
+
+                console.log("Restored and filtered queue:", appState.queue);
+                updateQueueDisplay();
+            }
+            // --- END: FIX ---
 
             const bathroomState = await sendAuthenticatedRequest({ action: 'getBathroomState' });
             const currentClass = appState.ui.currentClassPeriod;
@@ -1009,15 +981,13 @@ async function initializePageSpecificApp() {
                     appState.passHolder = fullStudentName;
                     appState.timer.startTime = new Date(outStudent.Timestamp).getTime();
 
-                    // --- THE FIX: Check for tardiness immediately on load ---
                     const elapsedTimeSeconds = (new Date().getTime() - appState.timer.startTime) / 1000;
                     const isTardy = Math.floor(elapsedTimeSeconds / 60) >= TARDY_THRESHOLD_MINUTES;
-                    appState.timer.isTardy = isTardy; // Set the state
+                    appState.timer.isTardy = isTardy;
 
                     const initialColor = isTardy ? FORM_COLOR_TARDY : FORM_COLOR_OUT;
                     studentOutHeader.style.backgroundColor = initialColor;
                     mainForm.style.backgroundColor = initialColor;
-                    // --- End Fix ---
 
                     studentOutNameSpan.textContent = outStudent.Name;
                     headerStatusSpan.textContent = STATUS_IS_OUT;
@@ -1129,14 +1099,12 @@ manualSyncBtn.addEventListener('click', () => {
     manualSyncBtn.textContent = 'Syncing...';
     manualSyncBtn.disabled = true;
 
-    // Use a setTimeout to allow the UI to update before the async task starts
     setTimeout(async () => {
-        await syncAppState(); // Call the reusable sync function
+        await syncAppState();
 
-        // A short delay provides better visual feedback
         setTimeout(() => {
             manualSyncBtn.textContent = 'Sync';
             manualSyncBtn.disabled = false;
         }, 500);
-    }, 0); // A 0ms delay is all that's needed to push this to the next event cycle
+    }, 0);
 });
