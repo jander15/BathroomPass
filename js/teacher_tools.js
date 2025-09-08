@@ -11,7 +11,7 @@ let sortableInstance = null; // To hold the Draggable.js instance
 const groupColors = [
     { bg: '#fef2f2', border: '#fca5a5' }, // Red
     { bg: '#fff7ed', border: '#fdba74' }, // Orange
-    { bg: '##fefce8', border: '#fde047' }, // Yellow
+    { bg: '#fefce8', border: '#fde047' }, // Yellow
     { bg: '#f7fee7', border: '#bef264' }, // Lime
     { bg: '#ecfdf5', border: '#86efac' }, // Green
     { bg: '#eff6ff', border: '#93c5fd' }, // Blue
@@ -41,22 +41,18 @@ function initializeSortable() {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
-
     const containers = document.querySelectorAll('#seatingChartGrid, .group-container');
-
     sortableInstance = new Draggable.Sortable(containers, {
         draggable: '.draggable-item',
         handle: '.draggable-item',
         mirror: { constrainDimensions: true },
         plugins: [Draggable.Plugins.ResizeMirror],
     });
-
     sortableInstance.on('sortable:start', (evt) => {
         if (evt.data.source.classList.contains('group-container')) {
             document.body.classList.add('dragging-a-container');
         }
     });
-
     sortableInstance.on('drag:over:container', (evt) => {
         if (document.body.classList.contains('dragging-a-container')) {
             if (evt.overContainer.classList.contains('group-container')) {
@@ -64,7 +60,6 @@ function initializeSortable() {
             }
         }
     });
-
     sortableInstance.on('sortable:stop', () => {
         document.body.classList.remove('dragging-a-container');
     });
@@ -116,13 +111,13 @@ function createStudentGroupsByCount(students, groupCount) {
 }
 
 /**
- * NEW: Displays all students in a class as individual, selectable seats.
- * This is the initial state when a class is selected.
+ * NEW: Generates the initial chart for a class, defaulting to pairs.
+ * This function groups ALL students, ignoring selection.
  */
-function displayAllStudentsAsIndividuals() {
+function generateInitialChart() {
     const selectedClass = classDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) {
-        chartMessage.textContent = "Please select a class.";
+        chartMessage.textContent = "Please select a class first.";
         seatingChartGrid.innerHTML = '';
         return;
     }
@@ -133,18 +128,17 @@ function displayAllStudentsAsIndividuals() {
 
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
     
-    // Create an array where each student is in their own group
-    const individualGroups = students.map(student => [student]);
+    // Default to pairs (group size of 2) for the initial layout
+    const initialGroups = createStudentGroupsBySize(students, 2);
     
-    renderChart(individualGroups);
+    renderChart(initialGroups);
     initializeSortable();
 }
 
-/** * MODIFIED: Main function to generate and render the chart. 
- * Now reads selected students from the DOM and only groups them.
+/** * MODIFIED: Renamed to generateSelectiveChart.
+ * This function now ONLY groups students who have been manually selected by clicking.
  */
-function generateAndRenderChart() {
-    // 1. Get the names of selected and unselected students from the DOM.
+function generateSelectiveChart() {
     const selectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat.selected'))
                                .map(seat => seat.textContent);
     const unselectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat:not(.selected)'))
@@ -155,7 +149,6 @@ function generateAndRenderChart() {
         return;
     }
 
-    // 2. Determine which grouping mode is active.
     const activeModeBtn = document.querySelector('.group-btn.active');
     if (!activeModeBtn) {
         showErrorAlert("Please select a grouping method (e.g., Pairs, Threes).");
@@ -163,7 +156,6 @@ function generateAndRenderChart() {
     }
     const mode = activeModeBtn.id;
 
-    // 3. Generate groups using ONLY the selected students.
     let generatedGroups;
     if (mode === 'generateGroupsByCountBtn') {
         const groupCount = parseInt(groupCountInput.value, 10);
@@ -172,18 +164,14 @@ function generateAndRenderChart() {
             return;
         }
         generatedGroups = createStudentGroupsByCount(selectedNames, groupCount);
-    } else { // Handles Pairs, Threes, Fours
+    } else {
         const groupSize = parseInt(activeModeBtn.dataset.groupsize, 10);
         generatedGroups = createStudentGroupsBySize(selectedNames, groupSize);
     }
     
-    // 4. Unselected students become individual groups.
     const unselectedIndividualGroups = unselectedNames.map(name => [name]);
-
-    // 5. Combine the new groups and the unselected individuals.
     const finalChartLayout = [...generatedGroups, ...unselectedIndividualGroups];
 
-    // 6. Render the new layout.
     renderChart(finalChartLayout);
     initializeSortable();
 }
@@ -192,7 +180,6 @@ function generateAndRenderChart() {
 function createSeatElement(studentName) {
     const seat = document.createElement('div');
     seat.textContent = studentName;
-    // Add 'seat' class for styling and event handling
     seat.className = 'seat draggable-item bg-white p-2 border border-gray-300 rounded-md shadow-sm text-center text-sm flex items-center justify-center min-h-[60px] font-semibold cursor-pointer';
     return seat;
 }
@@ -218,7 +205,7 @@ function createGroupContainerElement(group, color) {
 
 /** Renders the entire chart from an array of groups. */
 function renderChart(groups) {
-    seatingChartGrid.innerHTML = ''; // Clear previous content
+    seatingChartGrid.innerHTML = '';
     shuffleArray(groups);
 
     const actualGroups = groups.filter(group => group.length > 1);
@@ -243,24 +230,23 @@ async function initializePageSpecificApp() {
     groupBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             updateActiveButton(e.currentTarget);
-            generateAndRenderChart();
+            generateSelectiveChart();
         });
     });
     
-    // MODIFIED: Class dropdown now displays all students as individuals initially.
+    // MODIFIED: Class dropdown now generates the initial paired chart.
     classDropdown.addEventListener('change', () => {
         const selectedClass = classDropdown.value;
         if (selectedClass && selectedClass !== DEFAULT_CLASS_OPTION) {
             const studentCount = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).length;
             groupCountInput.max = studentCount;
         }
-        updateActiveButton(generatePairsBtn); // Default to pairs
-        displayAllStudentsAsIndividuals(); // Render the initial set of clickable tiles
+        updateActiveButton(generatePairsBtn);
+        generateInitialChart(); // Renders the initial paired layout
     });
 
     // NEW: Add a single event listener to the grid for toggling selection.
     seatingChartGrid.addEventListener('click', (event) => {
-        // Use .closest() to ensure we're targeting a seat, even if a child element is clicked
         const seat = event.target.closest('.seat');
         if (seat) {
             seat.classList.toggle('selected');
