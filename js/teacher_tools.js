@@ -1,10 +1,9 @@
 // js/teacher_tools.js
 
 // --- DOM Element Caching ---
-let classDropdown, chartMessage, seatingChartGrid, instructionsArea;
+let classDropdown, chartMessage, seatingChartGrid, instructionsArea, toolsContent;
 let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
-// NEW: Add a variable for the new grid
 let unselectedStudentsGrid; 
 let groupBtns = [];
 let sortableInstance = null; // To hold the Draggable.js instance
@@ -28,25 +27,23 @@ function cacheToolsDOMElements() {
     chartMessage = document.getElementById('chartMessage');
     seatingChartGrid = document.getElementById('seatingChartGrid');
     instructionsArea = document.getElementById('instructionsArea');
+    toolsContent = document.getElementById('toolsContent'); // Cache parent container
     generatePairsBtn = document.getElementById('generatePairsBtn');
     generateThreesBtn = document.getElementById('generateThreesBtn');
     generateFoursBtn = document.getElementById('generateFoursBtn');
     groupCountInput = document.getElementById('groupCountInput');
     generateGroupsByCountBtn = document.getElementById('generateGroupsByCountBtn');
-    // NEW: Cache the new grid element
     unselectedStudentsGrid = document.getElementById('unselectedStudentsGrid');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
 /**
- * MODIFIED: Initializes or re-initializes Draggable.js Sortable functionality.
- * Now includes the unselected students grid as a valid drop zone.
+ * Initializes Draggable.js Sortable functionality, including the unselected students grid.
  */
 function initializeSortable() {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
-    // MODIFIED: Add the new grid to the list of sortable containers
     const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
     
     sortableInstance = new Draggable.Sortable(containers, {
@@ -146,9 +143,10 @@ function generateInitialChart() {
  * Groups students who have been manually selected by clicking.
  */
 function generateSelectiveChart() {
-    const selectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat.selected, #unselectedStudentsGrid .seat.selected'))
+    // --- THE FIX: Search for seats within the entire 'toolsContent' container ---
+    const selectedNames = Array.from(toolsContent.querySelectorAll('.seat.selected'))
                                .map(seat => seat.textContent);
-    const unselectedNames = Array.from(seatingChartGrid.querySelectorAll('.seat:not(.selected), #unselectedStudentsGrid .seat:not(.selected)'))
+    const unselectedNames = Array.from(toolsContent.querySelectorAll('.seat:not(.selected)'))
                                  .map(seat => seat.textContent);
 
     if (selectedNames.length === 0) {
@@ -223,10 +221,9 @@ function createGroupContainerElement(group, color, selectedNames = []) {
 }
 
 /**
- * MODIFIED: Renders the chart by splitting groups and individuals into separate containers.
+ * Renders the chart by splitting groups and individuals into separate containers.
  */
 function renderChart(groups, selectedNames = []) {
-    // Clear both containers before rendering
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
     
@@ -235,13 +232,11 @@ function renderChart(groups, selectedNames = []) {
     const actualGroups = groups.filter(group => group.length > 1);
     const individuals = groups.filter(group => group.length === 1);
 
-    // Render the colored groups into the main top grid
     actualGroups.forEach((group, index) => {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color, selectedNames));
     });
 
-    // Render the individual students into the bottom grid
     individuals.forEach(group => {
         const studentName = group[0];
         const isSelected = selectedNames.includes(studentName);
@@ -271,8 +266,8 @@ async function initializePageSpecificApp() {
         generateInitialChart();
     });
 
-    // MODIFIED: The listener now needs to check both grids for clicks.
-    document.getElementById('toolsContent').addEventListener('mousedown', (event) => {
+    // Listener is on the parent 'toolsContent' to catch clicks from both grids
+    toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
         if (seat) {
             event.preventDefault();
@@ -304,7 +299,7 @@ async function initializePageSpecificApp() {
     }
 }
 
-/** MODIFIED: Resets the page state, including the new grid. */
+/** Resets the page state, including the new grid. */
 function resetPageSpecificAppState() {
     if (sortableInstance) {
         sortableInstance.destroy();
@@ -315,7 +310,6 @@ function resetPageSpecificAppState() {
         classDropdown.setAttribute("disabled", "disabled");
     }
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
-    // NEW: Clear the unselected grid as well
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
     if (chartMessage) chartMessage.textContent = "Select a class and click a button to generate a chart.";
     if (groupBtns.length > 0) groupBtns.forEach(btn => { if(btn) btn.disabled = true });
