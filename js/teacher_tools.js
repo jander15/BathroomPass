@@ -93,21 +93,27 @@ function shuffleArray(array) {
 }
 
 /**
- * MODIFIED: Creates student groups with more balanced distribution logic.
- * - If remainder is 1, a student is added to an existing group.
- * - If remainder is 2+, they form a new group.
- * - Students are distributed as evenly as possible.
+ * MODIFIED: Creates student groups with a special exception for pairs.
  */
 function createStudentGroupsBySize(students, groupSize) {
-    const studentCount = students.length;
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
+    const groups = [];
 
+    // Special, simpler logic for pairs
+    if (groupSize === 2) {
+        while (shuffledStudents.length > 0) {
+            groups.push(shuffledStudents.splice(0, 2));
+        }
+        return groups;
+    }
+
+    // Balanced distribution logic for threes, fours, etc.
+    const studentCount = students.length;
     if (studentCount === 0) {
         return [];
     }
     
-    // Determine the number of groups to create based on the remainder logic
     const remainder = studentCount % groupSize;
     let numGroups = Math.floor(studentCount / groupSize);
 
@@ -115,22 +121,19 @@ function createStudentGroupsBySize(students, groupSize) {
         numGroups++;
     }
     
-    // If there are students but not enough to make a full group according to the logic,
-    // default to creating a single group.
     if (numGroups === 0 && studentCount > 0) {
         numGroups = 1;
     }
 
-    const groups = Array.from({ length: numGroups }, () => []);
+    const balancedGroups = Array.from({ length: numGroups }, () => []);
     let groupIndex = 0;
 
-    // Distribute all students as evenly as possible among the determined number of groups
     shuffledStudents.forEach(student => {
-        groups[groupIndex % numGroups].push(student);
+        balancedGroups[groupIndex % numGroups].push(student);
         groupIndex++;
     });
 
-    return groups;
+    return balancedGroups;
 }
 
 
