@@ -190,6 +190,13 @@ iframe[name="iframe"] {
     background-color: white;
 }
 
+/* --- THE FIX: This rule is more specific and will override Tailwind's bg-white --- */
+.seat.selected, .group-container .seat.selected {
+    background-color: #dcfce7 !important; /* Tailwind green-100 */
+    border-color: #22c55e !important;   /* Tailwind green-500 */
+    box-shadow: 0 0 0 2px #22c55e;
+}
+
 /* --- Seating Chart Group Button Styles --- */
 
 /* Style for the active generation button */
@@ -218,11 +225,4 @@ iframe[name="iframe"] {
 /* NEW: This rule makes the tab buttons expand to fill available space. */
 .right-side-tab-btn {
     flex-grow: 1;
-}
-
-/* ADD THIS NEW RULE for selected seats */
-.seat.selected {
-    background-color: #dcfce7 !important; /* Tailwind green-100 */
-    border-color: #22c55e !important;   /* Tailwind green-500 */
-    box-shadow: 0 0 0 2px #22c55e;
 }
