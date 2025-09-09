@@ -25,7 +25,7 @@ const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
 
-// --- State Flags for Initialization ---
+// --- State Flags for Robust Initialization ---
 let isDomReady = false;
 let isUserReady = false;
 let hasInitializationRun = false;
@@ -109,6 +109,7 @@ function showErrorAlert(message) {
 
 function setupProfileMenu() {
     if (!profilePicture || appState.ui.isProfileMenuSetup) return;
+    appState.ui.isProfileMenuSetup = true;
     profilePicture.addEventListener('click', (event) => {
         event.stopPropagation();
         profileDropdown.classList.toggle('hidden');
@@ -119,7 +120,6 @@ function setupProfileMenu() {
             profileDropdown.classList.add('hidden');
         }
     });
-    appState.ui.isProfileMenuSetup = true;
 }
 
 function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
@@ -135,41 +135,32 @@ function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
     selectElement.value = defaultValue;
 }
 
-async function sendAuthenticatedRequest(payload) {
+async function sendAuthenticatedRequest(payload, isRetry = false) {
     if (!appState.currentUser.idToken) throw new Error("User not authenticated.");
     payload.userEmail = appState.currentUser.email;
     payload.idToken = appState.currentUser.idToken;
-
     try {
-        // --- THIS IS THE FIX ---
-        // The first argument to fetch must be the API_URL.
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        // --- END FIX ---
-
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                 throw new Error("SESSION_EXPIRED");
-            }
+            if (response.status === 401 || response.status === 403) throw new Error("SESSION_EXPIRED");
             throw new Error(`HTTP error ${response.status}`);
         }
         return await response.json();
     } catch (error) {
-        if (error.message === "SESSION_EXPIRED") {
-            console.warn("Session expired. Attempting silent refresh...");
+        if (error.message === "SESSION_EXPIRED" && !isRetry) {
+            console.warn("Session expired. Attempting refresh...");
             try {
                 const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
                 const refreshResponse = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(refreshPayload) }).then(res => res.json());
                 if (refreshResponse.result === 'success' && refreshResponse.idToken) {
                     appState.currentUser.idToken = refreshResponse.idToken;
-                    return await sendAuthenticatedRequest(payload); // Retry original request
+                    return await sendAuthenticatedRequest(payload, true);
                 }
-            } catch (refreshError) {
-                // Ignore refresh error and fall through to page reload
-            }
+            } catch (refreshError) {}
             showErrorAlert(`Your session has expired. The application will refresh.`);
             setTimeout(() => window.location.reload(), 3000);
             throw new Error(`Session expired and refresh failed.`);
@@ -203,7 +194,6 @@ function tryInitializeApp() {
         console.log("DOM and User are ready. Initializing application.");
         
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
-        
         if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
         if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
         if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
@@ -219,18 +209,14 @@ function tryInitializeApp() {
         if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
         setupProfileMenu();
 
-        if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
-        proactiveTokenRefresh();
-        appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000);
-
-        if (typeof initializePageSpecificApp === 'function') {
-            initializePageSpecificApp();
+        if (typeof initializePageSpecificAppState === 'function') {
+            initializePageSpecificAppState();
         }
     }
 }
 
 async function processSignIn(tokenData) {
-    if (tokenData.result === 'success' && tokenData.idToken) {
+    if (tokenData && tokenData.result === 'success' && tokenData.idToken) {
         const profile = decodeJwtResponse(tokenData.idToken);
         localStorage.setItem('lastUserEmail', profile.email);
         appState.currentUser.email = profile.email;
@@ -248,43 +234,38 @@ async function handleSignIn(authCode) {
     try {
         const payload = { action: 'exchangeCodeForTokens', code: authCode };
         const tokenData = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(res => res.json());
-        await processSignIn(tokenData);
+        if (!await processSignIn(tokenData)) {
+            showErrorAlert("Could not complete the sign-in process.");
+        }
     } catch (error) {
-        showErrorAlert("Could not complete the sign-in process.");
+        showErrorAlert("An error occurred during sign-in.");
     }
 }
 
 function initGoogleSignIn() {
     if (!googleSignInButton) return;
-    if (typeof google === 'undefined' || !google.accounts) {
-        return;
+    try {
+        const codeClient = google.accounts.oauth2.initCodeClient({
+            client_id: GOOGLE_CLIENT_ID, scope: 'email profile openid', ux_mode: 'popup', access_type: 'offline',
+            callback: (response) => { if (response.code) handleSignIn(response.code); },
+        });
+        googleSignInButton.innerHTML = '';
+        const customButton = document.createElement('button');
+        customButton.textContent = 'Sign in with Google';
+        customButton.className = 'bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors';
+        customButton.onclick = () => {
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+            codeClient.requestCode();
+        };
+        googleSignInButton.appendChild(customButton);
+    } catch (error) {
+        showErrorAlert("Google Sign-In library failed to initialize.");
     }
-    const codeClient = google.accounts.oauth2.initCodeClient({
-        client_id: GOOGLE_CLIENT_ID, scope: 'email profile openid', ux_mode: 'popup', access_type: 'offline',
-        callback: (response) => { if (response.code) handleSignIn(response.code); },
-    });
-    googleSignInButton.innerHTML = '';
-    const customButton = document.createElement('button');
-    customButton.textContent = 'Sign in with Google';
-    customButton.className = 'bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors';
-    customButton.onclick = () => {
-        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-        codeClient.requestCode();
-    };
-    googleSignInButton.appendChild(customButton);
 }
 
 function handleGoogleSignOut() {
     localStorage.removeItem('lastUserEmail');
     window.location.reload();
-}
-
-async function proactiveTokenRefresh() {
-    if (!appState.currentUser.email) return;
-    try {
-        const payload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
-        await sendAuthenticatedRequest(payload);
-    } catch (error) { console.error("Proactive token refresh failed:", error.message); }
 }
 
 async function attemptSilentSignIn() {
@@ -303,6 +284,7 @@ async function attemptSilentSignIn() {
 
 async function onGoogleLibraryLoad() {
     if (!await attemptSilentSignIn()) {
+        console.log("Silent sign-in failed or no stored user. Manual sign-in required.");
         if (isDomReady) {
             initGoogleSignIn();
         }
