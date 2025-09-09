@@ -473,11 +473,18 @@ async function attemptSilentSignIn() {
 function updateUIAfterSignIn() {
     console.log("User data to display:", appState.currentUser);
 
-    if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
-    if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
-    if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
-    const infoBarTeacherEl = document.getElementById('infoBarTeacher'); // Re-check element
+    // --- START: FIX ---
+    // Find the elements at the exact moment they are needed.
+    const profilePictureEl = document.getElementById('profilePicture');
+    const dropdownUserNameEl = document.getElementById('dropdownUserName');
+    const dropdownUserEmailEl = document.getElementById('dropdownUserEmail');
+    const infoBarTeacherEl = document.getElementById('infoBarTeacher');
+
+    if (profilePictureEl) profilePictureEl.src = appState.currentUser.profilePic;
+    if (dropdownUserNameEl) dropdownUserNameEl.textContent = appState.currentUser.name;
+    if (dropdownUserEmailEl) dropdownUserEmailEl.textContent = appState.currentUser.email;
     if (infoBarTeacherEl) infoBarTeacherEl.textContent = `Teacher: ${appState.currentUser.name}`;
+    // --- END: FIX ---
 
     if (signInPage) signInPage.style.display = 'none';
 
