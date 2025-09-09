@@ -123,17 +123,26 @@ async function syncAppState() {
     }
 }
 
-
-function updatePassAndTravelDropdowns(currentClass, travelingStudents, classRoster) {
+/**
+ * FINAL CORRECTED VERSION: Populates all dropdowns using the correct data sources.
+ * This resolves the bug where the class period would not update in "Auto" mode.
+ */
+function updatePassAndTravelDropdowns(currentClass, travelingStudents) {
     // Determine which students are actively traveling
-    const activelyTraveling = travelingStudents
+    const activelyTraveling = (travelingStudents || [])
         .filter(student => student.Timestamp !== "arrived")
         .map(student => normalizeName(student.Name));
 
-    // The main pass dropdowns should contain the full class roster, MINUS anyone actively traveling.
-    const availableForPass = classRoster.filter(studentName => !activelyTraveling.includes(normalizeName(studentName)));
-
+    let availableForPass = [];
     if (currentClass) {
+        // Correctly filter the master list to get the roster for the current class.
+        const currentClassRoster = appState.data.allNamesFromSheet
+            .filter(student => student.Class === currentClass)
+            .map(student => student.Name);
+        
+        // From that roster, create the list of available students by removing anyone who is traveling.
+        availableForPass = currentClassRoster.filter(studentName => !activelyTraveling.includes(normalizeName(studentName)));
+
         populateDropdown('nameDropdown', availableForPass.sort(), DEFAULT_NAME_OPTION);
         populateDropdown('nameQueue', availableForPass.sort(), DEFAULT_NAME_OPTION);
         populateDropdown('lateNameDropdown', availableForPass.sort(), DEFAULT_NAME_OPTION);
@@ -141,7 +150,6 @@ function updatePassAndTravelDropdowns(currentClass, travelingStudents, classRost
         if (!appState.passHolder) {
             nameDropdown.removeAttribute("disabled");
             emojiDropdown.removeAttribute("disabled");
-
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
             studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
             mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
