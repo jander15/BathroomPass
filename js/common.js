@@ -25,11 +25,10 @@ const LATE_SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In Late";
 const SIGN_IN_BUTTON_DEFAULT_TEXT = "Sign In";
 const ACTION_REFRESH_TOKEN = 'refreshToken';
 
-// --- START: FIX for Race Condition ---
+// --- State Flags for Initialization ---
 let isDomReady = false;
 let isUserReady = false;
 let hasInitializationRun = false;
-// --- END: FIX ---
 
 // --- Global State Management ---
 const appState = {
@@ -46,10 +45,7 @@ const appState = {
         tokenRefreshIntervalId: null,
         isDataLoaded: false, 
         isPassEnabled: true,
-        currentClassPeriod: null,
-        lastPageRefresh: null,
-        lastPoll: null,
-        isProfileMenuSetup: false
+        currentClassPeriod: null
     },
     sortState: {
         signOut: { column: 'Date', direction: 'desc' },
@@ -58,7 +54,7 @@ const appState = {
 };
 
 // --- Common DOM Element References ---
-let signInPage, loadingOverlay, googleSignInButton, signInError, appContent, bodyElement;
+let signInPage, loadingOverlay, googleSignInButton, appContent, bodyElement;
 let profileMenuContainer, profilePicture, profileDropdown, dropdownUserName, dropdownUserEmail, dropdownSignOutButton;
 let alertDiv, alertMessageSpan, errorAlertDiv, errorAlertMessageSpan;
 
@@ -66,7 +62,6 @@ function cacheCommonDOMElements() {
     signInPage = document.getElementById('signInPage');
     loadingOverlay = document.getElementById('loadingOverlay');
     googleSignInButton = document.getElementById('googleSignInButton');
-    signInError = document.getElementById('signInError');
     appContent = document.getElementById('appContent');
     bodyElement = document.getElementById('body');
     profileMenuContainer = document.getElementById('profileMenuContainer');
@@ -81,7 +76,6 @@ function cacheCommonDOMElements() {
     errorAlertMessageSpan = document.getElementById('errorAlertMessage');
 }
 
-
 // --- Utility Functions ---
 
 function normalizeName(name) {
@@ -93,43 +87,35 @@ function normalizeName(name) {
 function decodeJwtResponse(token) {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
     return JSON.parse(jsonPayload);
 }
 
 function showSuccessAlert(message) {
-    if (alertDiv && alertMessageSpan) {
-        alertDiv.classList.remove("hidden");
+    if (alertDiv) {
         alertMessageSpan.textContent = message;
+        alertDiv.classList.remove("hidden");
         setTimeout(() => alertDiv.classList.add('hidden'), 5000);
     }
 }
 
 function showErrorAlert(message) {
-    if (errorAlertDiv && errorAlertMessageSpan) {
-        errorAlertDiv.classList.remove("hidden");
+    if (errorAlertDiv) {
         errorAlertMessageSpan.textContent = message;
+        errorAlertDiv.classList.remove("hidden");
         setTimeout(() => errorAlertDiv.classList.add('hidden'), 10000);
     }
 }
 
-function removeOptions(selectElement) {
-    while (selectElement.options.length > 0) {
-        selectElement.remove(0);
-    }
-}
-
 function setupProfileMenu() {
-    if (appState.ui.isProfileMenuSetup || !profilePicture) return;
+    if (!profilePicture || appState.ui.isProfileMenuSetup) return;
     profilePicture.addEventListener('click', (event) => {
         event.stopPropagation();
         profileDropdown.classList.toggle('hidden');
     });
     dropdownSignOutButton.addEventListener('click', handleGoogleSignOut);
-    bodyElement.addEventListener('click', (event) => {
-        if (!profileMenuContainer.contains(event.target) && !profileDropdown.classList.contains('hidden')) {
+    bodyElement.addEventListener('click', () => {
+        if (!profileDropdown.classList.contains('hidden')) {
             profileDropdown.classList.add('hidden');
         }
     });
@@ -139,43 +125,54 @@ function setupProfileMenu() {
 function populateDropdown(dropdownId, arr, defaultText, defaultValue = "") {
     let selectElement = document.getElementById(dropdownId);
     if (!selectElement) return;
-    removeOptions(selectElement); 
+    selectElement.innerHTML = '';
     selectElement.add(new Option(defaultText, defaultValue));
     arr.forEach(itemValue => {
-        if (itemValue !== defaultText && itemValue !== defaultValue) { 
+        if (itemValue !== defaultText && itemValue !== defaultValue) {
             selectElement.add(new Option(itemValue, itemValue));
         }
     });
     selectElement.value = defaultValue;
 }
 
-async function sendAuthenticatedRequest(payload, isRetry = false) {
+async function sendAuthenticatedRequest(payload) {
     if (!appState.currentUser.idToken) throw new Error("User not authenticated.");
     payload.userEmail = appState.currentUser.email;
     payload.idToken = appState.currentUser.idToken;
+
     try {
-        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        // --- THIS IS THE FIX ---
+        // The first argument to fetch must be the API_URL.
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        // --- END FIX ---
+
         if (!response.ok) {
-            const errorText = await response.text();
-            try {
-                if (JSON.parse(errorText).error === "SESSION_EXPIRED") throw new Error("SESSION_EXPIRED");
-            } catch (e) {}
+            if (response.status === 401 || response.status === 403) {
+                 throw new Error("SESSION_EXPIRED");
+            }
             throw new Error(`HTTP error ${response.status}`);
         }
         return await response.json();
     } catch (error) {
-        if (error.message === "SESSION_EXPIRED" && !isRetry) {
+        if (error.message === "SESSION_EXPIRED") {
             console.warn("Session expired. Attempting silent refresh...");
-            const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
-            const refreshResponse = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(refreshPayload) }).then(res => res.json());
-            if (refreshResponse.result === 'success' && refreshResponse.idToken) {
-                appState.currentUser.idToken = refreshResponse.idToken;
-                return await sendAuthenticatedRequest(payload, true);
-            } else {
-                showErrorAlert(`Your session has expired. The application will refresh.`);
-                setTimeout(() => window.location.reload(), 3000);
-                throw new Error(`Session expired and refresh failed.`);
+            try {
+                const refreshPayload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
+                const refreshResponse = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(refreshPayload) }).then(res => res.json());
+                if (refreshResponse.result === 'success' && refreshResponse.idToken) {
+                    appState.currentUser.idToken = refreshResponse.idToken;
+                    return await sendAuthenticatedRequest(payload); // Retry original request
+                }
+            } catch (refreshError) {
+                // Ignore refresh error and fall through to page reload
             }
+            showErrorAlert(`Your session has expired. The application will refresh.`);
+            setTimeout(() => window.location.reload(), 3000);
+            throw new Error(`Session expired and refresh failed.`);
         }
         throw error;
     }
@@ -200,22 +197,19 @@ function populateCourseDropdownFromData() {
 
 // --- Google Sign-In & App Initialization ---
 
-/**
- * The central function that runs ONLY when both DOM and user are ready.
- */
 function tryInitializeApp() {
     if (isDomReady && isUserReady && !hasInitializationRun) {
         hasInitializationRun = true;
         console.log("DOM and User are ready. Initializing application.");
         
-        // 1. Update the UI with user info
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        
         if (profilePicture) profilePicture.src = appState.currentUser.profilePic;
         if (dropdownUserName) dropdownUserName.textContent = appState.currentUser.name;
         if (dropdownUserEmail) dropdownUserEmail.textContent = appState.currentUser.email;
         const infoBarTeacherEl = document.getElementById('infoBarTeacher');
         if (infoBarTeacherEl) infoBarTeacherEl.textContent = `Teacher: ${appState.currentUser.name}`;
 
-        // 2. Transition from sign-in page to app content
         if (signInPage) signInPage.style.display = 'none';
         if (appContent) {
             appContent.classList.remove('hidden');
@@ -225,44 +219,44 @@ function tryInitializeApp() {
         if (profileMenuContainer) profileMenuContainer.classList.remove('hidden');
         setupProfileMenu();
 
-        // 3. Start background tasks
         if (appState.ui.tokenRefreshIntervalId) clearInterval(appState.ui.tokenRefreshIntervalId);
         proactiveTokenRefresh();
         appState.ui.tokenRefreshIntervalId = setInterval(proactiveTokenRefresh, 45 * 60 * 1000);
 
-        // 4. Initialize the page-specific logic (e.g., bathroom_pass.js)
-        if (typeof initializePageSpecificAppState === 'function') {
-            initializePageSpecificAppState();
+        if (typeof initializePageSpecificApp === 'function') {
+            initializePageSpecificApp();
         }
     }
+}
+
+async function processSignIn(tokenData) {
+    if (tokenData.result === 'success' && tokenData.idToken) {
+        const profile = decodeJwtResponse(tokenData.idToken);
+        localStorage.setItem('lastUserEmail', profile.email);
+        appState.currentUser.email = profile.email;
+        appState.currentUser.name = profile.name;
+        appState.currentUser.profilePic = profile.picture;
+        appState.currentUser.idToken = tokenData.idToken;
+        isUserReady = true;
+        tryInitializeApp();
+        return true;
+    }
+    return false;
 }
 
 async function handleSignIn(authCode) {
     try {
         const payload = { action: 'exchangeCodeForTokens', code: authCode };
         const tokenData = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(res => res.json());
-        if (tokenData.result === 'success' && tokenData.idToken) {
-            const profile = decodeJwtResponse(tokenData.idToken);
-            localStorage.setItem('lastUserEmail', profile.email);
-            appState.currentUser.email = profile.email;
-            appState.currentUser.name = profile.name;
-            appState.currentUser.profilePic = profile.picture;
-            appState.currentUser.idToken = tokenData.idToken;
-            
-            isUserReady = true;
-            tryInitializeApp();
-        } else { throw new Error(tokenData.error || "Token exchange failed."); } 
+        await processSignIn(tokenData);
     } catch (error) {
         showErrorAlert("Could not complete the sign-in process.");
-    } finally {
-        if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
 
 function initGoogleSignIn() {
     if (!googleSignInButton) return;
     if (typeof google === 'undefined' || !google.accounts) {
-        showErrorAlert("Google Sign-In library failed to load.");
         return;
     }
     const codeClient = google.accounts.oauth2.initCodeClient({
@@ -289,10 +283,7 @@ async function proactiveTokenRefresh() {
     if (!appState.currentUser.email) return;
     try {
         const payload = { action: ACTION_REFRESH_TOKEN, userEmail: appState.currentUser.email };
-        const tokenData = await sendAuthenticatedRequest(payload);
-        if (tokenData.result === 'success' && tokenData.idToken) {
-            appState.currentUser.idToken = tokenData.idToken;
-        }
+        await sendAuthenticatedRequest(payload);
     } catch (error) { console.error("Proactive token refresh failed:", error.message); }
 }
 
@@ -303,45 +294,25 @@ async function attemptSilentSignIn() {
     try {
         const payload = { action: ACTION_REFRESH_TOKEN, userEmail: lastUserEmail };
         const tokenData = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(res => res.json());
-        if (tokenData.result === 'success' && tokenData.idToken) {
-            const profile = decodeJwtResponse(tokenData.idToken);
-            appState.currentUser.email = profile.email;
-            appState.currentUser.name = profile.name;
-            appState.currentUser.profilePic = profile.picture;
-            appState.currentUser.idToken = tokenData.idToken;
-            isUserReady = true;
-            tryInitializeApp();
-            return true;
-        } else { throw new Error(tokenData.details || "Refresh token rejected."); }
+        return await processSignIn(tokenData);
     } catch (error) {
         localStorage.removeItem('lastUserEmail');
         return false;
-    } finally {
-        if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
 
-/**
- * Main entry point called by Google's script tag.
- */
 async function onGoogleLibraryLoad() {
     if (!await attemptSilentSignIn()) {
-        // If silent sign-in fails, we still need to wait for the DOM to be ready
-        // before we can create the manual sign-in button.
         if (isDomReady) {
             initGoogleSignIn();
         }
-        // If DOM isn't ready, the DOMContentLoaded listener will handle it.
     }
 }
 
-// --- Main App Initialization Flow ---
 document.addEventListener('DOMContentLoaded', () => {
     cacheCommonDOMElements();
     isDomReady = true;
-    // If the user isn't ready yet (i.e., silent sign-in failed or hasn't run),
-    // and the sign-in button exists, initialize it.
-    if (!isUserReady && googleSignInButton) {
+    if (!isUserReady) {
         initGoogleSignIn();
     }
     tryInitializeApp();
