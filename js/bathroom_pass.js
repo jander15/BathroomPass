@@ -141,6 +141,10 @@ function updatePassAndTravelDropdowns(currentClass, travelingStudents, classRost
         if (!appState.passHolder) {
             nameDropdown.removeAttribute("disabled");
             emojiDropdown.removeAttribute("disabled");
+
+            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
         }
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
