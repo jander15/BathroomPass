@@ -14,8 +14,8 @@ let sortableInstance = null;
 let classStarted = false;
 let originalSeating = null;
 let preselectedStudents = new Set();
-let participatedStudents = new Set(); // NEW: Track yellow selections
-let attendanceVisible = true; // NEW: Track attendance view state
+let participatedStudents = new Set();
+let attendanceVisible = true;
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -37,7 +37,7 @@ function cacheToolsDOMElements() {
     deselectAllBtn = document.getElementById('deselectAllBtn');
     startClassBtn = document.getElementById('startClassBtn');
     originalSeatingBtn = document.getElementById('originalSeatingBtn');
-    attendanceToggleBtn = document.getElementById('attendanceToggleBtn'); // Cache new button
+    attendanceToggleBtn = document.getElementById('attendanceToggleBtn');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
@@ -126,27 +126,23 @@ function renderSeatingState(seatingState) {
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
     seatingState.unselected.forEach(name => {
-        unselectedStudentsGrid.appendChild(createSeatElement(name, false));
+        unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
     initializeSortable();
-    applyAttendanceStyles(); // Re-apply styles after rendering
+    applyAttendanceStyles();
 }
 
-/** NEW: Applies the correct visual style to all seats based on the current state. */
+/** Applies the correct visual style to all seats based on the current state. */
 function applyAttendanceStyles() {
     toolsContent.querySelectorAll('.seat').forEach(seat => {
         const studentName = seat.textContent;
         const isPreselected = preselectedStudents.has(studentName);
         const hasParticipated = participatedStudents.has(studentName);
-
-        // Remove all potential highlight classes first
         seat.classList.remove('selected', 'participated', 'attendance-hidden');
-
         if (attendanceVisible) {
             if (isPreselected) seat.classList.add('selected');
             if (hasParticipated) seat.classList.add('participated');
         } else {
-            // If attendance is hidden, only apply the blue class if the student is selected in ANY way
             if (isPreselected || hasParticipated) {
                 seat.classList.add('attendance-hidden');
             }
@@ -158,8 +154,6 @@ function applyAttendanceStyles() {
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
-
-    // Reset state
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
@@ -170,10 +164,8 @@ function generateInitialChart() {
     originalSeatingBtn.disabled = true;
     attendanceToggleBtn.disabled = true;
     attendanceToggleBtn.textContent = "Hide Attendance";
-
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
-    
     const initialGroups = createStudentGroupsBySize(students, 2);
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
@@ -184,16 +176,17 @@ function generateInitialChart() {
     initializeSortable();
 }
 
-/** Groups selected students and moves unselected students. */
+/** MODIFIED: Groups selected students, preserving participation state. */
 function generateSelectiveChart() {
-    // MODIFIED: Now includes participated students in the "selected" group for regrouping
-    const selectedNames = [
-        ...Array.from(toolsContent.querySelectorAll('.seat.selected')).map(seat => seat.textContent),
-        ...Array.from(toolsContent.querySelectorAll('.seat.participated')).map(seat => seat.textContent)
-    ];
-    const unselectedNames = Array.from(toolsContent.querySelectorAll('.seat:not(.selected):not(.participated)')).map(seat => seat.textContent);
+    const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => seat.textContent);
+    
+    // --- START: FIX ---
+    // Correctly gather all students who should be part of the new groups.
+    const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
+    const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
+    // --- END: FIX ---
 
-    if (selectedNames.length === 0) {
+    if (namesToRegroup.length === 0) {
         showErrorAlert("No students are selected for grouping.");
         return;
     }
@@ -205,10 +198,10 @@ function generateSelectiveChart() {
     let generatedGroups;
     if (mode === 'generateGroupsByCountBtn') {
         const groupCount = parseInt(groupCountInput.value, 10);
-        generatedGroups = createStudentGroupsByCount(selectedNames, groupCount);
+        generatedGroups = createStudentGroupsByCount(namesToRegroup, groupCount);
     } else {
         const groupSize = parseInt(activeModeBtn.dataset.groupsize, 10);
-        generatedGroups = createStudentGroupsBySize(selectedNames, groupSize);
+        generatedGroups = createStudentGroupsBySize(namesToRegroup, groupSize);
     }
     
     seatingChartGrid.innerHTML = '';
@@ -220,9 +213,8 @@ function generateSelectiveChart() {
     unselectedNames.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-
     initializeSortable();
-    applyAttendanceStyles(); // Re-apply styles after regrouping
+    applyAttendanceStyles();
 }
 
 /** Creates an individual student seat element. */
@@ -304,12 +296,6 @@ async function initializePageSpecificApp() {
         startClassBtn.textContent = "Class Has Started";
         originalSeatingBtn.disabled = false;
         attendanceToggleBtn.disabled = false;
-        
-        preselectedStudents.clear();
-        toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
-            preselectedStudents.add(seat.textContent);
-        });
-        applyAttendanceStyles();
         showSuccessAlert("Class started! You can now track participation.");
     });
 
