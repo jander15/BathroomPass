@@ -239,3 +239,17 @@ iframe[name="iframe"] {
     background-color: #dbeafe !important; /* Tailwind blue-100 */
     border-color: #60a5fa !important;   /* Tailwind blue-400 */
 }
+
+/* NEW: Styles for manual attendance overrides */
+.attendance-manual-present {
+    background-color: #dcfce7 !important; /* green-100 */
+}
+.attendance-manual-present:hover {
+    background-color: #bbf7d0 !important; /* green-200 */
+}
+.attendance-manual-tardy {
+    background-color: #fef9c3 !important; /* yellow-100 */
+}
+.attendance-manual-tardy:hover {
+    background-color: #fef08a !important; /* yellow-200 */
+}
