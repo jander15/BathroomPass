@@ -226,3 +226,10 @@ iframe[name="iframe"] {
 .right-side-tab-btn {
     flex-grow: 1;
 }
+
+/* NEW: Style for students who have participated */
+.seat.participated {
+    background-color: #fef9c3 !important; /* Tailwind yellow-100 */
+    border-color: #facc15 !important;   /* Tailwind yellow-400 */
+    box-shadow: 0 0 0 2px #facc15;
+}
