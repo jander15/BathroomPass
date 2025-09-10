@@ -233,3 +233,9 @@ iframe[name="iframe"] {
     border-color: #facc15 !important;   /* Tailwind yellow-400 */
     box-shadow: 0 0 0 2px #facc15;
 }
+
+/* NEW: Style for when attendance is hidden */
+.seat.attendance-hidden {
+    background-color: #dbeafe !important; /* Tailwind blue-100 */
+    border-color: #60a5fa !important;   /* Tailwind blue-400 */
+}
