@@ -7,6 +7,7 @@ let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
 let selectAllBtn, deselectAllBtn;
 let startClassBtn, originalSeatingBtn, attendanceToggleBtn;
+let setupButtons, inClassButtons; // NEW: Button containers
 let groupBtns = [];
 let sortableInstance = null;
 
@@ -38,6 +39,8 @@ function cacheToolsDOMElements() {
     startClassBtn = document.getElementById('startClassBtn');
     originalSeatingBtn = document.getElementById('originalSeatingBtn');
     attendanceToggleBtn = document.getElementById('attendanceToggleBtn');
+    setupButtons = document.getElementById('setupButtons'); // Cache new container
+    inClassButtons = document.getElementById('inClassButtons'); // Cache new container
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
@@ -154,18 +157,22 @@ function applyAttendanceStyles() {
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
+    
+    // Reset state and UI
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
     preselectedStudents.clear();
     participatedStudents.clear();
+    
+    // MODIFIED: Manage button visibility
+    setupButtons.classList.remove('hidden');
+    inClassButtons.classList.add('hidden');
     startClassBtn.disabled = false;
-    startClassBtn.textContent = "Start Class";
-    originalSeatingBtn.disabled = true;
-    attendanceToggleBtn.disabled = true;
-    attendanceToggleBtn.textContent = "Hide Attendance";
+    
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
+    
     const initialGroups = createStudentGroupsBySize(students, 2);
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
@@ -176,15 +183,11 @@ function generateInitialChart() {
     initializeSortable();
 }
 
-/** MODIFIED: Groups selected students, preserving participation state. */
+/** Groups selected students, preserving participation state. */
 function generateSelectiveChart() {
     const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => seat.textContent);
-    
-    // --- START: FIX ---
-    // Correctly gather all students who should be part of the new groups.
     const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
     const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
-    // --- END: FIX ---
 
     if (namesToRegroup.length === 0) {
         showErrorAlert("No students are selected for grouping.");
@@ -274,12 +277,7 @@ async function initializePageSpecificApp() {
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
-            const studentName = seat.textContent;
-            if (classStarted) {
-                if (!preselectedStudents.has(studentName)) participatedStudents.add(studentName);
-            } else {
-                preselectedStudents.add(studentName);
-            }
+            preselectedStudents.add(seat.textContent);
         });
         applyAttendanceStyles();
     });
@@ -292,10 +290,17 @@ async function initializePageSpecificApp() {
     startClassBtn.addEventListener('click', () => {
         classStarted = true;
         originalSeating = captureSeatingState();
-        startClassBtn.disabled = true;
-        startClassBtn.textContent = "Class Has Started";
+        
+        // MODIFIED: Manage button visibility
+        setupButtons.classList.add('hidden');
+        inClassButtons.classList.remove('hidden');
         originalSeatingBtn.disabled = false;
-        attendanceToggleBtn.disabled = false;
+        
+        preselectedStudents.clear();
+        toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
+            preselectedStudents.add(seat.textContent);
+        });
+        
         showSuccessAlert("Class started! You can now track participation.");
     });
 
@@ -331,9 +336,12 @@ function resetPageSpecificAppState() {
     attendanceVisible = true;
     preselectedStudents.clear();
     participatedStudents.clear();
-    if (startClassBtn) { startClassBtn.disabled = false; startClassBtn.textContent = "Start Class"; }
-    if (originalSeatingBtn) originalSeatingBtn.disabled = true;
-    if (attendanceToggleBtn) { attendanceToggleBtn.disabled = true; attendanceToggleBtn.textContent = "Hide Attendance"; }
+
+    // MODIFIED: Manage button visibility
+    if (setupButtons) setupButtons.classList.remove('hidden');
+    if (inClassButtons) inClassButtons.classList.add('hidden');
+    if (startClassBtn) startClassBtn.disabled = false;
+
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';

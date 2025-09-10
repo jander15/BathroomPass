@@ -77,13 +77,16 @@
                 <div class="flex justify-center items-center gap-x-4">
                     <p id="chartMessage" class="text-center text-gray-500 flex-grow">Select a class and click a button to generate a chart.</p>
                     
-                    <button id="startClassBtn" class="px-3 py-1 text-xs bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition-colors disabled:bg-green-800 disabled:cursor-not-allowed">Start Class</button>
-                    <button id="originalSeatingBtn" class="px-3 py-1 text-xs bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition-colors" disabled>Original Seating</button>
-                    
-                    <button id="attendanceToggleBtn" class="px-3 py-1 text-xs bg-gray-600 text-white font-semibold rounded-md shadow-sm hover:bg-gray-700 transition-colors" disabled>Hide Attendance</button>
+                    <div id="setupButtons" class="flex items-center gap-x-4">
+                        <button id="startClassBtn" class="px-3 py-1 text-xs bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition-colors disabled:bg-green-800 disabled:cursor-not-allowed">Start Class</button>
+                        <button id="selectAllBtn" class="px-3 py-1 text-xs bg-blue-500 text-white font-semibold rounded-md shadow-sm hover:bg-blue-600 transition-colors">Select All</button>
+                        <button id="deselectAllBtn" class="px-3 py-1 text-xs bg-gray-500 text-white font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors">Deselect All</button>
+                    </div>
 
-                    <button id="selectAllBtn" class="px-3 py-1 text-xs bg-blue-500 text-white font-semibold rounded-md shadow-sm hover:bg-blue-600 transition-colors">Select All</button>
-                    <button id="deselectAllBtn" class="px-3 py-1 text-xs bg-gray-500 text-white font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors">Deselect All</button>
+                    <div id="inClassButtons" class="flex items-center gap-x-4 hidden">
+                        <button id="originalSeatingBtn" class="px-3 py-1 text-xs bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition-colors">Original Seating</button>
+                        <button id="attendanceToggleBtn" class="px-3 py-1 text-xs bg-gray-600 text-white font-semibold rounded-md shadow-sm hover:bg-gray-700 transition-colors">Hide Attendance</button>
+                    </div>
                 </div>              
                 <div id="instructionsArea" 
                      contenteditable="true" 
