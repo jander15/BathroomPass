@@ -6,13 +6,14 @@ let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid, unselectedStudentsSection;
 let selectAllBtn, deselectAllBtn;
-let startClassBtn, originalSeatingBtn; // New Buttons
+let startClassBtn, originalSeatingBtn;
 let groupBtns = [];
 let sortableInstance = null;
 
 // --- State Tracking ---
 let classStarted = false;
 let originalSeating = null;
+let preselectedStudents = new Set(); // NEW: To track students selected before "Start Class"
 
 // --- Color Palette for Groups ---
 const groupColors = [
@@ -52,18 +53,14 @@ function cacheToolsDOMElements() {
  * Initializes Draggable.js Sortable functionality.
  */
 function initializeSortable() {
-    if (sortableInstance) {
-        sortableInstance.destroy();
-    }
+    if (sortableInstance) sortableInstance.destroy();
     const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
-    
     sortableInstance = new Draggable.Sortable(containers, {
         draggable: '.draggable-item',
         handle: '.draggable-item',
         mirror: { constrainDimensions: true },
         plugins: [Draggable.Plugins.ResizeMirror],
     });
-    // ... (Sortable event listeners remain the same)
 }
 
 /** Updates the visual state of the generation buttons. */
@@ -89,20 +86,16 @@ function createStudentGroupsBySize(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
     const groups = [];
-
     if (groupSize === 2) {
         while (shuffledStudents.length > 0) groups.push(shuffledStudents.splice(0, 2));
         return groups;
     }
-
     const studentCount = students.length;
     if (studentCount === 0) return [];
-    
     const remainder = studentCount % groupSize;
     let numGroups = Math.floor(studentCount / groupSize);
     if (remainder >= 2) numGroups++;
     if (numGroups === 0 && studentCount > 0) numGroups = 1;
-
     const balancedGroups = Array.from({ length: numGroups }, () => []);
     let groupIndex = 0;
     shuffledStudents.forEach(student => {
@@ -118,7 +111,6 @@ function createStudentGroupsByCount(students, groupCount) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
     if (students.length === 0) return [];
-
     const groups = Array.from({ length: groupCount }, () => []);
     let groupIndex = 0;
     shuffledStudents.forEach(student => {
@@ -129,7 +121,7 @@ function createStudentGroupsByCount(students, groupCount) {
 }
 
 /**
- * NEW: Saves the current seating chart layout.
+ * Saves the current seating chart layout.
  */
 function captureSeatingState() {
     const groups = [];
@@ -137,28 +129,23 @@ function captureSeatingState() {
         const group = Array.from(container.querySelectorAll('.seat')).map(seat => seat.textContent);
         groups.push(group);
     });
-
     const unselected = Array.from(unselectedStudentsGrid.querySelectorAll('.seat')).map(seat => seat.textContent);
-    
     return { groups, unselected };
 }
 
 /**
- * NEW: Renders a captured seating chart layout.
+ * Renders a captured seating chart layout.
  */
 function renderSeatingState(seatingState) {
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
-
     seatingState.groups.forEach((group, index) => {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-
     seatingState.unselected.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name, false));
     });
-    
     initializeSortable();
 }
 
@@ -178,6 +165,7 @@ function generateInitialChart() {
     classStarted = false;
     originalSeating = null;
     originalSeatingBtn.disabled = true;
+    preselectedStudents.clear();
 
     const students = appState.data.allNamesFromSheet
         .filter(student => student.Class === selectedClass)
@@ -293,43 +281,77 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    // MODIFIED: Click handler now checks if class has started
+    // MODIFIED: Click handler with new participation logic
     toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
         if (seat) {
             event.preventDefault();
+            const studentName = seat.textContent;
+
             if (classStarted) {
-                seat.classList.toggle('participated');
+                // If class has started, check if student was pre-selected
+                if (preselectedStudents.has(studentName)) {
+                    // This was a pre-selected student, toggle green
+                    seat.classList.toggle('selected');
+                } else {
+                    // This is a normal participation click, toggle yellow
+                    seat.classList.toggle('participated');
+                }
             } else {
+                // If class has NOT started, just toggle green
                 seat.classList.toggle('selected');
             }
         }
     });
 
-    // MODIFIED: Select/Deselect All now handles both states
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
-            if (classStarted) seat.classList.add('participated');
-            else seat.classList.add('selected');
+            const studentName = seat.textContent;
+            if (classStarted) {
+                if (preselectedStudents.has(studentName)) seat.classList.add('selected');
+                else seat.classList.add('participated');
+            } else {
+                seat.classList.add('selected');
+            }
         });
     });
+
     deselectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
             seat.classList.remove('selected', 'participated');
         });
     });
     
-    // NEW: Event listeners for new buttons
+    // MODIFIED: Start Class button now captures pre-selected students
     startClassBtn.addEventListener('click', () => {
         classStarted = true;
         originalSeating = captureSeatingState();
         originalSeatingBtn.disabled = false;
-        toolsContent.querySelectorAll('.seat').forEach(seat => seat.classList.remove('selected'));
-        showSuccessAlert("Class started! You can now select students who have participated (yellow).");
+        
+        // Capture the names of all currently selected (green) students
+        preselectedStudents.clear();
+        toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
+            preselectedStudents.add(seat.textContent);
+        });
+
+        // Clear any yellow highlights from previous sessions
+        toolsContent.querySelectorAll('.seat.participated').forEach(seat => {
+            seat.classList.remove('participated');
+        });
+        
+        showSuccessAlert("Class started! Pre-selected students remain green. New selections will be yellow.");
     });
+
     originalSeatingBtn.addEventListener('click', () => {
         if (originalSeating) {
             renderSeatingState(originalSeating);
+            // After restoring, re-apply highlights
+            toolsContent.querySelectorAll('.seat').forEach(seat => {
+                const studentName = seat.textContent;
+                if (preselectedStudents.has(studentName)) {
+                    seat.classList.add('selected');
+                }
+            });
         }
     });
 
@@ -352,6 +374,7 @@ function resetPageSpecificAppState() {
     if (sortableInstance) sortableInstance.destroy();
     classStarted = false;
     originalSeating = null;
+    preselectedStudents.clear();
     if (originalSeatingBtn) originalSeatingBtn.disabled = true;
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
