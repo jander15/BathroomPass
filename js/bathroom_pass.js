@@ -82,20 +82,49 @@ async function syncAppState() {
             lastPollTimeSpan.textContent = appState.ui.lastPoll.toLocaleTimeString();
         }
 
-        const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
+        let activelyTravelingStudents = [];
+        if (travelState.students) {
+            const allTravelers = travelState.students || [];
+            activelyTravelingStudents = allTravelers
+                .filter(student => student.Timestamp !== "arrived")
+                .map(student => student.Name);
+            
+            const normalizedArriving = activelyTravelingStudents.map(name => normalizeName(name));
+            populateDropdown('travelSignInName', normalizedArriving, DEFAULT_NAME_OPTION);
+        }
+        
+        if (departingList.students) {
+            const finalDepartingList = departingList.students.filter(student => !activelyTravelingStudents.includes(student));
+            const normalizedDeparting = finalDepartingList.map(name => normalizeName(name));
+            populateDropdown('travelSignOutName', normalizedDeparting, DEFAULT_NAME_OPTION);
+        }
+        
+        travelSignOutName.removeAttribute("disabled");
+        travelSignInName.removeAttribute("disabled");
+        handleTravelSignOutChange();
+        handleTravelSignInChange();
 
+        const classHasChanged = appState.ui.currentClassPeriod !== liveState.currentClass;
+        
+        // --- START: FIX ---
         if (classHasChanged) {
             const oldClassName = appState.ui.currentClassPeriod;
             console.log(`Class changed from ${oldClassName} to ${liveState.currentClass}`);
 
-            if (oldClassName && appState.passHolder) {
+            // If a student was out when the class changed, auto-sign them in.
+           if (oldClassName && appState.passHolder) {
                 showSuccessAlert(`Class period ended. Auto-signing in ${appState.passHolder}.`);
+
+                // Immediately stop the timer to prevent race conditions.
                 if (appState.timer.intervalId) {
                     clearInterval(appState.timer.intervalId);
                     appState.timer.intervalId = null;
                 }
+
                 await autoSignInStudent(appState.passHolder, oldClassName);
-            } else if (oldClassName && !appState.passHolder) {
+            }
+            // If no one was out, just clear the queue for the new period.
+            else if (oldClassName && !appState.passHolder) {
                 let alertMessage = "Class period changed. ";
                 if (appState.queue.length > 0) {
                     appState.queue = [];
@@ -105,13 +134,14 @@ async function syncAppState() {
                 }
                 showSuccessAlert(alertMessage.trim());
             }
-        }
 
+            // After handling the state from the old class, update the dropdowns for the new one.
+            updateMainPassDropdownsForClass(liveState.currentClass, activelyTravelingStudents);
+        }
+        // --- END: FIX ---
+        
         appState.ui.currentClassPeriod = liveState.currentClass;
         infoBarClass.textContent = liveState.currentClass ? `Class: ${liveState.currentClass}` : "Class: No Active Class";
-
-        // This now runs every sync, using the server-provided lists for accuracy.
-        updatePassAndTravelDropdowns(liveState.currentClass, travelState.students || [], departingList.students || []);
         updatePassAvailability(liveState.isEnabled);
 
     } catch (error) {
@@ -123,64 +153,56 @@ async function syncAppState() {
     }
 }
 
+
 /**
- * FINAL CORRECTED VERSION: Populates all dropdowns using the correct data sources.
- * This resolves the bug where the class period would not update in "Auto" mode.
+ * Populates the main pass, queue, and late sign-in dropdowns.
  */
-function updatePassAndTravelDropdowns(currentClass, travelingStudents) {
-    // Determine which students are actively traveling
-    const activelyTraveling = (travelingStudents || [])
-        .filter(student => student.Timestamp !== "arrived")
-        .map(student => normalizeName(student.Name));
+function updateMainPassDropdownsForClass(currentClassName, travelingStudents = []) {
+    if (currentClassName) {
+        const namesForCourseSet = new Set();
+        appState.data.allNamesFromSheet.forEach(item => {
+            if (item && item.Class === currentClassName && item.Name) {
+                namesForCourseSet.add(item.Name);
+            }
+        });
+        let sortedNames = Array.from(namesForCourseSet).sort();
 
-    let availableForPass = [];
-    if (currentClass) {
-        // Correctly filter the master list to get the roster for the current class.
-        const currentClassRoster = appState.data.allNamesFromSheet
-            .filter(student => student.Class === currentClass)
-            .map(student => student.Name);
-        
-        // From that roster, create the list of available students by removing anyone who is traveling.
-        availableForPass = currentClassRoster.filter(studentName => !activelyTraveling.includes(normalizeName(studentName)));
+        sortedNames = sortedNames.filter(name => !travelingStudents.includes(name));
 
-        populateDropdown('nameDropdown', availableForPass.sort(), DEFAULT_NAME_OPTION);
-        populateDropdown('nameQueue', availableForPass.sort(), DEFAULT_NAME_OPTION);
-        populateDropdown('lateNameDropdown', availableForPass.sort(), DEFAULT_NAME_OPTION);
+        populateDropdown('nameDropdown', sortedNames, DEFAULT_NAME_OPTION);
+        populateDropdown('nameQueue', sortedNames, DEFAULT_NAME_OPTION);
+        populateDropdown('lateNameDropdown', sortedNames, DEFAULT_NAME_OPTION);
 
         if (!appState.passHolder) {
             nameDropdown.removeAttribute("disabled");
             emojiDropdown.removeAttribute("disabled");
-            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
-            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
-            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
         }
         lateNameDropdown.removeAttribute("disabled");
         nameQueueDropdown.removeAttribute("disabled");
 
+        if (!appState.passHolder) {
+            headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
+            studentOutHeader.style.backgroundColor = FORM_COLOR_AVAILABLE;
+            mainForm.style.backgroundColor = FORM_COLOR_AVAILABLE;
+        }
+
     } else {
-         const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
-         dropdownsToDisable.forEach(id => {
-             const dd = document.getElementById(id);
-             if(dd) {
-                 populateDropdown(id, [], "No Active Class", "");
-                 dd.setAttribute("disabled", "disabled");
-             }
-         });
-         if(emojiDropdown) emojiDropdown.setAttribute("disabled", "disabled");
+        const dropdownsToDisable = ['nameDropdown', 'nameQueue', 'lateNameDropdown'];
+        dropdownsToDisable.forEach(id => {
+            const dd = document.getElementById(id);
+            if(dd) {
+                populateDropdown(id, [], "No Active Class", "");
+                dd.setAttribute("disabled", "disabled");
+            }
+        });
+        if(emojiDropdown) emojiDropdown.setAttribute("disabled", "disabled");
+        if (!appState.passHolder) {
+            headerStatusSpan.textContent = "No Active Class";
+        }
     }
-
-    // The "Arriving" dropdown should ONLY list students who are actively traveling.
-    populateDropdown('travelSignInName', activelyTraveling.sort(), DEFAULT_NAME_OPTION);
-    travelSignInName.removeAttribute("disabled");
-
-    // The "Departing" dropdown should show the same list as the main pass dropdowns.
-    populateDropdown('travelSignOutName', availableForPass.sort(), DEFAULT_NAME_OPTION);
-    travelSignOutName.removeAttribute("disabled");
 
     handleNameSelectionChange();
     handleLateNameSelectionChange();
-    handleTravelSignOutChange();
-    handleTravelSignInChange();
 }
 
 
