@@ -19,7 +19,7 @@ let tardyStudents = new Set();
 let attendanceVisible = true;
 let longPressTimer = null;
 let isLongPress = false;
-let firstSwapTile = null; // NEW: For tile swapping
+let firstSwapTile = null; // For tile swapping
 const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
@@ -57,7 +57,7 @@ function toggleSortable(enable) {
                 draggable: '.draggable-item', handle: '.draggable-item', mirror: { constrainDimensions: true }, plugins: [Draggable.Plugins.ResizeMirror],
             });
             sortableInstance.on('mirror:create', (evt) => {
-                const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
+                const sourceClasses = ['selected', 'participated', 'attendance-hidden', 'swap-selected'];
                 sourceClasses.forEach(className => {
                     if (evt.source.classList.contains(className)) evt.mirror.classList.add(className);
                 });
@@ -151,7 +151,7 @@ function applyAttendanceStyles() {
         const studentName = seat.textContent;
         const isOnTime = onTimeStudents.has(studentName);
         const isTardy = tardyStudents.has(studentName);
-        seat.classList.remove('selected', 'participated', 'attendance-hidden');
+        seat.classList.remove('selected', 'participated', 'attendance-hidden', 'swap-selected');
         if (attendanceVisible) {
             if (isOnTime) seat.classList.add('selected');
             if (isTardy) seat.classList.add('participated');
@@ -172,6 +172,7 @@ function generateInitialChart() {
     attendanceVisible = true;
     onTimeStudents.clear();
     tardyStudents.clear();
+    firstSwapTile = null;
     setupButtons.classList.remove('hidden');
     inClassButtons.classList.add('hidden');
     startClassBtn.disabled = false;
@@ -243,7 +244,7 @@ function createGroupContainerElement(group, color) {
     return container;
 }
 
-/** NEW: Swaps two DOM elements */
+/** Swaps two DOM elements */
 function swapTiles(tile1, tile2) {
     const parent1 = tile1.parentNode;
     const parent2 = tile2.parentNode;
@@ -273,22 +274,24 @@ async function initializePageSpecificApp() {
 
     toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
-        if (!seat || !classStarted || !attendanceVisible) return;
+        if (!seat) return;
         event.preventDefault();
         
         isLongPress = false;
-        longPressTimer = setTimeout(() => {
-            isLongPress = true;
-            const studentName = seat.textContent;
-            if (onTimeStudents.has(studentName)) {
-                onTimeStudents.delete(studentName);
-                tardyStudents.add(studentName);
-            } else if (tardyStudents.has(studentName)) {
-                tardyStudents.delete(studentName);
-                onTimeStudents.add(studentName);
-            }
-            applyAttendanceStyles();
-        }, LONG_PRESS_DURATION);
+        if (classStarted && attendanceVisible) {
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                const studentName = seat.textContent;
+                if (onTimeStudents.has(studentName)) {
+                    onTimeStudents.delete(studentName);
+                    tardyStudents.add(studentName);
+                } else if (tardyStudents.has(studentName)) {
+                    tardyStudents.delete(studentName);
+                    onTimeStudents.add(studentName);
+                }
+                applyAttendanceStyles();
+            }, LONG_PRESS_DURATION);
+        }
     });
 
     toolsContent.addEventListener('mouseup', (event) => {
@@ -307,11 +310,8 @@ async function initializePageSpecificApp() {
                 applyAttendanceStyles();
             } else { // Handle swap clicks
                 if (firstSwapTile) {
-                    seat.classList.remove('swap-selected');
+                    if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
                     firstSwapTile.classList.remove('swap-selected');
-                    if (firstSwapTile !== seat) {
-                        swapTiles(firstSwapTile, seat);
-                    }
                     firstSwapTile = null;
                 } else {
                     firstSwapTile = seat;
