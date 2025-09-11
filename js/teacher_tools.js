@@ -19,7 +19,7 @@ let tardyStudents = new Set();
 let attendanceVisible = true;
 let longPressTimer = null;
 let isLongPress = false;
-let firstSwapTile = null; // For tile swapping
+let firstSwapTile = null;
 const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
@@ -185,7 +185,7 @@ function generateInitialChart() {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-    toggleSortable(false); // Start with dragging disabled
+    toggleSortable(false);
 }
 
 /** Groups selected students, preserving attendance state. */
@@ -249,14 +249,11 @@ function swapTiles(tile1, tile2) {
     const parent1 = tile1.parentNode;
     const parent2 = tile2.parentNode;
     if (!parent1 || !parent2) return;
-
     const after1 = tile1.nextElementSibling;
     const after2 = tile2.nextElementSibling;
-
     parent1.insertBefore(tile2, after1);
     parent2.insertBefore(tile1, after2);
 }
-
 
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
@@ -276,7 +273,6 @@ async function initializePageSpecificApp() {
         const seat = event.target.closest('.seat');
         if (!seat) return;
         event.preventDefault();
-        
         isLongPress = false;
         if (classStarted && attendanceVisible) {
             longPressTimer = setTimeout(() => {
@@ -298,7 +294,7 @@ async function initializePageSpecificApp() {
         clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
         if (seat && !isLongPress) {
-            if (attendanceVisible) { // Handle attendance clicks
+            if (attendanceVisible) {
                 const studentName = seat.textContent;
                 if (classStarted) {
                     if (onTimeStudents.has(studentName)) onTimeStudents.delete(studentName);
@@ -308,7 +304,7 @@ async function initializePageSpecificApp() {
                     onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
                 }
                 applyAttendanceStyles();
-            } else { // Handle swap clicks
+            } else {
                 if (firstSwapTile) {
                     if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
                     firstSwapTile.classList.remove('swap-selected');
