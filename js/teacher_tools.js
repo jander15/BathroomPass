@@ -19,6 +19,7 @@ let tardyStudents = new Set();
 let attendanceVisible = true;
 let longPressTimer = null;
 let isLongPress = false;
+let firstSwapTile = null; // NEW: For tile swapping
 const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
@@ -50,32 +51,20 @@ function cacheToolsDOMElements() {
 /** Initializes or toggles Draggable.js Sortable functionality. */
 function toggleSortable(enable) {
     if (enable) {
-        if (!sortableInstance) { // Initialize if it doesn't exist
+        if (!sortableInstance) {
             const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
             sortableInstance = new Draggable.Sortable(containers, {
-                draggable: '.draggable-item',
-                handle: '.draggable-item',
-                mirror: { constrainDimensions: true },
-                plugins: [Draggable.Plugins.ResizeMirror],
+                draggable: '.draggable-item', handle: '.draggable-item', mirror: { constrainDimensions: true }, plugins: [Draggable.Plugins.ResizeMirror],
             });
             sortableInstance.on('mirror:create', (evt) => {
                 const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
                 sourceClasses.forEach(className => {
-                    if (evt.source.classList.contains(className)) {
-                        evt.mirror.classList.add(className);
-                    }
+                    if (evt.source.classList.contains(className)) evt.mirror.classList.add(className);
                 });
             });
-        } else { // Re-enable existing instance
-            sortableInstance.enable();
-        }
-    } else {
-        if (sortableInstance) { // Disable if it exists
-            sortableInstance.disable();
-        }
-    }
+        } else { sortableInstance.enable(); }
+    } else { if (sortableInstance) sortableInstance.disable(); }
 }
-
 
 /** Updates the visual state of the generation buttons. */
 function updateActiveButton(activeBtn) {
@@ -195,7 +184,7 @@ function generateInitialChart() {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-    toggleSortable(!attendanceVisible); // Draggable by default before class starts
+    toggleSortable(false); // Start with dragging disabled
 }
 
 /** Groups selected students, preserving attendance state. */
@@ -254,6 +243,20 @@ function createGroupContainerElement(group, color) {
     return container;
 }
 
+/** NEW: Swaps two DOM elements */
+function swapTiles(tile1, tile2) {
+    const parent1 = tile1.parentNode;
+    const parent2 = tile2.parentNode;
+    if (!parent1 || !parent2) return;
+
+    const after1 = tile1.nextElementSibling;
+    const after2 = tile2.nextElementSibling;
+
+    parent1.insertBefore(tile2, after1);
+    parent2.insertBefore(tile1, after2);
+}
+
+
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
@@ -270,23 +273,21 @@ async function initializePageSpecificApp() {
 
     toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
-        if (!seat) return;
+        if (!seat || !classStarted || !attendanceVisible) return;
         event.preventDefault();
         
         isLongPress = false;
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            if (classStarted && attendanceVisible) { // Long press only works if class started AND attendance is shown
-                const studentName = seat.textContent;
-                if (onTimeStudents.has(studentName)) {
-                    onTimeStudents.delete(studentName);
-                    tardyStudents.add(studentName);
-                } else if (tardyStudents.has(studentName)) {
-                    tardyStudents.delete(studentName);
-                    onTimeStudents.add(studentName);
-                }
-                applyAttendanceStyles();
+            const studentName = seat.textContent;
+            if (onTimeStudents.has(studentName)) {
+                onTimeStudents.delete(studentName);
+                tardyStudents.add(studentName);
+            } else if (tardyStudents.has(studentName)) {
+                tardyStudents.delete(studentName);
+                onTimeStudents.add(studentName);
             }
+            applyAttendanceStyles();
         }, LONG_PRESS_DURATION);
     });
 
@@ -294,19 +295,29 @@ async function initializePageSpecificApp() {
         clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
         if (seat && !isLongPress) {
-            const studentName = seat.textContent;
-            if (classStarted) {
-                if (onTimeStudents.has(studentName)) {
-                    onTimeStudents.delete(studentName);
-                } else if (tardyStudents.has(studentName)) {
-                    tardyStudents.delete(studentName);
+            if (attendanceVisible) { // Handle attendance clicks
+                const studentName = seat.textContent;
+                if (classStarted) {
+                    if (onTimeStudents.has(studentName)) onTimeStudents.delete(studentName);
+                    else if (tardyStudents.has(studentName)) tardyStudents.delete(studentName);
+                    else tardyStudents.add(studentName);
                 } else {
-                    tardyStudents.add(studentName);
+                    onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
                 }
-            } else {
-                onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
+                applyAttendanceStyles();
+            } else { // Handle swap clicks
+                if (firstSwapTile) {
+                    seat.classList.remove('swap-selected');
+                    firstSwapTile.classList.remove('swap-selected');
+                    if (firstSwapTile !== seat) {
+                        swapTiles(firstSwapTile, seat);
+                    }
+                    firstSwapTile = null;
+                } else {
+                    firstSwapTile = seat;
+                    seat.classList.add('swap-selected');
+                }
             }
-            applyAttendanceStyles();
         }
         isLongPress = false;
     });
@@ -344,8 +355,12 @@ async function initializePageSpecificApp() {
 
     attendanceToggleBtn.addEventListener('click', () => {
         attendanceVisible = !attendanceVisible;
-        attendanceToggleBtn.textContent = attendanceVisible ? "Hide Attendance" : "Show Attendance";
-        toggleSortable(!attendanceVisible); // Enable dragging when hidden, disable when shown
+        attendanceToggleBtn.textContent = attendanceVisible ? "Arrange Mode" : "Attendance Mode";
+        toggleSortable(!attendanceVisible);
+        if (firstSwapTile) {
+            firstSwapTile.classList.remove('swap-selected');
+            firstSwapTile = null;
+        }
         applyAttendanceStyles();
     });
 
@@ -371,6 +386,7 @@ function resetPageSpecificAppState() {
     attendanceVisible = true;
     onTimeStudents.clear();
     tardyStudents.clear();
+    firstSwapTile = null;
     if (setupButtons) setupButtons.classList.remove('hidden');
     if (inClassButtons) inClassButtons.classList.add('hidden');
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");

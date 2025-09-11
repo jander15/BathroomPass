@@ -254,3 +254,7 @@ iframe[name="iframe"] {
 .attendance-manual-tardy:hover {
     background-color: #fef08a !important; /* yellow-200 */
 }
+.seat.swap-selected {
+    box-shadow: 0 0 0 3px #8b5cf6 !important; /* A bright violet */
+    border-color: #8b5cf6 !important;
+}
