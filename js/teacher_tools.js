@@ -19,6 +19,7 @@ let tardyStudents = new Set();
 let attendanceVisible = true;
 let longPressTimer = null;
 let isLongPress = false;
+let isDragging = false; // NEW: Flag to track drag state
 const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
@@ -47,7 +48,7 @@ function cacheToolsDOMElements() {
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
-/** MODIFIED: Initializes Draggable.js with custom mirror styling. */
+/** MODIFIED: Initializes Draggable.js with drag state tracking. */
 function initializeSortable() {
     if (sortableInstance) sortableInstance.destroy();
     const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
@@ -58,16 +59,27 @@ function initializeSortable() {
         plugins: [Draggable.Plugins.ResizeMirror],
     });
 
-    // --- START: FIX for Drag Visuals ---
-    // This event fires when you start dragging an item.
     sortableInstance.on('mirror:create', (evt) => {
-        // Copy the relevant attendance classes from the original seat to the mirror.
         const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
         sourceClasses.forEach(className => {
             if (evt.source.classList.contains(className)) {
                 evt.mirror.classList.add(className);
             }
         });
+    });
+
+    // --- START: FIX for Pure Click ---
+    // Set a flag when dragging starts.
+    sortableInstance.on('drag:start', () => {
+        isDragging = true;
+    });
+
+    // Reset the flag when dragging stops.
+    sortableInstance.on('drag:stop', () => {
+        // Use a tiny timeout to ensure this runs after the mouseup event.
+        setTimeout(() => {
+            isDragging = false;
+        }, 10);
     });
     // --- END: FIX ---
 }
@@ -288,16 +300,15 @@ async function initializePageSpecificApp() {
     toolsContent.addEventListener('mouseup', (event) => {
         clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
-        if (seat && !isLongPress) {
+        // MODIFIED: Only run click logic if it's not a long-press AND not a drag.
+        if (seat && !isLongPress && !isDragging) {
             const studentName = seat.textContent;
             if (classStarted) {
-                // --- START: FIX for click behavior ---
                 if (onTimeStudents.has(studentName)) {
-                    onTimeStudents.delete(studentName); // Allow deselection of green tiles
+                    onTimeStudents.delete(studentName);
                 } else {
                     tardyStudents.has(studentName) ? tardyStudents.delete(studentName) : tardyStudents.add(studentName);
                 }
-                // --- END: FIX ---
             } else {
                 onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
             }
