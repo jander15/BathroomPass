@@ -253,3 +253,8 @@ iframe[name="iframe"] {
 .attendance-manual-tardy:hover {
     background-color: #fef08a !important; /* yellow-200 */
 }
+
+/* NEW: Ensures dragged item keeps its original color */
+.draggable-mirror {
+    background-color: inherit !important;
+}

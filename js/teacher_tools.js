@@ -14,12 +14,12 @@ let sortableInstance = null;
 // --- State Tracking ---
 let classStarted = false;
 let originalSeating = null;
-let onTimeStudents = new Set(); // Formerly preselectedStudents
-let tardyStudents = new Set(); // Formerly participatedStudents
+let onTimeStudents = new Set();
+let tardyStudents = new Set();
 let attendanceVisible = true;
-let longPressTimer = null; // For long-press detection
-let isLongPress = false;   // Flag to prevent click action on long-press
-const LONG_PRESS_DURATION = 500; // 0.5 seconds
+let longPressTimer = null;
+let isLongPress = false;
+const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -47,7 +47,7 @@ function cacheToolsDOMElements() {
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
-/** Initializes Draggable.js Sortable functionality. */
+/** MODIFIED: Initializes Draggable.js with custom mirror styling. */
 function initializeSortable() {
     if (sortableInstance) sortableInstance.destroy();
     const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
@@ -57,6 +57,19 @@ function initializeSortable() {
         mirror: { constrainDimensions: true },
         plugins: [Draggable.Plugins.ResizeMirror],
     });
+
+    // --- START: FIX for Drag Visuals ---
+    // This event fires when you start dragging an item.
+    sortableInstance.on('mirror:create', (evt) => {
+        // Copy the relevant attendance classes from the original seat to the mirror.
+        const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
+        sourceClasses.forEach(className => {
+            if (evt.source.classList.contains(className)) {
+                evt.mirror.classList.add(className);
+            }
+        });
+    });
+    // --- END: FIX ---
 }
 
 /** Updates the visual state of the generation buttons. */
@@ -278,10 +291,13 @@ async function initializePageSpecificApp() {
         if (seat && !isLongPress) {
             const studentName = seat.textContent;
             if (classStarted) {
-                if (onTimeStudents.has(studentName)) { // On-time students can't be changed with a short click
-                    return; 
+                // --- START: FIX for click behavior ---
+                if (onTimeStudents.has(studentName)) {
+                    onTimeStudents.delete(studentName); // Allow deselection of green tiles
+                } else {
+                    tardyStudents.has(studentName) ? tardyStudents.delete(studentName) : tardyStudents.add(studentName);
                 }
-                tardyStudents.has(studentName) ? tardyStudents.delete(studentName) : tardyStudents.add(studentName);
+                // --- END: FIX ---
             } else {
                 onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
             }
@@ -308,7 +324,7 @@ async function initializePageSpecificApp() {
         setupButtons.classList.add('hidden');
         inClassButtons.classList.remove('hidden');
         originalSeatingBtn.disabled = false;
-        onTimeStudents.clear(); // Clear and re-capture
+        onTimeStudents.clear();
         toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
             onTimeStudents.add(seat.textContent);
         });
