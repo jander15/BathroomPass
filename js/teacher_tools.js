@@ -19,7 +19,6 @@ let tardyStudents = new Set();
 let attendanceVisible = true;
 let longPressTimer = null;
 let isLongPress = false;
-let isDragging = false; // NEW: Flag to track drag state
 const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
@@ -48,41 +47,35 @@ function cacheToolsDOMElements() {
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
-/** MODIFIED: Initializes Draggable.js with drag state tracking. */
-function initializeSortable() {
-    if (sortableInstance) sortableInstance.destroy();
-    const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
-    sortableInstance = new Draggable.Sortable(containers, {
-        draggable: '.draggable-item',
-        handle: '.draggable-item',
-        mirror: { constrainDimensions: true },
-        plugins: [Draggable.Plugins.ResizeMirror],
-    });
-
-    sortableInstance.on('mirror:create', (evt) => {
-        const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
-        sourceClasses.forEach(className => {
-            if (evt.source.classList.contains(className)) {
-                evt.mirror.classList.add(className);
-            }
-        });
-    });
-
-    // --- START: FIX for Pure Click ---
-    // Set a flag when dragging starts.
-    sortableInstance.on('drag:start', () => {
-        isDragging = true;
-    });
-
-    // Reset the flag when dragging stops.
-    sortableInstance.on('drag:stop', () => {
-        // Use a tiny timeout to ensure this runs after the mouseup event.
-        setTimeout(() => {
-            isDragging = false;
-        }, 10);
-    });
-    // --- END: FIX ---
+/** Initializes or toggles Draggable.js Sortable functionality. */
+function toggleSortable(enable) {
+    if (enable) {
+        if (!sortableInstance) { // Initialize if it doesn't exist
+            const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
+            sortableInstance = new Draggable.Sortable(containers, {
+                draggable: '.draggable-item',
+                handle: '.draggable-item',
+                mirror: { constrainDimensions: true },
+                plugins: [Draggable.Plugins.ResizeMirror],
+            });
+            sortableInstance.on('mirror:create', (evt) => {
+                const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
+                sourceClasses.forEach(className => {
+                    if (evt.source.classList.contains(className)) {
+                        evt.mirror.classList.add(className);
+                    }
+                });
+            });
+        } else { // Re-enable existing instance
+            sortableInstance.enable();
+        }
+    } else {
+        if (sortableInstance) { // Disable if it exists
+            sortableInstance.disable();
+        }
+    }
 }
+
 
 /** Updates the visual state of the generation buttons. */
 function updateActiveButton(activeBtn) {
@@ -159,7 +152,7 @@ function renderSeatingState(seatingState) {
     seatingState.unselected.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    toggleSortable(!attendanceVisible);
     applyAttendanceStyles();
 }
 
@@ -202,7 +195,7 @@ function generateInitialChart() {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-    initializeSortable();
+    toggleSortable(!attendanceVisible); // Draggable by default before class starts
 }
 
 /** Groups selected students, preserving attendance state. */
@@ -234,7 +227,7 @@ function generateSelectiveChart() {
     unselectedNames.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    toggleSortable(!attendanceVisible);
     applyAttendanceStyles();
 }
 
@@ -283,7 +276,7 @@ async function initializePageSpecificApp() {
         isLongPress = false;
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            if (classStarted) {
+            if (classStarted && attendanceVisible) { // Long press only works if class started AND attendance is shown
                 const studentName = seat.textContent;
                 if (onTimeStudents.has(studentName)) {
                     onTimeStudents.delete(studentName);
@@ -300,14 +293,15 @@ async function initializePageSpecificApp() {
     toolsContent.addEventListener('mouseup', (event) => {
         clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
-        // MODIFIED: Only run click logic if it's not a long-press AND not a drag.
-        if (seat && !isLongPress && !isDragging) {
+        if (seat && !isLongPress) {
             const studentName = seat.textContent;
             if (classStarted) {
                 if (onTimeStudents.has(studentName)) {
                     onTimeStudents.delete(studentName);
+                } else if (tardyStudents.has(studentName)) {
+                    tardyStudents.delete(studentName);
                 } else {
-                    tardyStudents.has(studentName) ? tardyStudents.delete(studentName) : tardyStudents.add(studentName);
+                    tardyStudents.add(studentName);
                 }
             } else {
                 onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
@@ -320,6 +314,7 @@ async function initializePageSpecificApp() {
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
             onTimeStudents.add(seat.textContent);
+            tardyStudents.delete(seat.textContent);
         });
         applyAttendanceStyles();
     });
@@ -334,11 +329,12 @@ async function initializePageSpecificApp() {
         originalSeating = captureSeatingState();
         setupButtons.classList.add('hidden');
         inClassButtons.classList.remove('hidden');
-        originalSeatingBtn.disabled = false;
         onTimeStudents.clear();
+        tardyStudents.clear();
         toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
             onTimeStudents.add(seat.textContent);
         });
+        applyAttendanceStyles();
         showSuccessAlert("Class started! You can now mark tardy students (yellow).");
     });
 
@@ -349,6 +345,7 @@ async function initializePageSpecificApp() {
     attendanceToggleBtn.addEventListener('click', () => {
         attendanceVisible = !attendanceVisible;
         attendanceToggleBtn.textContent = attendanceVisible ? "Hide Attendance" : "Show Attendance";
+        toggleSortable(!attendanceVisible); // Enable dragging when hidden, disable when shown
         applyAttendanceStyles();
     });
 
@@ -368,7 +365,7 @@ async function initializePageSpecificApp() {
 
 /** Resets the page state. */
 function resetPageSpecificAppState() {
-    if (sortableInstance) sortableInstance.destroy();
+    if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
@@ -376,7 +373,6 @@ function resetPageSpecificAppState() {
     tardyStudents.clear();
     if (setupButtons) setupButtons.classList.remove('hidden');
     if (inClassButtons) inClassButtons.classList.add('hidden');
-    if (startClassBtn) startClassBtn.disabled = false;
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
