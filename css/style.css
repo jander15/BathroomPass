@@ -150,10 +150,11 @@ iframe[name="iframe"] {
 /* Style for the item currently being dragged (the "mirror") */
 .draggable-mirror {
     opacity: 0.8;
-    background-color: #e0f2fe; /* Light blue */
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     transform: scale(1.05);
     z-index: 1000;
+    background-color: inherit !important;
+
 }
 
 /* The original item that the mirror is based on */
@@ -252,9 +253,4 @@ iframe[name="iframe"] {
 }
 .attendance-manual-tardy:hover {
     background-color: #fef08a !important; /* yellow-200 */
-}
-
-/* NEW: Ensures dragged item keeps its original color */
-.draggable-mirror {
-    background-color: inherit !important;
 }
