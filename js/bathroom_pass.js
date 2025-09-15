@@ -699,14 +699,8 @@ function updateQueueDisplay() {
     } else {
         queueList.style.display = 'block'; 
         updateQueueMessage('Select a name to remove, or add another.');
-
-        // --- START: MODIFIED SORTING LOGIC ---
-        // Only sort if the mode is 'time'. Otherwise, leave in the order they were added.
-        if (appState.ui.queueSortMode === 'time') {
-            appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
-        }
-        // --- END: MODIFIED SORTING LOGIC ---        
-            appState.queue.forEach((person) => {
+        appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        appState.queue.forEach((person) => {
             const listItem = document.createElement('li');
             listItem.textContent = person; 
             listItem.addEventListener('click', () => {

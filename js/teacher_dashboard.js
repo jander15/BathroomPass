@@ -48,8 +48,7 @@ const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 const dashboardContent = document.getElementById('dashboardContent');
 const passStatusToggle = document.getElementById('passStatusToggle');
 const passStatusLabel = document.getElementById('passStatusLabel');
-const queueSortToggle = document.getElementById('queueSortToggle');
-const queueSortLabel = document.getElementById('queueSortLabel');
+
 
 
 // --- Helper & Formatting Functions ---
@@ -603,22 +602,6 @@ async function initializePageSpecificApp() {
 
         // --- 2. Add All Event Listeners ---
         console.log("Dashboard Init: 2. Attaching event listeners.");
-
-        // --- ADD EVENT LISTENER FOR NEW TOGGLE ---
-        queueSortToggle.addEventListener('change', async () => {
-            const sortByTime = queueSortToggle.checked;
-            const sortMode = sortByTime ? 'time' : 'queue';
-            queueSortLabel.textContent = sortByTime ? 'By Time Out' : 'By Queue Order';
-            try {
-                await sendAuthenticatedRequest({ action: 'setQueueSortMode', sortMode: sortMode });
-                showSuccessAlert(`Queue sorting updated to: ${queueSortLabel.textContent}`);
-            } catch (error) {
-                showErrorAlert("Could not update queue sorting setting.");
-                // Revert UI on failure
-                queueSortToggle.checked = !sortByTime;
-                queueSortLabel.textContent = !sortByTime ? 'By Time Out' : 'By Queue Order';
-            }
-        });
         
         classOverrideDropdown.addEventListener('change', async () => {
             const selectedClass = classOverrideDropdown.value;
@@ -676,9 +659,6 @@ async function initializePageSpecificApp() {
                 showErrorAlert("Could not update pass status. Please try again.");
                 passStatusToggle.checked = !isEnabled; // Revert UI on failure
                 passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
-
-                queueSortToggle.checked = statusPayload.queueSortMode === 'time';
-                queueSortLabel.textContent = statusPayload.queueSortMode === 'time' ? 'By Time Out' : 'By Queue Order';
             }
         });
 
@@ -924,18 +904,15 @@ async function initializePageSpecificApp() {
         // --- 3. Initial Data Load ---
         console.log("Dashboard Init: 3. Checking authentication.");
         if (appState.currentUser.email && appState.currentUser.idToken) {
-    // Correctly call the 'getLiveState' action and use its direct response
-    const liveStatePayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
-    
-    passStatusToggle.checked = liveStatePayload.isEnabled;
-    passStatusLabel.textContent = liveStatePayload.isEnabled ? 'Enabled' : 'Disabled';
-    
-    queueSortToggle.checked = liveStatePayload.queueSortMode === 'time';
-    queueSortLabel.textContent = liveStatePayload.queueSortMode === 'time' ? 'By Time Out' : 'By Queue Order';
-
-    await fetchAllStudentData();
-
+            console.log("Dashboard Init: 3a. User is authenticated. Fetching data...");
+            
+            const statusPayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
+            console.log("Dashboard Init: 3b. Fetched live state:", statusPayload);
+            passStatusToggle.checked = statusPayload.isEnabled;
+            passStatusLabel.textContent = statusPayload.isEnabled ? 'Enabled' : 'Disabled';
+            
             await fetchAllStudentData();
+            console.log("Dashboard Init: 3c. Fetched all student data.");
             populateCourseDropdownFromData();
 
             populateDropdown('signOutClassDropdown', appState.data.courses, "All Classes", "All Classes");
