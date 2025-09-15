@@ -924,16 +924,16 @@ async function initializePageSpecificApp() {
         // --- 3. Initial Data Load ---
         console.log("Dashboard Init: 3. Checking authentication.");
         if (appState.currentUser.email && appState.currentUser.idToken) {
-            // This fetches all live settings, including the queue sort mode
-            const liveStatePayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
-            
-            // Set the initial state of the "Pass System" toggle
-            passStatusToggle.checked = liveStatePayload.isEnabled;
-            passStatusLabel.textContent = liveStatePayload.isEnabled ? 'Enabled' : 'Disabled';
+    // Correctly call the 'getLiveState' action and use its direct response
+    const liveStatePayload = await sendAuthenticatedRequest({ action: 'getLiveState' });
+    
+    passStatusToggle.checked = liveStatePayload.isEnabled;
+    passStatusLabel.textContent = liveStatePayload.isEnabled ? 'Enabled' : 'Disabled';
+    
+    queueSortToggle.checked = liveStatePayload.queueSortMode === 'time';
+    queueSortLabel.textContent = liveStatePayload.queueSortMode === 'time' ? 'By Time Out' : 'By Queue Order';
 
-            // Set the initial state of the "Queue Sorting" toggle
-            queueSortToggle.checked = liveStatePayload.queueSortMode === 'time';
-            queueSortLabel.textContent = liveStatePayload.queueSortMode === 'time' ? 'By Time Out' : 'By Queue Order';
+    await fetchAllStudentData();
 
             await fetchAllStudentData();
             populateCourseDropdownFromData();
