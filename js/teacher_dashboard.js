@@ -48,6 +48,8 @@ const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 const dashboardContent = document.getElementById('dashboardContent');
 const passStatusToggle = document.getElementById('passStatusToggle');
 const passStatusLabel = document.getElementById('passStatusLabel');
+const queueSortToggle = document.getElementById('queueSortToggle');
+const queueSortLabel = document.getElementById('queueSortLabel');
 
 
 // --- Helper & Formatting Functions ---
@@ -601,6 +603,22 @@ async function initializePageSpecificApp() {
 
         // --- 2. Add All Event Listeners ---
         console.log("Dashboard Init: 2. Attaching event listeners.");
+
+        // --- ADD EVENT LISTENER FOR NEW TOGGLE ---
+        queueSortToggle.addEventListener('change', async () => {
+            const sortByTime = queueSortToggle.checked;
+            const sortMode = sortByTime ? 'time' : 'queue';
+            queueSortLabel.textContent = sortByTime ? 'By Time Out' : 'By Queue Order';
+            try {
+                await sendAuthenticatedRequest({ action: 'setQueueSortMode', sortMode: sortMode });
+                showSuccessAlert(`Queue sorting updated to: ${queueSortLabel.textContent}`);
+            } catch (error) {
+                showErrorAlert("Could not update queue sorting setting.");
+                // Revert UI on failure
+                queueSortToggle.checked = !sortByTime;
+                queueSortLabel.textContent = !sortByTime ? 'By Time Out' : 'By Queue Order';
+            }
+        });
         
         classOverrideDropdown.addEventListener('change', async () => {
             const selectedClass = classOverrideDropdown.value;
@@ -658,6 +676,9 @@ async function initializePageSpecificApp() {
                 showErrorAlert("Could not update pass status. Please try again.");
                 passStatusToggle.checked = !isEnabled; // Revert UI on failure
                 passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
+
+                queueSortToggle.checked = statusPayload.queueSortMode === 'time';
+                queueSortLabel.textContent = statusPayload.queueSortMode === 'time' ? 'By Time Out' : 'By Queue Order';
             }
         });
 

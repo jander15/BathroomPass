@@ -77,6 +77,9 @@ async function syncAppState() {
 
         const { liveState, travelState, departingList } = syncData;
 
+        appState.ui.queueSortMode = liveState.queueSortMode || 'time'; // Default to 'time'
+
+
         appState.ui.lastPoll = new Date();
         if (lastPollTimeSpan) {
             lastPollTimeSpan.textContent = appState.ui.lastPoll.toLocaleTimeString();
@@ -696,8 +699,14 @@ function updateQueueDisplay() {
     } else {
         queueList.style.display = 'block'; 
         updateQueueMessage('Select a name to remove, or add another.');
-        appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
-        appState.queue.forEach((person) => {
+
+        // --- START: MODIFIED SORTING LOGIC ---
+        // Only sort if the mode is 'time'. Otherwise, leave in the order they were added.
+        if (appState.ui.queueSortMode === 'time') {
+            appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        }
+        // --- END: MODIFIED SORTING LOGIC ---        
+            appState.queue.forEach((person) => {
             const listItem = document.createElement('li');
             listItem.textContent = person; 
             listItem.addEventListener('click', () => {
