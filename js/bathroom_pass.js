@@ -233,10 +233,20 @@ function updatePassAvailability(isEnabled) {
         studentOutHeader.classList.remove('bg-gray-500');
 
         if (!previousState && isEnabled && appState.queue.length > 0) {
-            const nextPerson = appState.queue.shift();
-            preparePassForNextInQueue(nextPerson);
-            updateQueueDisplay();
-        } else if (!appState.passHolder) {
+    let nextPerson;
+    // If sorting by time, find the student with the highest time out number
+    if (appState.ui.queueSortMode === 'time') {
+        const sortedByTime = [...appState.queue].sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        nextPerson = sortedByTime[0]; // Get the top person from the sorted list
+        // Now, remove that person from the original, unsorted queue
+        appState.queue = appState.queue.filter(name => name !== nextPerson);
+    } else {
+        // Otherwise, just take the first person who signed up
+        nextPerson = appState.queue.shift();
+    }
+    preparePassForNextInQueue(nextPerson);
+    updateQueueDisplay();
+} else if (!appState.passHolder) {
             headerStatusSpan.textContent = STATUS_PASS_AVAILABLE;
         }
 
@@ -685,31 +695,34 @@ function updateQueueTabVisibility() {
  * Updates the visual display of the queue.
  */
 function updateQueueDisplay() {
-    queueList.innerHTML = ''; 
-    appState.selectedQueueName = null; 
-    removeFromQueueButton.classList.add('hidden'); 
+    queueList.innerHTML = '';
+    appState.selectedQueueName = null;
+    removeFromQueueButton.classList.add('hidden');
 
     if (appState.queue.length === 0) {
-        queueList.style.display = 'none'; 
-        if (!appState.passHolder) { 
-           updateQueueMessage('The queue is currently empty. Add your name!');
-        } else { 
-           updateQueueMessage('No one else is in queue. Select your name below to add.');
-        }
+        queueList.style.display = 'none';
+        updateQueueMessage(!appState.passHolder ? 'The queue is currently empty. Add your name!' : 'No one else is in queue. Select your name below to add.');
     } else {
-        queueList.style.display = 'block'; 
+        queueList.style.display = 'block';
         updateQueueMessage('Select a name to remove, or add another.');
+
+        // --- START: NEW LOGIC ---
+        // Create a temporary list for display, leaving the original appState.queue untouched.
+        let displayQueue = [...appState.queue]; 
+        
+        // Only sort the temporary display list if the mode is 'time'.
         if (appState.ui.queueSortMode === 'time') {
-            appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+            displayQueue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
         }
-        appState.queue.forEach((person) => {
+        // --- END: NEW LOGIC ---
+
+        // Use the new temporary list to build the UI
+        displayQueue.forEach((person) => {
             const listItem = document.createElement('li');
-            listItem.textContent = person; 
+            listItem.textContent = person;
             listItem.addEventListener('click', () => {
-                Array.from(queueList.children).forEach(item => {
-                    item.classList.remove('bg-yellow-200-selected');
-                });
-                appState.selectedQueueName = person;
+                Array.from(queueList.children).forEach(item => item.classList.remove('bg-yellow-200-selected'));
+                appState.selectedQueueName = person; // This still refers to the name, which is fine
                 listItem.classList.add('bg-yellow-200-selected');
                 removeFromQueueButton.classList.remove('hidden');
             });
