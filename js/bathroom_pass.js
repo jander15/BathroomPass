@@ -79,7 +79,6 @@ async function syncAppState() {
 
         appState.ui.queueSortMode = liveState.queueSortMode || 'time'; // Default to 'time'
 
-
         appState.ui.lastPoll = new Date();
         if (lastPollTimeSpan) {
             lastPollTimeSpan.textContent = appState.ui.lastPoll.toLocaleTimeString();
@@ -699,7 +698,9 @@ function updateQueueDisplay() {
     } else {
         queueList.style.display = 'block'; 
         updateQueueMessage('Select a name to remove, or add another.');
-        appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        if (appState.ui.queueSortMode === 'time') {
+            appState.queue.sort((a, b) => getNumberFromName(a) - getNumberFromName(b));
+        }
         appState.queue.forEach((person) => {
             const listItem = document.createElement('li');
             listItem.textContent = person; 
