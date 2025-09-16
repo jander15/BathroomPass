@@ -77,7 +77,7 @@ async function syncAppState() {
 
         const { liveState, travelState, departingList } = syncData;
 
-        appState.ui.queueSortMode = liveState.queueSortMode || 'time'; // Default to 'time'
+        appState.ui.queueSortMode = liveState.queueSortMode || 'queue'; // Default to 'time'
 
         appState.ui.lastPoll = new Date();
         if (lastPollTimeSpan) {
