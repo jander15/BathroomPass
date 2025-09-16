@@ -146,6 +146,7 @@ async function syncAppState() {
         appState.ui.currentClassPeriod = liveState.currentClass;
         infoBarClass.textContent = liveState.currentClass ? `Class: ${liveState.currentClass}` : "Class: No Active Class";
         updatePassAvailability(liveState.isEnabled);
+        updateQueueDisplay();
 
     } catch (error) {
         console.error("Sync Error:", error);
