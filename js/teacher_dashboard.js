@@ -48,6 +48,8 @@ const deleteEntryBtn = document.getElementById('deleteEntryBtn');
 const dashboardContent = document.getElementById('dashboardContent');
 const passStatusToggle = document.getElementById('passStatusToggle');
 const passStatusLabel = document.getElementById('passStatusLabel');
+const queueSortToggle = document.getElementById('queueSortToggle'); // NEW
+const queueSortLabel = document.getElementById('queueSortLabel'); // NEW
 
 
 
@@ -660,6 +662,19 @@ async function initializePageSpecificApp() {
                 passStatusToggle.checked = !isEnabled; // Revert UI on failure
                 passStatusLabel.textContent = !isEnabled ? 'Enabled' : 'Disabled';
             }
+        });
+        queueSortToggle.addEventListener('change', async () => {
+        const sortByTime = queueSortToggle.checked;
+        const sortMode = sortByTime ? 'time' : 'queue';
+        queueSortLabel.textContent = sortByTime ? 'By Time Out' : 'By Queue Order';
+        try {
+            await sendAuthenticatedRequest({ action: 'setQueueSortMode', sortMode: sortMode });
+            showSuccessAlert(`Queue sorting updated to: ${queueSortLabel.textContent}`);
+        } catch (error) {
+            showErrorAlert("Could not update queue sorting setting.");
+            queueSortToggle.checked = !sortByTime;
+            queueSortLabel.textContent = !sortByTime ? 'By Time Out' : 'By Queue Order';
+        }
         });
 
         [signOutClassDropdown, studentFilterDropdown, dateFilterType, reportDateInput, startDateInput, endDateInput, filterProblemsCheckbox].forEach(el => {
