@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutoring Center - School Pass System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer onload="onGoogleLibraryLoad()"></script>
+</head>
+<body class="flex flex-col items-center p-4 min-h-screen" id="body">
+
+    <div id="signInPage" class="flex flex-col items-center justify-center min-h-screen w-full">
+        <h1 class="text-4xl font-bold text-white mb-8">Tutoring Center Log</h1>
+        <p class="text-gray-300 mb-6">Please sign in with your Google account to continue.</p>
+        <div id="googleSignInButton"></div>
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
+            <div class="spinner w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+            <p class="text-white text-lg mt-4">Authenticating...</p>
+        </div>
+    </div>
+
+    <div id="appContent" class="hidden relative flex flex-col items-center p-4 min-h-screen w-full">
+        <div id="profileMenuContainer" class="absolute top-4 right-4 z-50 hidden">
+            <img id="profilePicture" src="" alt="Profile" class="w-10 h-10 rounded-full cursor-pointer border-2 border-blue-500 hover:border-red-500">
+            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 text-gray-800 border-2 border-red-500">
+                <div class="px-4 py-2" id="dropdownUserName"></div>
+                <div class="px-4 pb-2 text-xs" id="dropdownUserEmail"></div>
+                <hr class="my-1">
+                <button id="dropdownSignOutButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Sign Out</button>
+            </div>
+        </div>
+        
+        <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Tutoring Center</h1>
+        
+        <div id="tutoringContainer" class="bg-gray-50 rounded-lg shadow-xl w-full max-w-4xl hidden">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button id="newLogTab" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">New Log Entry</button>
+                    <button id="adminReportTab" class="hidden whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Admin Report</button>
+                </nav>
+            </div>
+
+            <div id="newLogContent" class="p-6">
+                <form id="tutoringForm" class="space-y-4">
+                    <div class="relative">
+                        <label for="studentLookup" class="block text-sm font-medium text-gray-700">Student Lookup:</label>
+                        <input type="text" id="studentLookup" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm" placeholder="Loading..." disabled>
+                        <div id="studentResults" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Selected Students:</label>
+                        <div id="selectedStudentsList" class="mt-1 p-2 border border-gray-200 rounded-md min-h-[50px] bg-gray-100 flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <label for="durationInput" class="block text-sm font-medium text-gray-700">Duration (minutes):</label>
+                        <input type="number" id="durationInput" min="0" step="1" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 30">
+                    </div>
+                    <div>
+                        <label for="notesInput" class="block text-sm font-medium text-gray-700">Notes:</label>
+                        <textarea id="notesInput" rows="4" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md shadow-sm" placeholder="Enter notes..."></textarea>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Log Session</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="adminReportContent" class="hidden p-6 space-y-4">
+                <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 bg-white p-3 rounded-lg border">
+                    <div class="flex items-center">
+                        <label for="tutorFilter" class="mr-2 text-sm font-medium text-gray-700">Tutor:</label>
+                        <select id="tutorFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
+                    </div>
+                    <div class="flex items-center">
+                        <label for="studentFilter" class="mr-2 text-sm font-medium text-gray-700">Student:</label>
+                        <select id="studentFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
+                    </div>
+                    <div class="flex items-center">
+                        <label for="periodFilter" class="mr-2 text-sm font-medium text-gray-700">Period:</label>
+                        <select id="periodFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm"></select>
+                    </div>
+                    <div class="flex items-center">
+                        <label for="dateFilter" class="mr-2 text-sm font-medium text-gray-700">Date:</label>
+                        <select id="dateFilter" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="all_time">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                        </select>
+                    </div>
+                    <button id="reloadDataBtn" class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md text-sm hover:bg-blue-700">Reload Data</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <p id="reportMessage" class="text-center text-gray-600">Loading report data...</p>
+                    <table id="reportTable" class="min-w-full bg-white hidden">
+                        <thead>
+                            <tr class="bg-gray-100 text-left text-sm font-semibold">
+                                <th class="p-2 border-b">Date</th>
+                                <th class="p-2 border-b">Tutor</th>
+                                <th class="p-2 border-b">Student</th>
+                                <th class="p-2 border-b">Period</th>
+                                <th class="p-2 border-b">Duration</th>
+                                <th class="p-2 border-b">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script src="js/tutoring.js"></script> </body>
+</html>
