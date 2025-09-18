@@ -269,24 +269,44 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    toolsContent.addEventListener('mousedown', (event) => {
+    toolsContent.addEventListener('mouseup', (event) => {
+        clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
-        if (!seat) return;
-        event.preventDefault();
-        isLongPress = false;
-        if (classStarted && attendanceVisible) {
-            longPressTimer = setTimeout(() => {
-                isLongPress = true;
-                const studentName = seat.textContent;
-                if (onTimeStudents.has(studentName)) {
-                    onTimeStudents.delete(studentName);
-                    tardyStudents.add(studentName);
-                } else if (tardyStudents.has(studentName)) {
-                    tardyStudents.delete(studentName);
-                    onTimeStudents.add(studentName);
-                }
-                applyAttendanceStyles();
-            }, LONG_PRESS_DURATION);
+        
+        // If the action was a long press, or if the click was not on a seat, do nothing more.
+        if (!seat || isLongPress) {
+            isLongPress = false;
+            return;
+        }
+
+        const studentName = seat.textContent;
+
+        if (attendanceVisible) {
+            // --- Handle Clicks in Attendance Mode ---
+            if (classStarted) {
+                if (onTimeStudents.has(studentName)) onTimeStudents.delete(studentName);
+                else if (tardyStudents.has(studentName)) tardyStudents.delete(studentName);
+                else tardyStudents.add(studentName);
+            } else {
+                onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
+            }
+            applyAttendanceStyles();
+
+        } else {
+            // --- Handle Clicks in Arrange Mode (for swapping) ---
+            const isPartOfGroup = onTimeStudents.has(studentName) || tardyStudents.has(studentName);
+            
+            // Only allow swapping for students who are part of the active group.
+            if (!isPartOfGroup) return;
+
+            if (firstSwapTile) {
+                if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
+                firstSwapTile.classList.remove('swap-selected');
+                firstSwapTile = null;
+            } else {
+                firstSwapTile = seat;
+                seat.classList.add('swap-selected');
+            }
         }
     });
 
