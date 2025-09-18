@@ -269,7 +269,28 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    toolsContent.addEventListener('mouseup', (event) => {
+    toolsContent.addEventListener('mousedown', (event) => {
+        const seat = event.target.closest('.seat');
+        if (!seat) return;
+        event.preventDefault();
+        isLongPress = false;
+        if (classStarted && attendanceVisible) {
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                const studentName = seat.textContent;
+                if (onTimeStudents.has(studentName)) {
+                    onTimeStudents.delete(studentName);
+                    tardyStudents.add(studentName);
+                } else if (tardyStudents.has(studentName)) {
+                    tardyStudents.delete(studentName);
+                    onTimeStudents.add(studentName);
+                }
+                applyAttendanceStyles();
+            }, LONG_PRESS_DURATION);
+        }
+    });
+
+     toolsContent.addEventListener('mouseup', (event) => {
         clearTimeout(longPressTimer);
         const seat = event.target.closest('.seat');
         
@@ -308,35 +329,6 @@ async function initializePageSpecificApp() {
                 seat.classList.add('swap-selected');
             }
         }
-    });
-
-    toolsContent.addEventListener('mouseup', (event) => {
-        clearTimeout(longPressTimer);
-        const seat = event.target.closest('.seat');
-        if (seat && !isLongPress) {
-            if (attendanceVisible) {
-                const studentName = seat.textContent;
-                if (classStarted) {
-                    if (onTimeStudents.has(studentName)) onTimeStudents.delete(studentName);
-                    else if (tardyStudents.has(studentName)) tardyStudents.delete(studentName);
-                    else tardyStudents.add(studentName);
-                } else {
-                    onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
-                }
-                applyAttendanceStyles();
-            } else { // In Arrange Mode
-                if (!seat.classList.contains('attendance-hidden')) return;
-                if (firstSwapTile) {
-                    if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
-                    firstSwapTile.classList.remove('swap-selected');
-                    firstSwapTile = null;
-                } else {
-                    firstSwapTile = seat;
-                    seat.classList.add('swap-selected');
-                }
-            }
-        }
-        isLongPress = false;
     });
 
     selectAllBtn.addEventListener('click', () => {
