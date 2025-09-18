@@ -254,3 +254,9 @@ iframe[name="iframe"] {
     background-color: #fef08a !important; /* yellow-200 */
 }
 
+/* NEW: Style for the first tile selected for a swap */
+.seat.swap-selected {
+    box-shadow: 0 0 0 3px #8b5cf6 !important; /* A bright violet */
+    border-color: #8b5cf6 !important;
+}
+

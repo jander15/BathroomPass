@@ -7,19 +7,23 @@ let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
 let selectAllBtn, deselectAllBtn;
 let startClassBtn, originalSeatingBtn, attendanceToggleBtn;
-let setupButtons, inClassButtons; // Button containers
+let setupButtons, inClassButtons;
 let groupBtns = [];
 let sortableInstance = null;
 
 // --- State Tracking ---
 let classStarted = false;
 let originalSeating = null;
-let preselectedStudents = new Set();
-let participatedStudents = new Set();
-let attendanceVisible = true;
+let onTimeStudents = new Set();
+let tardyStudents = new Set();
+let attendanceVisible = true; // True = Attendance Mode, False = Arrange Mode
+let longPressTimer = null;
+let isLongPress = false;
+let firstSwapTile = null; // For tile swapping
+const LONG_PRESS_DURATION = 500;
 
 // --- Color Palette for Groups ---
-const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
+const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
 
 /** Caches all DOM elements specific to the Teacher Tools page. */
 function cacheToolsDOMElements() {
@@ -44,16 +48,22 @@ function cacheToolsDOMElements() {
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
 }
 
-/** Initializes Draggable.js Sortable functionality. */
-function initializeSortable() {
-    if (sortableInstance) sortableInstance.destroy();
-    const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
-    sortableInstance = new Draggable.Sortable(containers, {
-        draggable: '.draggable-item',
-        handle: '.draggable-item',
-        mirror: { constrainDimensions: true },
-        plugins: [Draggable.Plugins.ResizeMirror],
-    });
+/** Initializes or toggles Draggable.js Sortable functionality. */
+function toggleSortable(enable) {
+    if (enable) {
+        if (!sortableInstance) {
+            const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
+            sortableInstance = new Draggable.Sortable(containers, {
+                draggable: '.draggable-item', handle: '.draggable-item', mirror: { constrainDimensions: true }, plugins: [Draggable.Plugins.ResizeMirror],
+            });
+            sortableInstance.on('mirror:create', (evt) => {
+                const sourceClasses = ['selected', 'participated', 'attendance-hidden', 'swap-selected'];
+                sourceClasses.forEach(className => {
+                    if (evt.source.classList.contains(className)) evt.mirror.classList.add(className);
+                });
+            });
+        } else { sortableInstance.enable(); }
+    } else { if (sortableInstance) sortableInstance.disable(); }
 }
 
 /** Updates the visual state of the generation buttons. */
@@ -131,7 +141,7 @@ function renderSeatingState(seatingState) {
     seatingState.unselected.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    toggleSortable(!attendanceVisible);
     applyAttendanceStyles();
 }
 
@@ -139,14 +149,14 @@ function renderSeatingState(seatingState) {
 function applyAttendanceStyles() {
     toolsContent.querySelectorAll('.seat').forEach(seat => {
         const studentName = seat.textContent;
-        const isPreselected = preselectedStudents.has(studentName);
-        const hasParticipated = participatedStudents.has(studentName);
-        seat.classList.remove('selected', 'participated', 'attendance-hidden');
+        const isOnTime = onTimeStudents.has(studentName);
+        const isTardy = tardyStudents.has(studentName);
+        seat.classList.remove('selected', 'participated', 'attendance-hidden', 'swap-selected');
         if (attendanceVisible) {
-            if (isPreselected) seat.classList.add('selected');
-            if (hasParticipated) seat.classList.add('participated');
+            if (isOnTime) seat.classList.add('selected');
+            if (isTardy) seat.classList.add('participated');
         } else {
-            if (isPreselected || hasParticipated) {
+            if (isOnTime || isTardy) {
                 seat.classList.add('attendance-hidden');
             }
         }
@@ -157,20 +167,17 @@ function applyAttendanceStyles() {
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
-    
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
-    preselectedStudents.clear();
-    participatedStudents.clear();
-    
+    onTimeStudents.clear();
+    tardyStudents.clear();
+    firstSwapTile = null;
     setupButtons.classList.remove('hidden');
     inClassButtons.classList.add('hidden');
     startClassBtn.disabled = false;
-    
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
     chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
-    
     const initialGroups = createStudentGroupsBySize(students, 2);
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
@@ -178,21 +185,20 @@ function generateInitialChart() {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-    initializeSortable();
+    toggleSortable(false);
 }
 
-/** Groups selected students, preserving participation state. */
+/** Groups selected students, preserving attendance state. */
 function generateSelectiveChart() {
     const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => seat.textContent);
-    const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
-    const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
+    const namesToRegroup = allStudents.filter(name => onTimeStudents.has(name) || tardyStudents.has(name));
+    const unselectedNames = allStudents.filter(name => !onTimeStudents.has(name) && !tardyStudents.has(name));
     if (namesToRegroup.length === 0) {
         showErrorAlert("No students are selected for grouping.");
         return;
     }
     const activeModeBtn = document.querySelector('.group-btn.active');
     if (!activeModeBtn) { showErrorAlert("Please select a grouping method."); return; }
-    
     const mode = activeModeBtn.id;
     let generatedGroups;
     if (mode === 'generateGroupsByCountBtn') {
@@ -202,7 +208,6 @@ function generateSelectiveChart() {
         const groupSize = parseInt(activeModeBtn.dataset.groupsize, 10);
         generatedGroups = createStudentGroupsBySize(namesToRegroup, groupSize);
     }
-    
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
     generatedGroups.forEach((group, index) => {
@@ -212,7 +217,7 @@ function generateSelectiveChart() {
     unselectedNames.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    toggleSortable(!attendanceVisible);
     applyAttendanceStyles();
 }
 
@@ -239,11 +244,21 @@ function createGroupContainerElement(group, color) {
     return container;
 }
 
+/** Swaps two DOM elements */
+function swapTiles(tile1, tile2) {
+    const parent1 = tile1.parentNode;
+    const parent2 = tile2.parentNode;
+    if (!parent1 || !parent2) return;
+    const after1 = tile1.nextElementSibling;
+    const after2 = tile2.nextElementSibling;
+    parent1.insertBefore(tile2, after1);
+    parent2.insertBefore(tile1, after2);
+}
+
+
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
-    // THIS IS THE SAFEGUARD: Cache page-specific elements immediately.
     cacheToolsDOMElements();
-
     groupBtns.forEach(btn => btn.disabled = true);
     
     groupBtns.forEach(btn => {
@@ -257,31 +272,63 @@ async function initializePageSpecificApp() {
 
     toolsContent.addEventListener('mousedown', (event) => {
         const seat = event.target.closest('.seat');
-        if (seat) {
-            event.preventDefault();
-            const studentName = seat.textContent;
-            if (classStarted) {
-                if (preselectedStudents.has(studentName)) {
-                    preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
-                } else {
-                    participatedStudents.has(studentName) ? participatedStudents.delete(studentName) : participatedStudents.add(studentName);
+        if (!seat) return;
+        event.preventDefault();
+        isLongPress = false;
+        if (classStarted && attendanceVisible) {
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                const studentName = seat.textContent;
+                if (onTimeStudents.has(studentName)) {
+                    onTimeStudents.delete(studentName);
+                    tardyStudents.add(studentName);
+                } else if (tardyStudents.has(studentName)) {
+                    tardyStudents.delete(studentName);
+                    onTimeStudents.add(studentName);
                 }
-            } else {
-                preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
-            }
-            applyAttendanceStyles();
+                applyAttendanceStyles();
+            }, LONG_PRESS_DURATION);
         }
+    });
+
+    toolsContent.addEventListener('mouseup', (event) => {
+        clearTimeout(longPressTimer);
+        const seat = event.target.closest('.seat');
+        if (seat && !isLongPress) {
+            if (attendanceVisible) {
+                const studentName = seat.textContent;
+                if (classStarted) {
+                    if (onTimeStudents.has(studentName)) onTimeStudents.delete(studentName);
+                    else if (tardyStudents.has(studentName)) tardyStudents.delete(studentName);
+                    else tardyStudents.add(studentName);
+                } else {
+                    onTimeStudents.has(studentName) ? onTimeStudents.delete(studentName) : onTimeStudents.add(studentName);
+                }
+                applyAttendanceStyles();
+            } else { // In Arrange Mode
+                if (firstSwapTile) {
+                    if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
+                    firstSwapTile.classList.remove('swap-selected');
+                    firstSwapTile = null;
+                } else {
+                    firstSwapTile = seat;
+                    seat.classList.add('swap-selected');
+                }
+            }
+        }
+        isLongPress = false;
     });
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
-            preselectedStudents.add(seat.textContent);
+            onTimeStudents.add(seat.textContent);
+            tardyStudents.delete(seat.textContent);
         });
         applyAttendanceStyles();
     });
     deselectAllBtn.addEventListener('click', () => {
-        preselectedStudents.clear();
-        participatedStudents.clear();
+        onTimeStudents.clear();
+        tardyStudents.clear();
         applyAttendanceStyles();
     });
     
@@ -290,12 +337,13 @@ async function initializePageSpecificApp() {
         originalSeating = captureSeatingState();
         setupButtons.classList.add('hidden');
         inClassButtons.classList.remove('hidden');
-        originalSeatingBtn.disabled = false;
-        preselectedStudents.clear();
+        onTimeStudents.clear();
+        tardyStudents.clear();
         toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
-            preselectedStudents.add(seat.textContent);
+            onTimeStudents.add(seat.textContent);
         });
-        showSuccessAlert("Class started! You can now track participation.");
+        applyAttendanceStyles();
+        showSuccessAlert("Class started! You can now mark tardy students (yellow).");
     });
 
     originalSeatingBtn.addEventListener('click', () => {
@@ -304,7 +352,12 @@ async function initializePageSpecificApp() {
 
     attendanceToggleBtn.addEventListener('click', () => {
         attendanceVisible = !attendanceVisible;
-        attendanceToggleBtn.textContent = attendanceVisible ? "Hide Attendance" : "Show Attendance";
+        attendanceToggleBtn.textContent = attendanceVisible ? "Arrange Mode" : "Attendance Mode";
+        toggleSortable(!attendanceVisible);
+        if (firstSwapTile) {
+            firstSwapTile.classList.remove('swap-selected');
+            firstSwapTile = null;
+        }
         applyAttendanceStyles();
     });
 
@@ -324,15 +377,15 @@ async function initializePageSpecificApp() {
 
 /** Resets the page state. */
 function resetPageSpecificAppState() {
-    if (sortableInstance) sortableInstance.destroy();
+    if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
-    preselectedStudents.clear();
-    participatedStudents.clear();
+    onTimeStudents.clear();
+    tardyStudents.clear();
+    firstSwapTile = null;
     if (setupButtons) setupButtons.classList.remove('hidden');
     if (inClassButtons) inClassButtons.classList.add('hidden');
-    if (startClassBtn) startClassBtn.disabled = false;
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
