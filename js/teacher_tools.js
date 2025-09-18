@@ -372,7 +372,7 @@ async function initializePageSpecificApp() {
             firstSwapTile.classList.remove('swap-selected');
             firstSwapTile = null;
         }
-        applyAttendanceStyles();
+        renderSeatingState();
     });
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
