@@ -306,7 +306,7 @@ async function initializePageSpecificApp() {
                 }
                 applyAttendanceStyles();
             } else { // In Arrange Mode
-                if (!seat.classList.contains('attendance-hidden')) return; // Can only swap selected students
+                if (!seat.classList.contains('attendance-hidden')) return;
                 if (firstSwapTile) {
                     if (firstSwapTile !== seat) swapTiles(firstSwapTile, seat);
                     firstSwapTile.classList.remove('swap-selected');
