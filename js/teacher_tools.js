@@ -51,30 +51,19 @@ function cacheToolsDOMElements() {
 /** Initializes or toggles Draggable.js Sortable functionality. */
 function toggleSortable(enable) {
     if (enable) {
-        if (!sortableInstance) { // Initialize if it doesn't exist
+        if (!sortableInstance) {
             const containers = document.querySelectorAll('#seatingChartGrid, #unselectedStudentsGrid, .group-container');
             sortableInstance = new Draggable.Sortable(containers, {
-                draggable: '.draggable-item',
-                handle: '.draggable-item',
-                mirror: { constrainDimensions: true },
-                plugins: [Draggable.Plugins.ResizeMirror],
+                draggable: '.draggable-item', handle: '.draggable-item', mirror: { constrainDimensions: true }, plugins: [Draggable.Plugins.ResizeMirror],
             });
             sortableInstance.on('mirror:create', (evt) => {
-                const sourceClasses = ['selected', 'participated', 'attendance-hidden'];
+                const sourceClasses = ['selected', 'participated', 'attendance-hidden', 'swap-selected'];
                 sourceClasses.forEach(className => {
-                    if (evt.source.classList.contains(className)) {
-                        evt.mirror.classList.add(className);
-                    }
+                    if (evt.source.classList.contains(className)) evt.mirror.classList.add(className);
                 });
             });
-        } else { // Re-enable existing instance
-            sortableInstance.enable();
-        }
-    } else {
-        if (sortableInstance) { // Disable if it exists
-            sortableInstance.disable();
-        }
-    }
+        } else { sortableInstance.enable(); }
+    } else { if (sortableInstance) sortableInstance.disable(); }
 }
 
 /** Updates the visual state of the generation buttons. */
@@ -197,7 +186,6 @@ function generateInitialChart() {
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
     toggleSortable(false); // Start with dragging disabled
-
 }
 
 /** Groups selected students, preserving attendance state. */
@@ -266,7 +254,6 @@ function swapTiles(tile1, tile2) {
     parent1.insertBefore(tile2, after1);
     parent2.insertBefore(tile1, after2);
 }
-
 
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
@@ -366,13 +353,12 @@ async function initializePageSpecificApp() {
     attendanceToggleBtn.addEventListener('click', () => {
         attendanceVisible = !attendanceVisible;
         attendanceToggleBtn.textContent = attendanceVisible ? "Arrange Mode" : "Attendance Mode";
-        toggleSortable(!attendanceVisible); // Enable dragging when hidden, disable when shown
-
+        toggleSortable(!attendanceVisible);
         if (firstSwapTile) {
             firstSwapTile.classList.remove('swap-selected');
             firstSwapTile = null;
         }
-        renderSeatingState();
+        applyAttendanceStyles();
     });
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
