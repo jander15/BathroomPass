@@ -259,4 +259,34 @@ iframe[name="iframe"] {
     box-shadow: 0 0 0 3px #8b5cf6 !important; /* A bright violet */
     border-color: #8b5cf6 !important;
 }
+/* --- Seating Chart Context Menu --- */
 
+/* Style for the menu container */
+#seatContextMenu {
+    /* The HTML provides most of the base styles */
+    font-size: 0.9rem;
+}
+
+/* Style for each button inside the menu */
+.context-menu-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+/* Hover effect for the buttons */
+.context-menu-btn:hover {
+    background-color: #f3f4f6; /* Tailwind gray-100 */
+}
+
+/* A divider line for separating menu items */
+.context-menu-divider {
+    height: 1px;
+    background-color: #e5e7eb; /* Tailwind gray-200 */
+    margin: 0.25rem 0;
+}

@@ -21,6 +21,8 @@ let attendanceVisible = true;
 let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let timeRemaining = 0;
 let timerInterval = null;
+let seatContextMenu; // <-- Add this line
+
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -55,6 +57,8 @@ function cacheToolsDOMElements() {
     timerPlayPauseBtn = document.getElementById('timerPlayPauseBtn');
     timerResetBtn = document.getElementById('timerResetBtn');
     timerAudio = document.getElementById('timerAudio');
+    seatContextMenu = document.getElementById('seatContextMenu'); // <-- Add this line
+
 }
 
 /**
@@ -363,23 +367,90 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    toolsContent.addEventListener('mousedown', (event) => {
+    toolsContent.addEventListener('contextmenu', (event) => {
         const seat = event.target.closest('.seat');
-        if (seat) {
-            event.preventDefault();
-            const studentName = seat.textContent;
-            if (classStarted) {
-                if (preselectedStudents.has(studentName)) {
-                    preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
-                } else {
-                    participatedStudents.has(studentName) ? participatedStudents.delete(studentName) : participatedStudents.add(studentName);
-                }
+        if (!seat) return; // Exit if not clicking on a seat
+
+        event.preventDefault(); // Stop the browser's default right-click menu
+
+        const studentName = seat.textContent;
+        const isPresent = preselectedStudents.has(studentName);
+        const isTardy = participatedStudents.has(studentName);
+
+        // Build the menu content dynamically
+        let menuHtml = '';
+        if (classStarted) {
+            // After class starts, focus on Present/Tardy
+            if (isPresent) {
+                menuHtml += `<button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button>`;
             } else {
-                preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
+                menuHtml += `<button class="context-menu-btn" data-action="markPresent" data-student="${studentName}">Mark as Present (Green)</button>`;
             }
-            applyAttendanceStyles();
+            if (isPresent || isTardy) {
+                 menuHtml += `<button class="context-menu-btn" data-action="clearStatus" data-student="${studentName}">Clear Status</button>`;
+            }
+        } else {
+            // Before class starts, focus on selection
+            if (isPresent) {
+                menuHtml += `<button class="context-menu-btn" data-action="deselect" data-student="${studentName}">Deselect Student</button>`;
+            } else {
+                menuHtml += `<button class="context-menu-btn" data-action="select" data-student="${studentName}">Select Student</button>`;
+            }
+        }
+        
+        seatContextMenu.innerHTML = menuHtml;
+        seatContextMenu.style.top = `${event.pageY}px`;
+        seatContextMenu.style.left = `${event.pageX}px`;
+        seatContextMenu.classList.remove('hidden');
+    });
+
+    // 2. Handles clicks on the items WITHIN the context menu
+    seatContextMenu.addEventListener('click', (event) => {
+        const button = event.target.closest('.context-menu-btn');
+        if (!button) return;
+
+        const { action, student } = button.dataset;
+
+        if (action === 'markPresent') {
+            preselectedStudents.add(student);
+            participatedStudents.delete(student);
+        } else if (action === 'markTardy') {
+            participatedStudents.add(student);
+            preselectedStudents.delete(student);
+        } else if (action === 'clearStatus') {
+            preselectedStudents.delete(student);
+            participatedStudents.delete(student);
+        } else if (action === 'select') {
+            preselectedStudents.add(student);
+        } else if (action === 'deselect') {
+            preselectedStudents.delete(student);
+        }
+
+        applyAttendanceStyles();
+        seatContextMenu.classList.add('hidden'); // Hide menu after action
+    });
+
+    // 3. Handles regular Left-Clicks on seats (for selection before class)
+    toolsContent.addEventListener('click', (event) => {
+        const seat = event.target.closest('.seat');
+        if (!seat || classStarted) return; // Only allow selection before class starts
+
+        const studentName = seat.textContent;
+        preselectedStudents.has(studentName) 
+            ? preselectedStudents.delete(studentName) 
+            : preselectedStudents.add(studentName);
+        
+        applyAttendanceStyles();
+    });
+
+    // Bonus: A listener to hide the menu if you click anywhere else
+    window.addEventListener('click', () => {
+        if (!seatContextMenu.classList.contains('hidden')) {
+            seatContextMenu.classList.add('hidden');
         }
     });
+
+    // --- END: NEW EVENT LISTENER SYSTEM ---
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {

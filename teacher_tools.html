@@ -98,8 +98,8 @@
                 <div class="flex justify-center items-center gap-x-4">
                     <p id="chartMessage" class="text-center text-gray-500 flex-grow">Select a class and click a button to generate a chart.</p>
                     
+                    <button id="showTimerBtn" class="text-2xl text-gray-600 hover:text-purple-600 transition-all duration-200 hover:scale-110 p-1">⏱️</button>
                     <div id="setupButtons" class="flex items-center gap-x-4">
-                        <button id="showTimerBtn" class="text-2xl text-gray-600 hover:text-purple-600 transition-all duration-200 hover:scale-110 p-1">⏱️</button>
                         <button id="startClassBtn" class="px-3 py-1 text-xs bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition-colors disabled:bg-green-800 disabled:cursor-not-allowed">Start Class</button>
                         <button id="selectAllBtn" class="px-3 py-1 text-xs bg-blue-500 text-white font-semibold rounded-md shadow-sm hover:bg-blue-600 transition-colors">Select All</button>
                         <button id="deselectAllBtn" class="px-3 py-1 text-xs bg-gray-500 text-white font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors">Deselect All</button>
@@ -124,6 +124,10 @@
             </div>
         </div>
     </div>
+
+    <div id="seatContextMenu" class="hidden absolute z-50 bg-white border border-gray-300 rounded-md shadow-lg py-1 w-48">
+    </div>
+
 
     <script src="js/common.js"></script>
     <script src="js/teacher_tools.js"></script>
