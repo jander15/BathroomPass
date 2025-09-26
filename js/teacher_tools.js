@@ -320,42 +320,23 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    // REPLACEMENT for the old 'mousedown' listener.
-
-// Handles single-clicks for selecting students BEFORE class starts.
-toolsContent.addEventListener('click', (event) => {
-    const seat = event.target.closest('.seat');
-    if (!seat || classStarted) return; // This listener only works BEFORE class starts
-
-    const studentName = seat.textContent;
-    // Simple toggle for initial selection
-    if (preselectedStudents.has(studentName)) {
-        preselectedStudents.delete(studentName);
-    } else {
-        preselectedStudents.add(studentName);
-    }
-    applyAttendanceStyles();
-});
-
-// Handles double-clicks for toggling present/tardy AFTER class starts.
-toolsContent.addEventListener('dblclick', (event) => {
-    const seat = event.target.closest('.seat');
-    if (!seat || !classStarted) return; // This listener only works AFTER class starts
-
-    const studentName = seat.textContent;
-
-    // Toggle between Present (green) and Tardy (yellow)
-    if (preselectedStudents.has(studentName)) {
-        // Was Present -> Becomes Tardy
-        preselectedStudents.delete(studentName);
-        participatedStudents.add(studentName);
-    } else if (participatedStudents.has(studentName)) {
-        // Was Tardy -> Becomes Present
-        participatedStudents.delete(studentName);
-        preselectedStudents.add(studentName);
-    }
-    applyAttendanceStyles();
-});
+    toolsContent.addEventListener('mousedown', (event) => {
+        const seat = event.target.closest('.seat');
+        if (seat) {
+            event.preventDefault();
+            const studentName = seat.textContent;
+            if (classStarted) {
+                if (preselectedStudents.has(studentName)) {
+                    preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
+                } else {
+                    participatedStudents.has(studentName) ? participatedStudents.delete(studentName) : participatedStudents.add(studentName);
+                }
+            } else {
+                preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
+            }
+            applyAttendanceStyles();
+        }
+    });
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
