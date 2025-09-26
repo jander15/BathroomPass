@@ -37,24 +37,40 @@
             </div>
 
         </div>
-        <div id="timerContainer" class="hidden fixed top-20 left-1/2 -translate-x-1/2 w-80 bg-purple-600 rounded-xl shadow-2xl text-white z-50">
-    <div id="timerHeader" class="py-2 px-4 bg-purple-700 rounded-t-xl cursor-move flex justify-between items-center">
-        <h3 class="font-bold">Timer</h3>
-        <button id="timerHideBtn" class="text-xl font-bold hover:text-purple-200">&times;</button>
-    </div>
+        <div id="timerContainer" class="hidden fixed top-20 left-1/2 -translate-x-1/2 w-auto bg-slate-800 rounded-full shadow-2xl text-white z-50 border border-slate-700 flex items-center space-x-2 p-2 font-sans">
+            
+            <div id="timerHeader" class="cursor-move p-1 text-slate-500 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grip-vertical" viewBox="0 0 16 16">
+                    <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                </svg>
+            </div>
 
-        <div class="p-4 flex flex-col items-center gap-4">
-            <div class="flex items-center justify-center gap-2">
-                <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-24 p-2 border-2 border-purple-400 bg-purple-500 rounded-md shadow-sm text-center text-2xl font-mono focus:outline-none focus:border-white">
-                <span class="text-2xl font-mono font-bold">:</span>
-                <input type="number" id="timerSeconds" value="0" min="0" max="59" class="w-24 p-2 border-2 border-purple-400 bg-purple-500 rounded-md shadow-sm text-center text-2xl font-mono focus:outline-none focus:border-white">
+            <div class="flex items-center font-mono text-lg">
+                <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-10 bg-slate-700 text-white text-center rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <span class="px-1 text-slate-500">:</span>
+                <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-10 bg-slate-700 text-white text-center rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
             </div>
-            <div class="flex items-center justify-center gap-4">
-                <button id="timerPlayPauseBtn" class="px-4 py-3 text-3xl bg-purple-500 rounded-lg hover:bg-purple-400">▶️</button>
-                <button id="timerResetBtn" class="px-4 py-3 text-3xl bg-purple-500 rounded-lg hover:bg-purple-400">🔄</button>
-            </div>
+
+            <button id="timerPlayPauseBtn" title="Play/Pause" class="p-2 rounded-full hover:bg-slate-700 text-slate-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
+                    <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                </svg>
+                <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pause-fill hidden" viewBox="0 0 16 16">
+                    <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>
+                </svg>
+            </button>
+            <button id="timerResetBtn" title="Reset" class="p-2 rounded-full hover:bg-slate-700 text-slate-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                </svg>
+            </button>
+            <button id="timerHideBtn" title="Hide" class="p-2 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                </svg>
+            </button>
         </div>
-    </div>
         
         <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Randomized Seating Chart</h1>
         

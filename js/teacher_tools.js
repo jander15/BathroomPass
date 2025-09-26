@@ -22,6 +22,8 @@ let attendanceVisible = true;
 let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let timeRemaining = 0;
 let timerInterval = null;
+let playIcon, pauseIcon;
+
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -57,6 +59,8 @@ function cacheToolsDOMElements() {
     timerResetBtn = document.getElementById('timerResetBtn');
     timerAudio = document.getElementById('timerAudio');
     seatContextMenu = document.getElementById('seatContextMenu');
+    playIcon = document.getElementById('playIcon');
+    pauseIcon = document.getElementById('pauseIcon');
 }
 
 /**
@@ -107,9 +111,8 @@ function updateTimerDisplay() {
     timerSecondsInput.value = secs;
 }
 
-/** Starts or resumes the timer. */
 function playTimer() {
-    if (timerInterval) return;
+    if (timerInterval) return; // Already running
 
     if (timeRemaining <= 0) {
         const minutes = parseInt(timerMinutesInput.value, 10) || 0;
@@ -118,14 +121,17 @@ function playTimer() {
     }
 
     if (timeRemaining > 0) {
-        timerPlayPauseBtn.textContent = '⏸️';
+        playIcon.classList.add('hidden');    // Hide play icon
+        pauseIcon.classList.remove('hidden'); // Show pause icon
+        
         timerInterval = setInterval(() => {
             timeRemaining--;
             updateTimerDisplay();
             if (timeRemaining <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                timerPlayPauseBtn.textContent = '▶️';
+                pauseIcon.classList.add('hidden');  // Hide pause icon
+                playIcon.classList.remove('hidden'); // Show play icon
                 timerAudio.play();
                 showSuccessAlert("Time's up!");
             }
@@ -137,12 +143,13 @@ function playTimer() {
 function pauseTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
-    timerPlayPauseBtn.textContent = '▶️';
+    pauseIcon.classList.add('hidden');  // Hide pause icon
+    playIcon.classList.remove('hidden'); // Show play icon
 }
 
 /** Resets the timer. */
 function resetTimer() {
-    pauseTimer();
+    pauseTimer(); // This already resets the icon to 'play'
     timeRemaining = 0;
     timerMinutesInput.value = "5";
     timerSecondsInput.value = "00";

@@ -290,3 +290,15 @@ iframe[name="iframe"] {
     background-color: #e5e7eb; /* Tailwind gray-200 */
     margin: 0.25rem 0;
 }
+
+/* --- Sleek Timer Input Styles --- */
+/* Hides the arrows on number inputs for Chrome, Safari, Edge */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Hides the arrows on number inputs for Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
