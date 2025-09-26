@@ -298,7 +298,4 @@ input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-/* Hides the arrows on number inputs for Firefox */
-input[type=number] {
-  -moz-appearance: textfield;
-}
+

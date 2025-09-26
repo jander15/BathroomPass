@@ -112,6 +112,7 @@ function updateTimerDisplay() {
 }
 
 function playTimer() {
+    stopTimerSound()
     if (timerInterval) return; // Already running
 
     if (timeRemaining <= 0) {
@@ -145,6 +146,7 @@ function pauseTimer() {
     timerInterval = null;
     pauseIcon.classList.add('hidden');  // Hide pause icon
     playIcon.classList.remove('hidden'); // Show play icon
+    stopTimerSound()
 }
 
 /** Resets the timer. */
@@ -153,6 +155,13 @@ function resetTimer() {
     timeRemaining = 0;
     timerMinutesInput.value = "5";
     timerSecondsInput.value = "00";
+}
+/** Stops the looping timer sound and resets it. */
+function stopTimerSound() {
+    if (timerAudio) {
+        timerAudio.pause();
+        timerAudio.currentTime = 0;
+    }
 }
 
 /** Initializes Draggable.js Sortable functionality. */
@@ -503,6 +512,7 @@ async function initializePageSpecificApp() {
 
     timerHideBtn.addEventListener('click', () => {
         timerContainer.classList.add('hidden');
+        stopTimerSound(); // Stop the sound on hide
     });
 
     timerPlayPauseBtn.addEventListener('click', () => {
