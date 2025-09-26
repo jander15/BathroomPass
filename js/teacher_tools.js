@@ -379,29 +379,17 @@ async function initializePageSpecificApp() {
         const seat = event.target.closest('.seat');
         if (!seat) return;
 
-        event.preventDefault();
+        event.preventDefault(); // Stop the browser's default right-click menu
 
         const studentName = seat.textContent;
-        const isPresent = preselectedStudents.has(studentName);
-        const isTardy = participatedStudents.has(studentName);
 
-        let menuHtml = '';
-        if (classStarted) {
-            if (isPresent) {
-                menuHtml += `<button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button>`;
-            } else {
-                menuHtml += `<button class="context-menu-btn" data-action="markPresent" data-student="${studentName}">Mark as Present (Green)</button>`;
-            }
-            if (isPresent || isTardy) {
-                 menuHtml += `<button class="context-menu-btn" data-action="clearStatus" data-student="${studentName}">Clear Status</button>`;
-            }
-        } else {
-            if (isPresent) {
-                menuHtml += `<button class="context-menu-btn" data-action="deselect" data-student="${studentName}">Deselect Student</button>`;
-            } else {
-                menuHtml += `<button class="context-menu-btn" data-action="select" data-student="${studentName}">Select Student</button>`;
-            }
-        }
+        // Build a consistent, non-conditional menu every time.
+        const menuHtml = `
+            <button class="context-menu-btn" data-action="markPresent" data-student="${studentName}">Mark as Present (Green)</button>
+            <button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button>
+            <div class="context-menu-divider"></div>
+            <button class="context-menu-btn" data-action="deselect" data-student="${studentName}">Deselect</button>
+        `;
         
         seatContextMenu.innerHTML = menuHtml;
         seatContextMenu.style.top = `${event.pageY}px`;
@@ -415,41 +403,48 @@ async function initializePageSpecificApp() {
 
         const { action, student } = button.dataset;
 
+        // More robust logic to handle the consistent menu options
         if (action === 'markPresent') {
+            participatedStudents.delete(student); // Ensure it's not in the other set
             preselectedStudents.add(student);
-            participatedStudents.delete(student);
         } else if (action === 'markTardy') {
+            preselectedStudents.delete(student); // Ensure it's not in the other set
             participatedStudents.add(student);
-            preselectedStudents.delete(student);
-        } else if (action === 'clearStatus') {
-            preselectedStudents.delete(student);
-            participatedStudents.delete(student);
-        } else if (action === 'select') {
-            preselectedStudents.add(student);
         } else if (action === 'deselect') {
             preselectedStudents.delete(student);
+            participatedStudents.delete(student);
         }
 
         applyAttendanceStyles();
-        seatContextMenu.classList.add('hidden');
+        seatContextMenu.classList.add('hidden'); // Hide menu after action
     });
 
     document.addEventListener('click', (event) => {
+        // If the click was on a menu item, let the menu's own handler deal with it.
         if (event.target.closest('#seatContextMenu')) {
             return;
         }
 
+        // Any click outside the menu should hide it.
         if (!seatContextMenu.classList.contains('hidden')) {
             seatContextMenu.classList.add('hidden');
         }
 
         const seat = event.target.closest('.seat');
-        if (seat && !classStarted) {
+        if (seat) {
             const studentName = seat.textContent;
-            if (preselectedStudents.has(studentName)) {
+            if (classStarted) {
+                // AFTER class starts: a single click makes the student yellow (tardy/participated).
+                // This will also move them from green to yellow if they were already present.
                 preselectedStudents.delete(studentName);
+                participatedStudents.add(studentName);
             } else {
-                preselectedStudents.add(studentName);
+                // BEFORE class starts: a single click toggles selection (green).
+                if (preselectedStudents.has(studentName)) {
+                    preselectedStudents.delete(studentName);
+                } else {
+                    preselectedStudents.add(studentName);
+                }
             }
             applyAttendanceStyles();
         }
