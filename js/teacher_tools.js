@@ -18,6 +18,10 @@ let preselectedStudents = new Set();
 let participatedStudents = new Set();
 let attendanceVisible = true;
 
+let timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
+let timeRemaining = 0;
+let timerInterval = null;
+
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
 
@@ -42,6 +46,67 @@ function cacheToolsDOMElements() {
     setupButtons = document.getElementById('setupButtons');
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
+    timerMinutesInput = document.getElementById('timerMinutes');
+    timerSecondsInput = document.getElementById('timerSeconds');
+    timerPlayPauseBtn = document.getElementById('timerPlayPauseBtn');
+    timerResetBtn = document.getElementById('timerResetBtn');
+    timerAudio = document.getElementById('timerAudio');
+}
+
+/** Formats seconds into MM:SS format. */
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return { mins, secs };
+}
+
+/** Updates the timer input fields with the current time remaining. */
+function updateTimerDisplay() {
+    const { mins, secs } = formatTime(timeRemaining);
+    timerMinutesInput.value = mins;
+    timerSecondsInput.value = secs;
+}
+
+/** Starts or resumes the timer. */
+function playTimer() {
+    if (timerInterval) return; // Already running
+
+    // If starting fresh, get time from inputs
+    if (timeRemaining <= 0) {
+        const minutes = parseInt(timerMinutesInput.value, 10) || 0;
+        const seconds = parseInt(timerSecondsInput.value, 10) || 0;
+        timeRemaining = (minutes * 60) + seconds;
+    }
+
+    if (timeRemaining > 0) {
+        timerPlayPauseBtn.textContent = '⏸️';
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            updateTimerDisplay();
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerPlayPauseBtn.textContent = '▶️';
+                timerAudio.play();
+                showSuccessAlert("Time's up!");
+            }
+        }, 1000);
+    }
+}
+
+/** Pauses the timer. */
+function pauseTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerPlayPauseBtn.textContent = '▶️';
+}
+
+/** Resets the timer. */
+function resetTimer() {
+    pauseTimer();
+    timeRemaining = 0;
+    timerMinutesInput.value = "5"; // Default to 5 minutes
+    timerSecondsInput.value = "00";
 }
 
 /** Initializes Draggable.js Sortable functionality. */
@@ -255,23 +320,42 @@ async function initializePageSpecificApp() {
     
     classDropdown.addEventListener('change', generateInitialChart);
 
-    toolsContent.addEventListener('mousedown', (event) => {
-        const seat = event.target.closest('.seat');
-        if (seat) {
-            event.preventDefault();
-            const studentName = seat.textContent;
-            if (classStarted) {
-                if (preselectedStudents.has(studentName)) {
-                    preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
-                } else {
-                    participatedStudents.has(studentName) ? participatedStudents.delete(studentName) : participatedStudents.add(studentName);
-                }
-            } else {
-                preselectedStudents.has(studentName) ? preselectedStudents.delete(studentName) : preselectedStudents.add(studentName);
-            }
-            applyAttendanceStyles();
-        }
-    });
+    // REPLACEMENT for the old 'mousedown' listener.
+
+// Handles single-clicks for selecting students BEFORE class starts.
+toolsContent.addEventListener('click', (event) => {
+    const seat = event.target.closest('.seat');
+    if (!seat || classStarted) return; // This listener only works BEFORE class starts
+
+    const studentName = seat.textContent;
+    // Simple toggle for initial selection
+    if (preselectedStudents.has(studentName)) {
+        preselectedStudents.delete(studentName);
+    } else {
+        preselectedStudents.add(studentName);
+    }
+    applyAttendanceStyles();
+});
+
+// Handles double-clicks for toggling present/tardy AFTER class starts.
+toolsContent.addEventListener('dblclick', (event) => {
+    const seat = event.target.closest('.seat');
+    if (!seat || !classStarted) return; // This listener only works AFTER class starts
+
+    const studentName = seat.textContent;
+
+    // Toggle between Present (green) and Tardy (yellow)
+    if (preselectedStudents.has(studentName)) {
+        // Was Present -> Becomes Tardy
+        preselectedStudents.delete(studentName);
+        participatedStudents.add(studentName);
+    } else if (participatedStudents.has(studentName)) {
+        // Was Tardy -> Becomes Present
+        participatedStudents.delete(studentName);
+        preselectedStudents.add(studentName);
+    }
+    applyAttendanceStyles();
+});
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
@@ -307,6 +391,16 @@ async function initializePageSpecificApp() {
         attendanceToggleBtn.textContent = attendanceVisible ? "Hide Attendance" : "Show Attendance";
         applyAttendanceStyles();
     });
+
+    timerPlayPauseBtn.addEventListener('click', () => {
+    if (timerInterval) {
+        pauseTimer();
+    } else {
+        playTimer();
+    }
+});
+
+timerResetBtn.addEventListener('click', resetTimer);
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
