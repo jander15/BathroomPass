@@ -18,7 +18,7 @@ let preselectedStudents = new Set();
 let participatedStudents = new Set();
 let attendanceVisible = true;
 
-let timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
+let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let timeRemaining = 0;
 let timerInterval = null;
 
@@ -46,6 +46,10 @@ function cacheToolsDOMElements() {
     setupButtons = document.getElementById('setupButtons');
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
+    showTimerBtn = document.getElementById('showTimerBtn');
+    timerContainer = document.getElementById('timerContainer');
+    timerHeader = document.getElementById('timerHeader');
+    timerHideBtn = document.getElementById('timerHideBtn');
     timerMinutesInput = document.getElementById('timerMinutes');
     timerSecondsInput = document.getElementById('timerSeconds');
     timerPlayPauseBtn = document.getElementById('timerPlayPauseBtn');
@@ -53,61 +57,66 @@ function cacheToolsDOMElements() {
     timerAudio = document.getElementById('timerAudio');
 }
 
-/** Formats seconds into MM:SS format. */
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const secs = (seconds % 60).toString().padStart(2, '0');
-    return { mins, secs };
+/**
+ * Makes an HTML element draggable by its handle.
+ * @param {HTMLElement} element The element to drag.
+ * @param {HTMLElement} handle The part of the element that starts the drag.
+ */
+function makeElementDraggable(element, handle) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+    const dragMouseDown = (e) => {
+        e.preventDefault();
+        // Get the mouse cursor position at startup
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        // Call a function whenever the cursor moves
+        document.onmousemove = elementDrag;
+    };
+
+    const elementDrag = (e) => {
+        e.preventDefault();
+        // Calculate the new cursor position
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        // Set the element's new position
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+    };
+
+    const closeDragElement = () => {
+        // Stop moving when mouse button is released
+        document.onmouseup = null;
+        document.onmousemove = null;
+    };
+
+    handle.onmousedown = dragMouseDown;
 }
 
-/** Updates the timer input fields with the current time remaining. */
-function updateTimerDisplay() {
-    const { mins, secs } = formatTime(timeRemaining);
-    timerMinutesInput.value = mins;
-    timerSecondsInput.value = secs;
-}
+// ADD these new listeners for showing, hiding, and dragging the timer.
+showTimerBtn.addEventListener('click', () => {
+    timerContainer.classList.remove('hidden');
+});
 
-/** Starts or resumes the timer. */
-function playTimer() {
-    if (timerInterval) return; // Already running
+timerHideBtn.addEventListener('click', () => {
+    timerContainer.classList.add('hidden');
+});
 
-    // If starting fresh, get time from inputs
-    if (timeRemaining <= 0) {
-        const minutes = parseInt(timerMinutesInput.value, 10) || 0;
-        const seconds = parseInt(timerSecondsInput.value, 10) || 0;
-        timeRemaining = (minutes * 60) + seconds;
+timerPlayPauseBtn.addEventListener('click', () => {
+    if (timerInterval) {
+        pauseTimer();
+    } else {
+        playTimer();
     }
+});
 
-    if (timeRemaining > 0) {
-        timerPlayPauseBtn.textContent = '⏸️';
-        timerInterval = setInterval(() => {
-            timeRemaining--;
-            updateTimerDisplay();
-            if (timeRemaining <= 0) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                timerPlayPauseBtn.textContent = '▶️';
-                timerAudio.play();
-                showSuccessAlert("Time's up!");
-            }
-        }, 1000);
-    }
-}
+timerResetBtn.addEventListener('click', resetTimer);
 
-/** Pauses the timer. */
-function pauseTimer() {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    timerPlayPauseBtn.textContent = '▶️';
-}
-
-/** Resets the timer. */
-function resetTimer() {
-    pauseTimer();
-    timeRemaining = 0;
-    timerMinutesInput.value = "5"; // Default to 5 minutes
-    timerSecondsInput.value = "00";
-}
+// Make the timer draggable
+makeElementDraggable(timerContainer, timerHeader);
 
 /** Initializes Draggable.js Sortable functionality. */
 function initializeSortable() {
