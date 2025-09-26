@@ -96,27 +96,61 @@ function makeElementDraggable(element, handle) {
     handle.onmousedown = dragMouseDown;
 }
 
-// ADD these new listeners for showing, hiding, and dragging the timer.
-showTimerBtn.addEventListener('click', () => {
-    timerContainer.classList.remove('hidden');
-});
+/** Formats seconds into MM:SS format. */
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return { mins, secs };
+}
 
-timerHideBtn.addEventListener('click', () => {
-    timerContainer.classList.add('hidden');
-});
+/** Updates the timer input fields with the current time remaining. */
+function updateTimerDisplay() {
+    const { mins, secs } = formatTime(timeRemaining);
+    timerMinutesInput.value = mins;
+    timerSecondsInput.value = secs;
+}
 
-timerPlayPauseBtn.addEventListener('click', () => {
-    if (timerInterval) {
-        pauseTimer();
-    } else {
-        playTimer();
+/** Starts or resumes the timer. */
+function playTimer() {
+    if (timerInterval) return; // Already running
+
+    // If starting fresh, get time from inputs
+    if (timeRemaining <= 0) {
+        const minutes = parseInt(timerMinutesInput.value, 10) || 0;
+        const seconds = parseInt(timerSecondsInput.value, 10) || 0;
+        timeRemaining = (minutes * 60) + seconds;
     }
-});
 
-timerResetBtn.addEventListener('click', resetTimer);
+    if (timeRemaining > 0) {
+        timerPlayPauseBtn.textContent = '⏸️';
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            updateTimerDisplay();
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerPlayPauseBtn.textContent = '▶️';
+                timerAudio.play();
+                showSuccessAlert("Time's up!");
+            }
+        }, 1000);
+    }
+}
 
-// Make the timer draggable
-makeElementDraggable(timerContainer, timerHeader);
+/** Pauses the timer. */
+function pauseTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerPlayPauseBtn.textContent = '▶️';
+}
+
+/** Resets the timer. */
+function resetTimer() {
+    pauseTimer();
+    timeRemaining = 0;
+    timerMinutesInput.value = "5"; // Default to 5 minutes
+    timerSecondsInput.value = "00";
+}
 
 /** Initializes Draggable.js Sortable functionality. */
 function initializeSortable() {
@@ -382,7 +416,20 @@ async function initializePageSpecificApp() {
         applyAttendanceStyles();
     });
 
-    timerPlayPauseBtn.addEventListener('click', () => {
+    // Find initializePageSpecificApp() and make these changes
+
+// DELETE the old timerPlayPauseBtn and timerResetBtn listeners.
+
+// ADD these new listeners for showing, hiding, and dragging the timer.
+showTimerBtn.addEventListener('click', () => {
+    timerContainer.classList.remove('hidden');
+});
+
+timerHideBtn.addEventListener('click', () => {
+    timerContainer.classList.add('hidden');
+});
+
+timerPlayPauseBtn.addEventListener('click', () => {
     if (timerInterval) {
         pauseTimer();
     } else {
@@ -392,18 +439,8 @@ async function initializePageSpecificApp() {
 
 timerResetBtn.addEventListener('click', resetTimer);
 
-    if (appState.currentUser.email && appState.currentUser.idToken) {
-        try {
-            await fetchAllStudentData();
-            populateCourseDropdownFromData();
-            populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-            classDropdown.removeAttribute("disabled");
-            groupBtns.forEach(btn => btn.disabled = false);
-            updateActiveButton(generatePairsBtn);
-        } catch (error) {
-            showErrorAlert("Could not load class data. Please reload.");
-        }
-    }
+// Make the timer draggable
+makeElementDraggable(timerContainer, timerHeader);
 }
 
 /** Resets the page state. */
