@@ -430,27 +430,34 @@ async function initializePageSpecificApp() {
         seatContextMenu.classList.add('hidden'); // Hide menu after action
     });
 
-    // 3. Handles regular Left-Clicks on seats (for selection before class)
-    toolsContent.addEventListener('click', (event) => {
-        const seat = event.target.closest('.seat');
-        if (!seat || classStarted) return; // Only allow selection before class starts
+    // This single listener handles all left-clicks to prevent conflicts.
+    document.addEventListener('click', (event) => {
+        // Case 1: If the click was on an item inside the context menu,
+        // we do nothing here. The menu's own click listener will handle the action.
+        if (event.target.closest('#seatContextMenu')) {
+            return;
+        }
 
-        const studentName = seat.textContent;
-        preselectedStudents.has(studentName) 
-            ? preselectedStudents.delete(studentName) 
-            : preselectedStudents.add(studentName);
-        
-        applyAttendanceStyles();
-    });
-
-    // Bonus: A listener to hide the menu if you click anywhere else
-    window.addEventListener('click', () => {
+        // Case 2: The click was somewhere else on the page.
+        // First, no matter what, we hide the context menu if it is visible.
         if (!seatContextMenu.classList.contains('hidden')) {
             seatContextMenu.classList.add('hidden');
         }
-    });
 
-    // --- END: NEW EVENT LISTENER SYSTEM ---
+        // Case 3: Check if the click was on a student's seat.
+        const seat = event.target.closest('.seat');
+        
+        // If it was a seat AND the class has NOT started, perform the selection toggle.
+        if (seat && !classStarted) {
+            const studentName = seat.textContent;
+            if (preselectedStudents.has(studentName)) {
+                preselectedStudents.delete(studentName);
+            } else {
+                preselectedStudents.add(studentName);
+            }
+            applyAttendanceStyles();
+        }
+    });
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
