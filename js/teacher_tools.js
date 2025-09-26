@@ -10,6 +10,7 @@ let startClassBtn, originalSeatingBtn, attendanceToggleBtn;
 let setupButtons, inClassButtons; // Button containers
 let groupBtns = [];
 let sortableInstance = null;
+let seatContextMenu;
 
 // --- State Tracking ---
 let classStarted = false;
@@ -21,8 +22,6 @@ let attendanceVisible = true;
 let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let timeRemaining = 0;
 let timerInterval = null;
-let seatContextMenu; // <-- Add this line
-
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -57,8 +56,7 @@ function cacheToolsDOMElements() {
     timerPlayPauseBtn = document.getElementById('timerPlayPauseBtn');
     timerResetBtn = document.getElementById('timerResetBtn');
     timerAudio = document.getElementById('timerAudio');
-    seatContextMenu = document.getElementById('seatContextMenu'); // <-- Add this line
-
+    seatContextMenu = document.getElementById('seatContextMenu');
 }
 
 /**
@@ -71,28 +69,23 @@ function makeElementDraggable(element, handle) {
 
     const dragMouseDown = (e) => {
         e.preventDefault();
-        // Get the mouse cursor position at startup
         pos3 = e.clientX;
         pos4 = e.clientY;
         document.onmouseup = closeDragElement;
-        // Call a function whenever the cursor moves
         document.onmousemove = elementDrag;
     };
 
     const elementDrag = (e) => {
         e.preventDefault();
-        // Calculate the new cursor position
         pos1 = pos3 - e.clientX;
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        // Set the element's new position
         element.style.top = (element.offsetTop - pos2) + "px";
         element.style.left = (element.offsetLeft - pos1) + "px";
     };
 
     const closeDragElement = () => {
-        // Stop moving when mouse button is released
         document.onmouseup = null;
         document.onmousemove = null;
     };
@@ -116,9 +109,8 @@ function updateTimerDisplay() {
 
 /** Starts or resumes the timer. */
 function playTimer() {
-    if (timerInterval) return; // Already running
+    if (timerInterval) return;
 
-    // If starting fresh, get time from inputs
     if (timeRemaining <= 0) {
         const minutes = parseInt(timerMinutesInput.value, 10) || 0;
         const seconds = parseInt(timerSecondsInput.value, 10) || 0;
@@ -152,7 +144,7 @@ function pauseTimer() {
 function resetTimer() {
     pauseTimer();
     timeRemaining = 0;
-    timerMinutesInput.value = "5"; // Default to 5 minutes
+    timerMinutesInput.value = "5";
     timerSecondsInput.value = "00";
 }
 
@@ -166,6 +158,21 @@ function initializeSortable() {
         mirror: { constrainDimensions: true },
         plugins: [Draggable.Plugins.ResizeMirror],
     });
+}
+
+/**
+ * Enables or disables the drag-and-drop functionality for the seating chart.
+ * @param {boolean} enable - True to enable dragging, false to disable.
+ */
+function toggleDragAndDrop(enable) {
+    if (enable) {
+        initializeSortable();
+    } else {
+        if (sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+    }
 }
 
 /** Updates the visual state of the generation buttons. */
@@ -184,7 +191,7 @@ function shuffleArray(array) {
     }
 }
 
-/** Creates student groups with a special exception for pairs. */
+/** Creates student groups by a specified size. */
 function createStudentGroupsBySize(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
@@ -243,7 +250,7 @@ function renderSeatingState(seatingState) {
     seatingState.unselected.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    toggleDragAndDrop(false); // Always disable drag on render
     applyAttendanceStyles();
 }
 
@@ -290,7 +297,8 @@ function generateInitialChart() {
         const color = groupColors[index % groupColors.length];
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
-    initializeSortable();
+    
+    toggleDragAndDrop(false); // Ensure dragging is OFF by default.
 }
 
 /** Groups selected students, preserving participation state. */
@@ -324,7 +332,8 @@ function generateSelectiveChart() {
     unselectedNames.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    initializeSortable();
+    
+    toggleDragAndDrop(!attendanceVisible); // Re-apply correct draggable state
     applyAttendanceStyles();
 }
 
@@ -353,7 +362,6 @@ function createGroupContainerElement(group, color) {
 
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
-    // THIS IS THE SAFEGUARD: Cache page-specific elements immediately.
     cacheToolsDOMElements();
 
     groupBtns.forEach(btn => btn.disabled = true);
@@ -369,18 +377,16 @@ async function initializePageSpecificApp() {
 
     toolsContent.addEventListener('contextmenu', (event) => {
         const seat = event.target.closest('.seat');
-        if (!seat) return; // Exit if not clicking on a seat
+        if (!seat) return;
 
-        event.preventDefault(); // Stop the browser's default right-click menu
+        event.preventDefault();
 
         const studentName = seat.textContent;
         const isPresent = preselectedStudents.has(studentName);
         const isTardy = participatedStudents.has(studentName);
 
-        // Build the menu content dynamically
         let menuHtml = '';
         if (classStarted) {
-            // After class starts, focus on Present/Tardy
             if (isPresent) {
                 menuHtml += `<button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button>`;
             } else {
@@ -390,7 +396,6 @@ async function initializePageSpecificApp() {
                  menuHtml += `<button class="context-menu-btn" data-action="clearStatus" data-student="${studentName}">Clear Status</button>`;
             }
         } else {
-            // Before class starts, focus on selection
             if (isPresent) {
                 menuHtml += `<button class="context-menu-btn" data-action="deselect" data-student="${studentName}">Deselect Student</button>`;
             } else {
@@ -404,7 +409,6 @@ async function initializePageSpecificApp() {
         seatContextMenu.classList.remove('hidden');
     });
 
-    // 2. Handles clicks on the items WITHIN the context menu
     seatContextMenu.addEventListener('click', (event) => {
         const button = event.target.closest('.context-menu-btn');
         if (!button) return;
@@ -427,27 +431,19 @@ async function initializePageSpecificApp() {
         }
 
         applyAttendanceStyles();
-        seatContextMenu.classList.add('hidden'); // Hide menu after action
+        seatContextMenu.classList.add('hidden');
     });
 
-    // This single listener handles all left-clicks to prevent conflicts.
     document.addEventListener('click', (event) => {
-        // Case 1: If the click was on an item inside the context menu,
-        // we do nothing here. The menu's own click listener will handle the action.
         if (event.target.closest('#seatContextMenu')) {
             return;
         }
 
-        // Case 2: The click was somewhere else on the page.
-        // First, no matter what, we hide the context menu if it is visible.
         if (!seatContextMenu.classList.contains('hidden')) {
             seatContextMenu.classList.add('hidden');
         }
 
-        // Case 3: Check if the click was on a student's seat.
         const seat = event.target.closest('.seat');
-        
-        // If it was a seat AND the class has NOT started, perform the selection toggle.
         if (seat && !classStarted) {
             const studentName = seat.textContent;
             if (preselectedStudents.has(studentName)) {
@@ -465,6 +461,7 @@ async function initializePageSpecificApp() {
         });
         applyAttendanceStyles();
     });
+
     deselectAllBtn.addEventListener('click', () => {
         preselectedStudents.clear();
         participatedStudents.clear();
@@ -490,7 +487,8 @@ async function initializePageSpecificApp() {
 
     attendanceToggleBtn.addEventListener('click', () => {
         attendanceVisible = !attendanceVisible;
-        attendanceToggleBtn.textContent = attendanceVisible ? "Hide Attendance" : "Show Attendance";
+        attendanceToggleBtn.textContent = attendanceVisible ? "Arrange Mode" : "Attendance Mode";
+        toggleDragAndDrop(!attendanceVisible);
         applyAttendanceStyles();
     });
 
@@ -514,42 +512,36 @@ async function initializePageSpecificApp() {
 
     makeElementDraggable(timerContainer, timerHeader);
 
-     if (appState.currentUser.email && appState.currentUser.idToken) {
+    if (appState.currentUser.email && appState.currentUser.idToken) {
         try {
-            // 1. Fetch all student/class data from the server
             await fetchAllStudentData();
-            
-            // 2. Process the data to get a list of unique courses
             populateCourseDropdownFromData();
-            
-            // 3. Populate the actual dropdown menu in the HTML
             populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-            
-            // 4. Enable the UI elements now that data is loaded
             classDropdown.removeAttribute("disabled");
             groupBtns.forEach(btn => btn.disabled = false);
             updateActiveButton(generatePairsBtn);
-
         } catch (error) {
             showErrorAlert("Could not load class data. Please reload.");
-            console.error("Error during data fetch:", error); // Added for better debugging
+            console.error("Error during data fetch:", error);
         }
     }
-    // --- END of restored block ---
-
 }
 
 /** Resets the page state. */
 function resetPageSpecificAppState() {
-    if (sortableInstance) sortableInstance.destroy();
+    if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+    }
     classStarted = false;
     originalSeating = null;
     attendanceVisible = true;
     preselectedStudents.clear();
     participatedStudents.clear();
+
     if (setupButtons) setupButtons.classList.remove('hidden');
     if (inClassButtons) inClassButtons.classList.add('hidden');
-    if (startClassBtn) startClassBtn.disabled = false;
+    
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
