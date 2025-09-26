@@ -416,31 +416,49 @@ async function initializePageSpecificApp() {
         applyAttendanceStyles();
     });
 
-    // Find initializePageSpecificApp() and make these changes
+    showTimerBtn.addEventListener('click', () => {
+        timerContainer.classList.remove('hidden');
+    });
 
-// DELETE the old timerPlayPauseBtn and timerResetBtn listeners.
+    timerHideBtn.addEventListener('click', () => {
+        timerContainer.classList.add('hidden');
+    });
 
-// ADD these new listeners for showing, hiding, and dragging the timer.
-showTimerBtn.addEventListener('click', () => {
-    timerContainer.classList.remove('hidden');
-});
+    timerPlayPauseBtn.addEventListener('click', () => {
+        if (timerInterval) {
+            pauseTimer();
+        } else {
+            playTimer();
+        }
+    });
 
-timerHideBtn.addEventListener('click', () => {
-    timerContainer.classList.add('hidden');
-});
+    timerResetBtn.addEventListener('click', resetTimer);
 
-timerPlayPauseBtn.addEventListener('click', () => {
-    if (timerInterval) {
-        pauseTimer();
-    } else {
-        playTimer();
+    makeElementDraggable(timerContainer, timerHeader);
+
+     if (appState.currentUser.email && appState.currentUser.idToken) {
+        try {
+            // 1. Fetch all student/class data from the server
+            await fetchAllStudentData();
+            
+            // 2. Process the data to get a list of unique courses
+            populateCourseDropdownFromData();
+            
+            // 3. Populate the actual dropdown menu in the HTML
+            populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
+            
+            // 4. Enable the UI elements now that data is loaded
+            classDropdown.removeAttribute("disabled");
+            groupBtns.forEach(btn => btn.disabled = false);
+            updateActiveButton(generatePairsBtn);
+
+        } catch (error) {
+            showErrorAlert("Could not load class data. Please reload.");
+            console.error("Error during data fetch:", error); // Added for better debugging
+        }
     }
-});
+    // --- END of restored block ---
 
-timerResetBtn.addEventListener('click', resetTimer);
-
-// Make the timer draggable
-makeElementDraggable(timerContainer, timerHeader);
 }
 
 /** Resets the page state. */
