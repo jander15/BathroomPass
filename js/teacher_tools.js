@@ -434,10 +434,13 @@ async function initializePageSpecificApp() {
         if (seat) {
             const studentName = seat.textContent;
             if (classStarted) {
-                // AFTER class starts: a single click makes the student yellow (tardy/participated).
-                // This will also move them from green to yellow if they were already present.
-                preselectedStudents.delete(studentName);
-                participatedStudents.add(studentName);
+                if (preselectedStudents.has(studentName)) {
+                    preselectedStudents.delete(studentName);
+                }else if (participatedStudents.has(studentName)) {
+                    participatedStudents.delete(studentName);
+                }else {
+                    participatedStudents.add(studentName);
+                }
             } else {
                 // BEFORE class starts: a single click toggles selection (green).
                 if (preselectedStudents.has(studentName)) {
