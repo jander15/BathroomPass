@@ -6,7 +6,7 @@ let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
 let selectAllBtn, deselectAllBtn;
-let startClassBtn, originalSeatingBtn, attendanceToggleBtn;
+let startClassBtn, originalSeatingBtn, attendanceToggleBtn, jigsawBtn;
 let setupButtons, inClassButtons; // Button containers
 let groupBtns = [];
 let sortableInstance = null;
@@ -50,6 +50,7 @@ function cacheToolsDOMElements() {
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
     showTimerBtn = document.getElementById('showTimerBtn');
+    jigsawBtn = document.getElementById('jigsawBtn'); // <-- Add this line
     timerContainer = document.getElementById('timerContainer');
     timerHeader = document.getElementById('timerHeader');
     timerHideBtn = document.getElementById('timerHideBtn');
@@ -266,6 +267,7 @@ function renderSeatingState(seatingState) {
     seatingState.unselected.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
+    updateJigsawButtonVisibility();
     toggleDragAndDrop(false); // Always disable drag on render
     applyAttendanceStyles();
 }
@@ -348,7 +350,7 @@ function generateSelectiveChart() {
     unselectedNames.forEach(name => {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
-    
+    updateJigsawButtonVisibility();
     toggleDragAndDrop(!attendanceVisible); // Re-apply correct draggable state
     applyAttendanceStyles();
 }
@@ -374,6 +376,67 @@ function createGroupContainerElement(group, color) {
     container.style.gridColumn = `span ${parentSpan}`;
     group.forEach(studentName => container.appendChild(createSeatElement(studentName)));
     return container;
+}
+
+/**
+ * Checks the current groups and shows the Jigsaw button only if
+ * there are at least 2 groups and all groups have 3 or more students.
+ */
+function updateJigsawButtonVisibility() {
+    // Only proceed if the "in-class" buttons are visible
+    if (inClassButtons && !inClassButtons.classList.contains('hidden')) {
+        const groups = Array.from(seatingChartGrid.querySelectorAll('.group-container'));
+        
+        const allGroupsAreBigEnough = groups.every(group => group.querySelectorAll('.seat').length >= 3);
+        const canJigsaw = groups.length >= 2 && allGroupsAreBigEnough;
+
+        jigsawBtn.classList.toggle('hidden', !canJigsaw);
+    } else {
+        // Ensure the button is hidden if we're not in "in-class" mode
+        jigsawBtn.classList.add('hidden');
+    }
+}
+
+/**
+ * Reads the current groups and regroups them into new "jigsaw" groups,
+ * where each new group has one member from each original group.
+ */
+function generateJigsawGroups() {
+    const originalGroups = [];
+    seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
+        originalGroups.push(Array.from(container.querySelectorAll('.seat')).map(seat => seat.textContent));
+    });
+
+    // Final check before running, in case the button was visible erroneously
+    if (originalGroups.length < 2 || originalGroups.some(g => g.length < 3)) {
+        showErrorAlert("Jigsaw requires at least two groups, each with 3 or more students.");
+        return;
+    }
+
+    // The number of new groups will be the size of the largest original group
+    const maxGroupSize = Math.max(...originalGroups.map(g => g.length));
+    const newGroups = Array.from({ length: maxGroupSize }, () => []);
+
+    // This loop transposes the groups: students at the same position (index)
+    // in each original group are put together into a new group.
+    originalGroups.forEach(originalGroup => {
+        originalGroup.forEach((student, index) => {
+            newGroups[index].push(student);
+        });
+    });
+
+    // Render the new jigsawed groups to the DOM
+    seatingChartGrid.innerHTML = '';
+    newGroups.forEach((group, index) => {
+        if (group.length > 0) { // Don't render empty groups if original groups were uneven
+            const color = groupColors[index % groupColors.length];
+            seatingChartGrid.appendChild(createGroupContainerElement(group, color));
+        }
+    });
+
+    toggleDragAndDrop(!attendanceVisible); // Re-initialize draggable for the new elements
+    applyAttendanceStyles();
+    updateJigsawButtonVisibility(); // Re-check visibility, as new groups might not be eligible
 }
 
 /** Initializes the Teacher Tools page. */
@@ -469,6 +532,9 @@ async function initializePageSpecificApp() {
         }
     });
 
+    jigsawBtn.addEventListener('click', generateJigsawGroups);
+
+
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
             preselectedStudents.add(seat.textContent);
@@ -492,6 +558,7 @@ async function initializePageSpecificApp() {
         toolsContent.querySelectorAll('.seat.selected').forEach(seat => {
             preselectedStudents.add(seat.textContent);
         });
+        updateJigsawButtonVisibility();
         showSuccessAlert("Class started! You can now track participation.");
     });
 
