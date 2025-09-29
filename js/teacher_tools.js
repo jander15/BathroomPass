@@ -380,26 +380,25 @@ function createGroupContainerElement(group, color) {
 
 /**
  * Checks the current groups and shows the Jigsaw button only if
- * there are at least 2 groups and all groups have 3 or more students.
+ * there are at least 2 groups and all groups have 2 or more students.
  */
 function updateJigsawButtonVisibility() {
-    // Only proceed if the "in-class" buttons are visible
     if (inClassButtons && !inClassButtons.classList.contains('hidden')) {
         const groups = Array.from(seatingChartGrid.querySelectorAll('.group-container'));
         
+        // The condition is changed from >= 3 to >= 2
         const allGroupsAreBigEnough = groups.every(group => group.querySelectorAll('.seat').length >= 2);
         const canJigsaw = groups.length >= 2 && allGroupsAreBigEnough;
 
         jigsawBtn.classList.toggle('hidden', !canJigsaw);
     } else {
-        // Ensure the button is hidden if we're not in "in-class" mode
         jigsawBtn.classList.add('hidden');
     }
 }
 
 /**
  * Reads the current groups and regroups them into new "jigsaw" groups,
- * where each new group has one member from each original group.
+ * preventing any new group from having only one student.
  */
 function generateJigsawGroups() {
     const originalGroups = [];
@@ -407,36 +406,60 @@ function generateJigsawGroups() {
         originalGroups.push(Array.from(container.querySelectorAll('.seat')).map(seat => seat.textContent));
     });
 
-    // Final check before running, in case the button was visible erroneously
+    // Final check for the new condition (groups of 2+)
     if (originalGroups.length < 2 || originalGroups.some(g => g.length < 2)) {
         showErrorAlert("Jigsaw requires at least two groups, each with 2 or more students.");
         return;
     }
 
-    // The number of new groups will be the size of the smallest original group
-    const maxGroupSize = Math.min(...originalGroups.map(g => g.length));
-    const newGroups = Array.from({ length: maxGroupSize }, () => []);
+    const maxGroupSize = Math.max(...originalGroups.map(g => g.length));
+    const tempGroups = Array.from({ length: maxGroupSize }, () => []);
 
-    // This loop transposes the groups: students at the same position (index)
-    // in each original group are put together into a new group.
+    // Perform the initial "transpose" operation
     originalGroups.forEach(originalGroup => {
         originalGroup.forEach((student, index) => {
-            newGroups[index].push(student);
+            tempGroups[index].push(student);
         });
     });
 
-    // Render the new jigsawed groups to the DOM
+    // --- NEW: Algorithm to prevent groups of 1 ---
+    const finalGroups = [];
+    const leftovers = [];
+    // Separate the viable groups from the single-person "leftover" groups
+    tempGroups.forEach(group => {
+        if (group.length <= 1) {
+            leftovers.push(...group);
+        } else {
+            finalGroups.push(group);
+        }
+    });
+
+    // Distribute the leftovers evenly among the larger, final groups
+    if (finalGroups.length > 0) {
+        let groupIndex = 0;
+        leftovers.forEach(student => {
+            finalGroups[groupIndex % finalGroups.length].push(student);
+            groupIndex++;
+        });
+    } else if (leftovers.length > 0) {
+        // This handles the edge case where no groups of 2+ were formed.
+        // It puts all students into a single group to prevent data loss.
+        finalGroups.push(leftovers);
+    }
+    // --- End of new algorithm ---
+
+    // Render the new, balanced groups to the DOM
     seatingChartGrid.innerHTML = '';
-    newGroups.forEach((group, index) => {
-        if (group.length > 0) { // Don't render empty groups if original groups were uneven
+    finalGroups.forEach((group, index) => {
+        if (group.length > 0) {
             const color = groupColors[index % groupColors.length];
             seatingChartGrid.appendChild(createGroupContainerElement(group, color));
         }
     });
 
-    toggleDragAndDrop(!attendanceVisible); // Re-initialize draggable for the new elements
+    toggleDragAndDrop(!attendanceVisible);
     applyAttendanceStyles();
-    updateJigsawButtonVisibility(); // Re-check visibility, as new groups might not be eligible
+    updateJigsawButtonVisibility();
 }
 
 /** Initializes the Teacher Tools page. */
