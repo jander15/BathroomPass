@@ -387,7 +387,7 @@ function updateJigsawButtonVisibility() {
     if (inClassButtons && !inClassButtons.classList.contains('hidden')) {
         const groups = Array.from(seatingChartGrid.querySelectorAll('.group-container'));
         
-        const allGroupsAreBigEnough = groups.every(group => group.querySelectorAll('.seat').length >= 3);
+        const allGroupsAreBigEnough = groups.every(group => group.querySelectorAll('.seat').length >= 2);
         const canJigsaw = groups.length >= 2 && allGroupsAreBigEnough;
 
         jigsawBtn.classList.toggle('hidden', !canJigsaw);
