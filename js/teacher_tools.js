@@ -408,13 +408,13 @@ function generateJigsawGroups() {
     });
 
     // Final check before running, in case the button was visible erroneously
-    if (originalGroups.length < 2 || originalGroups.some(g => g.length < 3)) {
-        showErrorAlert("Jigsaw requires at least two groups, each with 3 or more students.");
+    if (originalGroups.length < 2 || originalGroups.some(g => g.length < 2)) {
+        showErrorAlert("Jigsaw requires at least two groups, each with 2 or more students.");
         return;
     }
 
-    // The number of new groups will be the size of the largest original group
-    const maxGroupSize = Math.max(...originalGroups.map(g => g.length));
+    // The number of new groups will be the size of the smallest original group
+    const maxGroupSize = Math.min(...originalGroups.map(g => g.length));
     const newGroups = Array.from({ length: maxGroupSize }, () => []);
 
     // This loop transposes the groups: students at the same position (index)
