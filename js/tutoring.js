@@ -15,7 +15,7 @@ let studentLookup, studentResults, durationInput, notesInput, tutoringForm, subm
 // History elements
 let historyStudentFilter, historyDateFilter, historyMessage, historyTable, historyTableBody;
 // Admin elements
-let reportMessage, reportTable, reportTableBody, tutorFilter, studentFilter, periodFilter, dateFilter, reloadDataBtn;
+let reportMessage, reportTable, reportTableBody, studentFilter, periodFilter, dateFilter, reloadDataBtn;
 // Modal elements
 let noteModal, noteModalContent, closeNoteModalBtn;
 let editModal, editStudentName, editDuration, editNotes, saveEditBtn, cancelEditBtn, deleteEntryBtn;
@@ -48,7 +48,6 @@ function cacheDOMElements() {
     reportMessage = document.getElementById('reportMessage');
     reportTable = document.getElementById('reportTable');
     reportTableBody = document.getElementById('reportTableBody');
-    tutorFilter = document.getElementById('tutorFilter');
     studentFilter = document.getElementById('studentFilter');
     periodFilter = document.getElementById('periodFilter');
     dateFilter = document.getElementById('dateFilter');
@@ -406,9 +405,6 @@ async function reloadData() {
         allTutoringLogs = response.logs;
 
         // Repopulate filters
-        const uniqueTutors = [...new Set(allTutoringLogs.map(entry => entry.TeacherEmail))].sort();
-        populateDropdown('tutorFilter', uniqueTutors, "All Tutors", "all");
-        
         const uniqueStudents = [...new Set(allTutoringLogs.map(entry => entry.StudentName))].sort();
         populateDropdown('studentFilter', uniqueStudents, "All Students", "all");
 
@@ -430,11 +426,6 @@ function renderAdminReport() {
     let filteredLogs = [...allTutoringLogs];
 
     // Apply all filters
-    const selectedTutor = tutorFilter.value;
-    if (selectedTutor !== 'all') {
-        filteredLogs = filteredLogs.filter(entry => entry.TeacherEmail === selectedTutor);
-    }
-
     const selectedStudent = studentFilter.value;
     if (selectedStudent !== 'all') {
         filteredLogs = filteredLogs.filter(entry => entry.StudentName === selectedStudent);
@@ -544,7 +535,6 @@ async function initializePageSpecificApp() {
         if (adminAuth.isAuthorized) {
             adminReportTab.classList.remove('hidden');
             adminReportTab.addEventListener('click', () => switchTab('admin'));
-            tutorFilter.addEventListener('change', renderAdminReport);
             studentFilter.addEventListener('change', renderAdminReport);
             periodFilter.addEventListener('change', renderAdminReport);
             dateFilter.addEventListener('change', renderAdminReport);
@@ -857,8 +847,6 @@ async function reloadData() {
             throw new Error(response.error || "Failed to get admin data.");
         }
         allTutoringLogs = response.logs;
-        const uniqueTutors = [...new Set(allTutoringLogs.map(entry => entry.TeacherEmail))].sort();
-        populateDropdown('tutorFilter', uniqueTutors, "All Tutors", "all");
         const uniqueStudents = [...new Set(allTutoringLogs.map(entry => entry.StudentName))].sort();
         populateDropdown('studentFilter', uniqueStudents, "All Students", "all");
         const uniquePeriods = [...new Set(allTutoringLogs.map(entry => entry.ClassName))].filter(p => p).sort();
@@ -874,8 +862,6 @@ async function reloadData() {
 }
 function renderAdminReport() {
     let filteredLogs = [...allTutoringLogs];
-    const selectedTutor = tutorFilter.value;
-    if (selectedTutor !== 'all') filteredLogs = filteredLogs.filter(entry => entry.TeacherEmail === selectedTutor);
     const selectedStudent = studentFilter.value;
     if (selectedStudent !== 'all') filteredLogs = filteredLogs.filter(entry => entry.StudentName === selectedStudent);
     const selectedPeriod = periodFilter.value;
