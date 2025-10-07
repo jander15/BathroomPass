@@ -327,7 +327,7 @@ async function saveEdit() {
         }
         // --- END: MODIFIED LOGIC ---
 
-        const entryToUpdate = tutoringLog.find(e => e.Timestamp === currentEditTimestamp);
+        const entryToUpdate = personalTutoringLogs.find(e => e.Timestamp === currentEditTimestamp);
         if (entryToUpdate) {
             entryToUpdate.DurationMinutes = parseInt(editDuration.value, 10);
             entryToUpdate.Notes = editNotes.value;
@@ -598,7 +598,7 @@ async function initializePageSpecificApp() {
             noteModal.classList.remove('hidden');
         } else if (editButton) {
             const timestamp = editButton.dataset.timestamp;
-            const entry = tutoringLog.find(e => e.Timestamp === timestamp);
+            const entry = personalTutoringLogs.find(e => e.Timestamp === timestamp);
             if (entry) openEditModal(entry);
         }
     });    
