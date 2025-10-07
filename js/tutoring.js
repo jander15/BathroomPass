@@ -161,7 +161,6 @@ async function handleFormSubmit(event) {
     const studentsPayload = selectedStudents.map(s => ({ studentName: s.StudentName, className: s.ClassName }));
 
     try {
-        // 1. Send the data to the server and get the official new entries back.
         const response = await sendAuthenticatedRequest({ 
             action: 'logTutoringSession', 
             students: studentsPayload, 
@@ -176,17 +175,19 @@ async function handleFormSubmit(event) {
 
         showSuccessAlert(`Session logged for ${selectedStudents.length} student(s)!`);
 
-        // 2. Add the server-confirmed entries to the beginning of our local log array.
-        tutoringLog.unshift(...response.newEntries);
-
-        // 3. Immediately re-render the history report with the official data.
+        // --- START FIX ---
+        // Add the new entries to BOTH the personal and admin logs
+        personalTutoringLogs.unshift(...response.newEntries);
+        allTutoringLogs.unshift(...response.newEntries); // Also update admin log if visible
+        
         renderHistoryReport();
 
-        // 4. Update the student filter dropdown with any new names.
-        const uniqueStudentsInLog = [...new Set(tutoringLog.map(entry => entry.StudentName))].sort();
+        // Use the correct array to update the filter dropdown
+        const uniqueStudentsInLog = [...new Set(personalTutoringLogs.map(entry => entry.StudentName))].sort();
+        // --- END FIX ---
+        
         populateDropdown('historyStudentFilter', uniqueStudentsInLog, "All Students", "all");
 
-        // 5. Reset the form.
         tutoringForm.reset();
         selectedStudents = [];
         renderSelectedStudents();
