@@ -207,7 +207,7 @@ function renderHistoryReport() {
     historyMessage.textContent = "Loading...";
     historyMessage.classList.remove('hidden');
 
-    let filteredLog = [...tutoringLog];
+    let filteredLog = [...personalTutoringLogs];
 
     // Apply student filter
     const studentFilter = historyStudentFilter.value;
@@ -376,7 +376,7 @@ async function deleteEntry() {
         }
         // --- END: MODIFIED LOGIC ---
 
-        tutoringLog = tutoringLog.filter(entry => entry.Timestamp !== currentEditTimestamp);
+        personalTutoringLogs = personalTutoringLogs.filter(entry => entry.Timestamp !== currentEditTimestamp);
         renderHistoryReport();
         showSuccessAlert("Entry deleted.");
     } catch (error) {
