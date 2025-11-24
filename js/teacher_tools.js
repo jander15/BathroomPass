@@ -482,11 +482,11 @@ function initializeQuill() {
             toolbar: [
                 [{ 'header': [1, 2, 3, false] }],
                 ['bold', 'italic', 'underline', 'strike'],
-                [{ 'color': [] }, { 'background': [] }], // Font color and background
+                [{ 'color': [] }, { 'background': [] }],
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                 [{ 'align': [] }],
-                ['image', 'link'], // Image upload and links
-                ['clean'] // Remove formatting
+                ['image', 'link', 'formula'], // Added 'formula' here
+                ['clean']
             ]
         }
     });
