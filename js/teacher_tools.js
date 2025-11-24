@@ -265,25 +265,26 @@ function toggleRolesPanelState(collapse) {
 function initializeQuill() {
     if (quillInstance) return;
 
-    // 1. Register the Image Resize module with Quill
-    // We wrap this in a try-catch block just in case the CDN failed to load,
-    // so it doesn't break the rest of the editor.
+    // 1. Register the Image Resize module
     try {
-        // 'ImageResize' is the global variable loaded by the new script tag in HTML
-        Quill.register('modules/imageResize', ImageResize);
+        // FIX: Check if the module is nested inside a '.default' property
+        // This resolves the "moduleClass is not a constructor" error.
+        let ResizeModule = ImageResize;
+        if (ResizeModule && typeof ResizeModule !== 'function' && ResizeModule.default) {
+            ResizeModule = ResizeModule.default;
+        }
+
+        Quill.register('modules/imageResize', ResizeModule);
     } catch (e) {
-        console.error("Could not register Image Resize module. Make sure the script tag is in HTML.", e);
+        console.error("Could not register Image Resize module.", e);
     }
 
-    // 2. Initialize Quill with the new module configuration
+    // 2. Initialize Quill
     quillInstance = new Quill('#quillEditorContainer', {
         theme: 'snow',
         modules: {
-            // NEW: Add imageResize configuration here
             imageResize: {
-                // You can add options here, but the defaults are usually good.
-                // displaySize: true shows the pixel dimensions while resizing.
-                displaySize: true 
+                displaySize: true
             },
             toolbar: [
                 [{ 'header': [1, 2, 3, false] }],
