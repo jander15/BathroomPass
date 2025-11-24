@@ -1,7 +1,7 @@
 // js/teacher_tools.js
 
 // --- DOM Element Caching ---
-let classDropdown, chartMessage, seatingChartGrid, instructionsArea, toolsContent;
+let classDropdown, chartMessage, seatingChartGrid, toolsContent;
 let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
@@ -24,6 +24,9 @@ let timeRemaining = 0;
 let timerInterval = null;
 let playIcon, pauseIcon;
 
+let quillInstance;
+let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
+
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
@@ -33,7 +36,6 @@ function cacheToolsDOMElements() {
     classDropdown = document.getElementById('classDropdown');
     chartMessage = document.getElementById('chartMessage');
     seatingChartGrid = document.getElementById('seatingChartGrid');
-    instructionsArea = document.getElementById('instructionsArea');
     toolsContent = document.getElementById('toolsContent');
     generatePairsBtn = document.getElementById('generatePairsBtn');
     generateThreesBtn = document.getElementById('generateThreesBtn');
@@ -62,6 +64,14 @@ function cacheToolsDOMElements() {
     seatContextMenu = document.getElementById('seatContextMenu');
     playIcon = document.getElementById('playIcon');
     pauseIcon = document.getElementById('pauseIcon');
+    modeTextBtn = document.getElementById('modeTextBtn');
+    modeEmbedBtn = document.getElementById('modeEmbedBtn');
+    embedControls = document.getElementById('embedControls');
+    embedUrlInput = document.getElementById('embedUrlInput');
+    loadEmbedBtn = document.getElementById('loadEmbedBtn');
+    quillEditorContainer = document.getElementById('quillEditorContainer');
+    embedContainer = document.getElementById('embedContainer');
+    contentFrame = document.getElementById('contentFrame');
 }
 
 /**
@@ -462,9 +472,79 @@ function generateJigsawGroups() {
     updateJigsawButtonVisibility();
 }
 
+/** Initializes the Quill Rich Text Editor. */
+function initializeQuill() {
+    if (quillInstance) return; // Already initialized
+
+    quillInstance = new Quill('#quillEditorContainer', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }], // Font color and background
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['image', 'link'], // Image upload and links
+                ['clean'] // Remove formatting
+            ]
+        }
+    });
+}
+
+/** Switches to the Text Editor view. */
+function showTextMode() {
+    modeTextBtn.classList.add('bg-blue-600', 'text-white');
+    modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700');
+    
+    modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700');
+    modeEmbedBtn.classList.remove('bg-blue-600', 'text-white');
+
+    embedControls.classList.add('hidden');
+    embedContainer.classList.add('hidden');
+    
+    // Show Quill (Quill wraps the container in its own structure)
+    document.querySelector('.ql-toolbar').classList.remove('hidden');
+    quillEditorContainer.classList.remove('hidden');
+}
+
+/** Switches to the Embed (Google Doc) view. */
+function showEmbedMode() {
+    modeEmbedBtn.classList.add('bg-blue-600', 'text-white');
+    modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700');
+
+    modeTextBtn.classList.add('bg-gray-200', 'text-gray-700');
+    modeTextBtn.classList.remove('bg-blue-600', 'text-white');
+
+    embedControls.classList.remove('hidden');
+    embedContainer.classList.remove('hidden');
+
+    // Hide Quill
+    document.querySelector('.ql-toolbar').classList.add('hidden');
+    quillEditorContainer.classList.add('hidden');
+}
+
+/** Loads the URL into the iframe. */
+function loadEmbedUrl() {
+    let url = embedUrlInput.value.trim();
+    if (!url) return;
+
+    // Simple check to ensure it's a valid URL structure
+    if (!url.startsWith('http')) {
+        url = 'https://' + url;
+    }
+
+    contentFrame.src = url;
+}
+
 /** Initializes the Teacher Tools page. */
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
+
+    initializeQuill();
+    modeTextBtn.addEventListener('click', showTextMode);
+    modeEmbedBtn.addEventListener('click', showEmbedMode);
+    loadEmbedBtn.addEventListener('click', loadEmbedUrl);
 
     groupBtns.forEach(btn => btn.disabled = true);
     

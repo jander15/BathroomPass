@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer onload="onGoogleLibraryLoad()"></script>
     <script src="https://cdn.jsdelivr.net/npm/@shopify/draggable@1.0.0-beta.12/lib/draggable.bundle.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 </head>
 <body class="flex flex-col items-center p-4 min-h-screen" id="body">
 
@@ -128,10 +130,22 @@
                         <button id="originalSeatingBtn" class="px-3 py-1 text-xs bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition-colors">Original Seating</button>
                         <button id="attendanceToggleBtn" class="px-3 py-1 text-xs bg-gray-600 text-white font-semibold rounded-md shadow-sm hover:bg-gray-700 transition-colors">Arrange Mode</button>                    </div>
                 </div>              
-                <div id="instructionsArea" 
-                     contenteditable="true" 
-                     class="w-full bg-white p-3 mt-4 border border-gray-300 rounded-md shadow-sm text-lg text-center text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                     data-placeholder="Click to add instructions for your students...">
+                <div class="w-full bg-white mt-4 border border-gray-300 rounded-md shadow-sm overflow-hidden">
+                    <div class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center">
+                        <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
+                        <button id="modeEmbedBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Google Doc/Slides</button>
+                        
+                        <div id="embedControls" class="hidden flex-grow flex gap-2 items-center ml-2">
+                            <input type="text" id="embedUrlInput" placeholder="Paste Google Doc/Slides Link here..." class="flex-grow p-1 text-sm border border-gray-300 rounded">
+                            <button id="loadEmbedBtn" class="px-3 py-1 text-xs bg-green-600 text-white rounded shadow-sm">Load</button>
+                        </div>
+                    </div>
+
+                    <div id="quillEditorContainer" class="bg-white" style="height: 300px;"></div>
+
+                    <div id="embedContainer" class="hidden w-full bg-white" style="height: 300px;">
+                        <iframe id="contentFrame" class="w-full h-full border-0"></iframe>
+                    </div>
                 </div>
                 <div id="seatingChartGrid" class="grid grid-cols-8 gap-4 mt-4">
                     </div>
