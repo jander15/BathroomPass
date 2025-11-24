@@ -299,3 +299,54 @@ input[type=number]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* --- Role Badges on Seats --- */
+.role-badge {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 2px 6px;
+    background-color: #e0e7ff; /* Indigo-100 */
+    color: #3730a3; /* Indigo-800 */
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid #c7d2fe;
+    pointer-events: none; /* Let clicks pass through to the seat */
+}
+
+/* Styles for the tags inside the Roles Panel */
+.role-tag {
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.role-tag.default {
+    background-color: white;
+    border-color: #d1d5db;
+    color: #374151;
+}
+.role-tag.default:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.role-tag.active {
+    background-color: #e0e7ff;
+    border-color: #6366f1;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.role-tag.active:hover {
+    background-color: #fee2e2; /* Red hover to indicate removal */
+    border-color: #ef4444;
+    color: #b91c1c;
+}
+

@@ -75,6 +75,45 @@
                 </svg>
             </button>
         </div>
+
+        <div id="rolesPanel" class="hidden fixed top-20 left-1/2 -translate-x-1/2 w-80 bg-white rounded-xl shadow-2xl z-50 border border-gray-200 flex flex-col font-sans overflow-hidden">
+            <div id="rolesHeader" class="bg-indigo-600 p-3 cursor-move flex justify-between items-center text-white">
+                <h3 class="font-bold text-sm">Manage Group Roles</h3>
+                <button id="closeRolesBtn" class="hover:text-indigo-200">&times;</button>
+            </div>
+
+            <div class="p-4 space-y-4 overflow-y-auto max-h-[80vh]">
+
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Active Roles</h4>
+                    <div id="activeRolesList" class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-50 rounded border border-gray-200">
+                        <span class="text-gray-400 text-xs italic p-1">No roles selected...</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="assignRolesBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-semibold hover:bg-indigo-700 shadow-sm">Assign Roles</button>
+                    <button id="shiftRolesBtn" class="flex-1 bg-amber-500 text-white py-2 rounded text-sm font-semibold hover:bg-amber-600 shadow-sm hidden">Shift ↻</button>
+                </div>
+                <button id="clearRolesBtn" class="w-full py-1 text-xs text-red-500 hover:text-red-700 border border-transparent hover:border-red-200 rounded">Clear Roles from Students</button>
+
+                <hr class="border-gray-200">
+
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Default Roles</h4>
+                    <div id="defaultRolesBank" class="flex flex-wrap gap-2">
+                        </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Add Custom</h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="customRoleInput" placeholder="Role name..." class="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <button id="addCustomRoleBtn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Randomized Seating Chart</h1>
         
@@ -120,6 +159,7 @@
                     
                     <button id="showTimerBtn" class="text-2xl text-gray-600 hover:text-purple-600 transition-all duration-200 hover:scale-110 p-1">⏱️</button>
                     <button id="toggleInstructionsBtn" class="text-2xl text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-110 p-1" title="Toggle Instructions">📝</button>
+                    <button id="rolesBtn" class="text-2xl text-gray-600 hover:text-indigo-600 transition-all duration-200 hover:scale-110 p-1" title="Group Roles">🎭</button>
                     <div id="setupButtons" class="flex items-center gap-x-4">
                         <button id="startClassBtn" class="px-3 py-1 text-xs bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition-colors disabled:bg-green-800 disabled:cursor-not-allowed">Start Class</button>
                         <button id="selectAllBtn" class="px-3 py-1 text-xs bg-blue-500 text-white font-semibold rounded-md shadow-sm hover:bg-blue-600 transition-colors">Select All</button>
@@ -128,7 +168,7 @@
 
                     <div id="inClassButtons" class="flex items-center gap-x-4 hidden">
                         <button id="jigsawBtn" class="hidden px-3 py-1 text-xs bg-teal-600 text-white font-semibold rounded-md shadow-sm hover:bg-teal-700 transition-colors">
-                            Jigsaw Groups
+                            🧩
                         </button>
                         <button id="originalSeatingBtn" class="px-3 py-1 text-xs bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition-colors">Original Seating</button>
                         <button id="attendanceToggleBtn" class="px-3 py-1 text-xs bg-gray-600 text-white font-semibold rounded-md shadow-sm hover:bg-gray-700 transition-colors">Arrange Mode</button>                    </div>
