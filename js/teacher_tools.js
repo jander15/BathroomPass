@@ -264,9 +264,37 @@ function toggleRolesPanelState(collapse) {
 // --- EDITOR FUNCTIONS ---
 function initializeQuill() {
     if (quillInstance) return;
+
+    // 1. Register the Image Resize module with Quill
+    // We wrap this in a try-catch block just in case the CDN failed to load,
+    // so it doesn't break the rest of the editor.
+    try {
+        // 'ImageResize' is the global variable loaded by the new script tag in HTML
+        Quill.register('modules/imageResize', ImageResize);
+    } catch (e) {
+        console.error("Could not register Image Resize module. Make sure the script tag is in HTML.", e);
+    }
+
+    // 2. Initialize Quill with the new module configuration
     quillInstance = new Quill('#quillEditorContainer', {
         theme: 'snow',
-        modules: { toolbar: [ [{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline', 'strike'], [{ 'color': [] }, { 'background': [] }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], [{ 'align': [] }], ['image', 'link', 'formula'], ['clean'] ] }
+        modules: {
+            // NEW: Add imageResize configuration here
+            imageResize: {
+                // You can add options here, but the defaults are usually good.
+                // displaySize: true shows the pixel dimensions while resizing.
+                displaySize: true 
+            },
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['image', 'link', 'formula'],
+                ['clean']
+            ]
+        }
     });
 }
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) { toolbar.classList.remove('hidden'); if(toggleToolbarBtn.textContent === "Show Tools") toolbar.classList.add('hidden'); } quillEditorContainer.classList.remove('hidden'); toggleToolbarBtn.classList.remove('hidden'); }
