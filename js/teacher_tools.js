@@ -32,12 +32,28 @@ let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
+let rolesFullContent, rolesMiniContent, toggleRolesViewBtn, miniShiftBtn;
+let isRolesPanelCollapsed = false;
 let activeRoles = [];
 let roleRotationIndex = 0;
 const defaultRoles = ["Facilitator", "Recorder", "Presenter", "Timekeeper", "Materials", "Reflector", "Encourager", "Spy"];
 
+
+
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
+
+// Palette excluding Yellow, Green, and Blue to avoid attendance conflicts
+const roleColors = [
+    'bg-red-100 text-red-800 border-red-200',
+    'bg-orange-100 text-orange-800 border-orange-200',
+    'bg-purple-100 text-purple-800 border-purple-200',
+    'bg-pink-100 text-pink-800 border-pink-200',
+    'bg-gray-100 text-gray-800 border-gray-200',
+    'bg-rose-100 text-rose-800 border-rose-200',
+    'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+    'bg-stone-200 text-stone-800 border-stone-300'
+];
 
 /** Caches all DOM elements specific to the Teacher Tools page. */
 function cacheToolsDOMElements() {
@@ -92,6 +108,10 @@ function cacheToolsDOMElements() {
     rolesPanel = document.getElementById('rolesPanel');
     rolesHeader = document.getElementById('rolesHeader');
     closeRolesBtn = document.getElementById('closeRolesBtn');
+    rolesFullContent = document.getElementById('rolesFullContent');
+    rolesMiniContent = document.getElementById('rolesMiniContent');
+    toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
+    miniShiftBtn = document.getElementById('miniShiftBtn');
     activeRolesList = document.getElementById('activeRolesList');
     assignRolesBtn = document.getElementById('assignRolesBtn');
     shiftRolesBtn = document.getElementById('shiftRolesBtn');
@@ -136,12 +156,16 @@ function renderRolesUI() {
     } else {
         activeRoles.forEach((role, index) => {
             const tag = document.createElement('div');
-            tag.className = 'role-tag active';
+            // Cycle through the color palette based on index
+            const colorClass = roleColors[index % roleColors.length];
+            
+            tag.className = `role-tag active ${colorClass}`;
             tag.innerHTML = `${role} <span class="ml-1 font-bold">&times;</span>`;
             tag.onclick = () => removeRole(index);
             activeRolesList.appendChild(tag);
         });
     }
+    
     defaultRolesBank.innerHTML = '';
     defaultRoles.forEach(role => {
         if (!activeRoles.includes(role)) {
@@ -159,23 +183,33 @@ function removeRole(index) { activeRoles.splice(index, 1); renderRolesUI(); }
 function handleCustomRoleAdd() { const name = customRoleInput.value.trim(); if (name) { addRole(name); customRoleInput.value = ''; } }
 
 function assignRolesToGroups() {
-    if (activeRoles.length === 0) { showErrorAlert("Please add at least one role."); return; }
+    if (activeRoles.length === 0) { 
+        showErrorAlert("Please add at least one role."); 
+        return; 
+    }
     roleRotationIndex = 0;
     shiftRolesBtn.classList.remove('hidden');
     distributeRoles();
     showSuccessAlert("Roles assigned!");
+    
+    // NEW: Auto-collapse the panel
+    toggleRolesPanelState(true);
 }
 
 function shiftRoles() { roleRotationIndex++; distributeRoles(); }
 
 function distributeRoles() {
     const groups = document.querySelectorAll('.group-container');
+    
     groups.forEach(group => {
         const seats = Array.from(group.querySelectorAll('.seat'));
         if (seats.length === 0) return;
         
         // Clear existing badges
-        seats.forEach(seat => { const b = seat.querySelector('.role-badge'); if(b) b.remove(); });
+        seats.forEach(seat => { 
+            const b = seat.querySelector('.role-badge'); 
+            if(b) b.remove(); 
+        });
 
         // Create roster of roles for this group
         let currentGroupRoles = [];
@@ -192,7 +226,12 @@ function distributeRoles() {
             const role = currentGroupRoles[index];
             if (role) {
                 const badge = document.createElement('span');
-                badge.className = 'role-badge';
+                
+                // Find the original index of this role to apply the matching color
+                const roleIndex = activeRoles.indexOf(role);
+                const colorClass = roleIndex > -1 ? roleColors[roleIndex % roleColors.length] : 'bg-gray-100 text-gray-800 border-gray-200';
+
+                badge.className = `role-badge ${colorClass}`;
                 badge.textContent = role;
                 seat.appendChild(badge);
             }
@@ -204,6 +243,22 @@ function clearRoles() {
     document.querySelectorAll('.role-badge').forEach(el => el.remove());
     shiftRolesBtn.classList.add('hidden');
     roleRotationIndex = 0;
+}
+
+function toggleRolesPanelState(collapse) {
+    isRolesPanelCollapsed = collapse;
+    
+    if (collapse) {
+        rolesFullContent.classList.add('hidden');
+        rolesMiniContent.classList.remove('hidden');
+        // Rotate icon to indicate it can be expanded
+        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
+    } else {
+        rolesFullContent.classList.remove('hidden');
+        rolesMiniContent.classList.add('hidden');
+        // Rotate icon to indicate it can be collapsed
+        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
+    }
 }
 
 // --- EDITOR FUNCTIONS ---
@@ -359,6 +414,11 @@ async function initializePageSpecificApp() {
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { rolesPanel.classList.remove('hidden'); renderRolesUI(); });
+    toggleRolesViewBtn.addEventListener('click', () => {
+        toggleRolesPanelState(!isRolesPanelCollapsed);
+    });
+    
+    miniShiftBtn.addEventListener('click', shiftRoles);
     closeRolesBtn.addEventListener('click', () => rolesPanel.classList.add('hidden'));
     addCustomRoleBtn.addEventListener('click', handleCustomRoleAdd);
     customRoleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCustomRoleAdd(); });

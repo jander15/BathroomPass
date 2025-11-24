@@ -299,23 +299,21 @@ input[type=number]::-webkit-outer-spin-button {
   margin: 0;
 }
 
-/* --- Role Badges on Seats --- */
+/* --- Group Roles Styles --- */
 .role-badge {
     display: block;
     margin-top: 4px;
     font-size: 0.7rem;
     line-height: 1;
     padding: 2px 6px;
-    background-color: #e0e7ff; /* Indigo-100 */
-    color: #3730a3; /* Indigo-800 */
     border-radius: 999px;
     font-weight: 600;
     text-transform: uppercase;
-    border: 1px solid #c7d2fe;
-    pointer-events: none; /* Let clicks pass through to the seat */
+    border: 1px solid; /* Color defined by JS */
+    pointer-events: none; 
 }
 
-/* Styles for the tags inside the Roles Panel */
+/* Roles Panel Tags */
 .role-tag {
     cursor: pointer;
     font-size: 0.75rem;
@@ -324,6 +322,9 @@ input[type=number]::-webkit-outer-spin-button {
     border: 1px solid;
     transition: all 0.2s;
     user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .role-tag.default {
@@ -337,16 +338,10 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 .role-tag.active {
-    background-color: #e0e7ff;
-    border-color: #6366f1;
-    color: #4338ca;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    /* Base styles for active tags; colors are now handled by Tailwind classes in JS */
+    font-weight: 500;
 }
 .role-tag.active:hover {
-    background-color: #fee2e2; /* Red hover to indicate removal */
-    border-color: #ef4444;
-    color: #b91c1c;
+    opacity: 0.8;
+    text-decoration: line-through;
 }
-
