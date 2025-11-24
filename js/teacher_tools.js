@@ -1,7 +1,7 @@
 // js/teacher_tools.js
 
 // --- DOM Element Caching ---
-let classDropdown, chartMessage, seatingChartGrid, toolsContent;
+let classDropdown, seatingChartGrid, toolsContent;
 let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
@@ -11,7 +11,8 @@ let setupButtons, inClassButtons;
 let groupBtns = [];
 let sortableInstance = null;
 let seatContextMenu;
-let moreOptionsBtn, moreOptionsMenu;
+// New Icons and Display
+let iconToArrange, iconToAttendance, studentCountDisplay;
 
 // --- State Tracking ---
 let classStarted = false;
@@ -33,33 +34,22 @@ let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
-let rolesFullContent, rolesMiniContent, toggleRolesViewBtn, miniShiftBtn;
-let isRolesPanelCollapsed = false;
 let activeRoles = [];
 let roleRotationIndex = 0;
 const defaultRoles = ["Facilitator", "Recorder", "Presenter", "Timekeeper", "Materials", "Reflector", "Encourager", "Spy"];
 
-
+// Menu State
+let moreOptionsBtn, moreOptionsMenu;
+let rolesFullContent, rolesMiniContent, toggleRolesViewBtn, miniShiftBtn;
+let isRolesPanelCollapsed = false;
 
 // --- Color Palette for Groups ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
-
-// Palette excluding Yellow, Green, and Blue to avoid attendance conflicts
-const roleColors = [
-    'bg-red-100 text-red-800 border-red-200',
-    'bg-orange-100 text-orange-800 border-orange-200',
-    'bg-purple-100 text-purple-800 border-purple-200',
-    'bg-pink-100 text-pink-800 border-pink-200',
-    'bg-gray-100 text-gray-800 border-gray-200',
-    'bg-rose-100 text-rose-800 border-rose-200',
-    'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
-    'bg-stone-200 text-stone-800 border-stone-300'
-];
+const roleColors = [ 'bg-red-100 text-red-800 border-red-200', 'bg-orange-100 text-orange-800 border-orange-200', 'bg-purple-100 text-purple-800 border-purple-200', 'bg-pink-100 text-pink-800 border-pink-200', 'bg-gray-100 text-gray-800 border-gray-200', 'bg-rose-100 text-rose-800 border-rose-200', 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200', 'bg-stone-200 text-stone-800 border-stone-300' ];
 
 /** Caches all DOM elements specific to the Teacher Tools page. */
 function cacheToolsDOMElements() {
     classDropdown = document.getElementById('classDropdown');
-    chartMessage = document.getElementById('chartMessage');
     seatingChartGrid = document.getElementById('seatingChartGrid');
     toolsContent = document.getElementById('toolsContent');
     generatePairsBtn = document.getElementById('generatePairsBtn');
@@ -76,12 +66,10 @@ function cacheToolsDOMElements() {
     setupButtons = document.getElementById('setupButtons');
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
-    moreOptionsBtn = document.getElementById('moreOptionsBtn');
-    moreOptionsMenu = document.getElementById('moreOptionsMenu');
-
+    
     showTimerBtn = document.getElementById('showTimerBtn');
     jigsawBtn = document.getElementById('jigsawBtn');
-    rolesBtn = document.getElementById('rolesBtn'); // New
+    rolesBtn = document.getElementById('rolesBtn'); 
 
     timerContainer = document.getElementById('timerContainer');
     timerHeader = document.getElementById('timerHeader');
@@ -111,10 +99,6 @@ function cacheToolsDOMElements() {
     rolesPanel = document.getElementById('rolesPanel');
     rolesHeader = document.getElementById('rolesHeader');
     closeRolesBtn = document.getElementById('closeRolesBtn');
-    rolesFullContent = document.getElementById('rolesFullContent');
-    rolesMiniContent = document.getElementById('rolesMiniContent');
-    toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
-    miniShiftBtn = document.getElementById('miniShiftBtn');
     activeRolesList = document.getElementById('activeRolesList');
     assignRolesBtn = document.getElementById('assignRolesBtn');
     shiftRolesBtn = document.getElementById('shiftRolesBtn');
@@ -122,6 +106,19 @@ function cacheToolsDOMElements() {
     defaultRolesBank = document.getElementById('defaultRolesBank');
     customRoleInput = document.getElementById('customRoleInput');
     addCustomRoleBtn = document.getElementById('addCustomRoleBtn');
+    rolesFullContent = document.getElementById('rolesFullContent');
+    rolesMiniContent = document.getElementById('rolesMiniContent');
+    toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
+    miniShiftBtn = document.getElementById('miniShiftBtn');
+
+    // More Menu
+    moreOptionsBtn = document.getElementById('moreOptionsBtn');
+    moreOptionsMenu = document.getElementById('moreOptionsMenu');
+
+    // New Icons & Displays
+    iconToArrange = document.getElementById('iconToArrange');
+    iconToAttendance = document.getElementById('iconToAttendance');
+    studentCountDisplay = document.getElementById('studentCountDisplay');
 }
 
 function makeElementDraggable(element, handle) {
@@ -133,14 +130,30 @@ function makeElementDraggable(element, handle) {
 }
 
 // --- HELPER: Get Student Name Safely ---
-// This extracts the text from the .student-name span, ignoring any badges.
 function getStudentNameFromSeat(seat) {
     const nameSpan = seat.querySelector('.student-name');
     if (nameSpan) return nameSpan.textContent;
-    // Fallback for legacy seats or if structure changes
     const clone = seat.cloneNode(true);
     clone.querySelectorAll('.role-badge').forEach(b => b.remove());
     return clone.textContent.trim();
+}
+
+// --- STUDENT COUNT HELPER ---
+function updateStudentCount() {
+    if (!appState.data.allNamesFromSheet || !classDropdown.value) return;
+    
+    // Total students in roster for this class
+    const currentClass = classDropdown.value;
+    const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
+    
+    // Present students: Everyone marked present (green) OR participated (yellow)
+    // In "Setup" mode (before start), preselectedStudents are the ones "Present".
+    // Once class starts, both sets count as "Present".
+    const presentCount = preselectedStudents.size + participatedStudents.size;
+    
+    if (studentCountDisplay) {
+        studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
+    }
 }
 
 // --- TIMER FUNCTIONS ---
@@ -159,16 +172,13 @@ function renderRolesUI() {
     } else {
         activeRoles.forEach((role, index) => {
             const tag = document.createElement('div');
-            // Cycle through the color palette based on index
             const colorClass = roleColors[index % roleColors.length];
-            
             tag.className = `role-tag active ${colorClass}`;
             tag.innerHTML = `${role} <span class="ml-1 font-bold">&times;</span>`;
             tag.onclick = () => removeRole(index);
             activeRolesList.appendChild(tag);
         });
     }
-    
     defaultRolesBank.innerHTML = '';
     defaultRoles.forEach(role => {
         if (!activeRoles.includes(role)) {
@@ -185,17 +195,25 @@ function addRole(roleName) { if (roleName && !activeRoles.includes(roleName)) { 
 function removeRole(index) { activeRoles.splice(index, 1); renderRolesUI(); }
 function handleCustomRoleAdd() { const name = customRoleInput.value.trim(); if (name) { addRole(name); customRoleInput.value = ''; } }
 
-function assignRolesToGroups() {
-    if (activeRoles.length === 0) { 
-        showErrorAlert("Please add at least one role."); 
-        return; 
+function toggleRolesPanelState(collapse) {
+    isRolesPanelCollapsed = collapse;
+    if (collapse) {
+        rolesFullContent.classList.add('hidden');
+        rolesMiniContent.classList.remove('hidden');
+        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
+    } else {
+        rolesFullContent.classList.remove('hidden');
+        rolesMiniContent.classList.add('hidden');
+        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
     }
+}
+
+function assignRolesToGroups() {
+    if (activeRoles.length === 0) { showErrorAlert("Please add at least one role."); return; }
     roleRotationIndex = 0;
     shiftRolesBtn.classList.remove('hidden');
     distributeRoles();
     showSuccessAlert("Roles assigned!");
-    
-    // NEW: Auto-collapse the panel
     toggleRolesPanelState(true);
 }
 
@@ -203,37 +221,23 @@ function shiftRoles() { roleRotationIndex++; distributeRoles(); }
 
 function distributeRoles() {
     const groups = document.querySelectorAll('.group-container');
-    
     groups.forEach(group => {
         const seats = Array.from(group.querySelectorAll('.seat'));
         if (seats.length === 0) return;
-        
-        // Clear existing badges
-        seats.forEach(seat => { 
-            const b = seat.querySelector('.role-badge'); 
-            if(b) b.remove(); 
-        });
-
-        // Create roster of roles for this group
+        seats.forEach(seat => { const b = seat.querySelector('.role-badge'); if(b) b.remove(); });
         let currentGroupRoles = [];
         for(let i=0; i<seats.length; i++) {
             if (i < activeRoles.length) currentGroupRoles.push(activeRoles[i]);
             else currentGroupRoles.push(null);
         }
-        
-        // Rotate logic
         const rotation = roleRotationIndex % Math.max(seats.length, activeRoles.length);
         for(let r=0; r<rotation; r++) currentGroupRoles.unshift(currentGroupRoles.pop());
-
         seats.forEach((seat, index) => {
             const role = currentGroupRoles[index];
             if (role) {
                 const badge = document.createElement('span');
-                
-                // Find the original index of this role to apply the matching color
                 const roleIndex = activeRoles.indexOf(role);
                 const colorClass = roleIndex > -1 ? roleColors[roleIndex % roleColors.length] : 'bg-gray-100 text-gray-800 border-gray-200';
-
                 badge.className = `role-badge ${colorClass}`;
                 badge.textContent = role;
                 seat.appendChild(badge);
@@ -248,56 +252,19 @@ function clearRoles() {
     roleRotationIndex = 0;
 }
 
-function toggleRolesPanelState(collapse) {
-    isRolesPanelCollapsed = collapse;
-    
-    if (collapse) {
-        rolesFullContent.classList.add('hidden');
-        rolesMiniContent.classList.remove('hidden');
-        // Rotate icon to indicate it can be expanded
-        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
-    } else {
-        rolesFullContent.classList.remove('hidden');
-        rolesMiniContent.classList.add('hidden');
-        // Rotate icon to indicate it can be collapsed
-        toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
-    }
-}
-
 // --- EDITOR FUNCTIONS ---
 function initializeQuill() {
     if (quillInstance) return;
-
-    // 1. Register the Image Resize module
     try {
-        // FIX: Check if the module is nested inside a '.default' property
-        // This resolves the "moduleClass is not a constructor" error.
         let ResizeModule = ImageResize;
-        if (ResizeModule && typeof ResizeModule !== 'function' && ResizeModule.default) {
-            ResizeModule = ResizeModule.default;
-        }
-
+        if (ResizeModule && typeof ResizeModule !== 'function' && ResizeModule.default) { ResizeModule = ResizeModule.default; }
         Quill.register('modules/imageResize', ResizeModule);
-    } catch (e) {
-        console.error("Could not register Image Resize module.", e);
-    }
-
-    // 2. Initialize Quill
+    } catch (e) { console.error("Could not register Image Resize module.", e); }
     quillInstance = new Quill('#quillEditorContainer', {
         theme: 'snow',
         modules: {
-            imageResize: {
-                displaySize: true
-            },
-            toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'align': [] }],
-                ['image', 'link', 'formula'],
-                ['clean']
-            ]
+            imageResize: { displaySize: true },
+            toolbar: [ [{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline', 'strike'], [{ 'color': [] }, { 'background': [] }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], [{ 'align': [] }], ['image', 'link', 'formula'], ['clean'] ]
         }
     });
 }
@@ -337,9 +304,9 @@ function createStudentGroupsByCount(students, groupCount) {
 function captureSeatingState() {
     const groups = [];
     seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
-        groups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); // UPDATED
+        groups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); 
     });
-    const unselected = Array.from(unselectedStudentsGrid.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); // UPDATED
+    const unselected = Array.from(unselectedStudentsGrid.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); 
     return { groups, unselected };
 }
 
@@ -347,18 +314,19 @@ function renderSeatingState(seatingState) {
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     seatingState.groups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     seatingState.unselected.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles();
+    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles(); updateStudentCount();
 }
 
 function applyAttendanceStyles() {
     toolsContent.querySelectorAll('.seat').forEach(seat => {
-        const studentName = getStudentNameFromSeat(seat); // UPDATED
+        const studentName = getStudentNameFromSeat(seat); 
         const isPreselected = preselectedStudents.has(studentName);
         const hasParticipated = participatedStudents.has(studentName);
         seat.classList.remove('selected', 'participated', 'attendance-hidden');
         if (attendanceVisible) { if (isPreselected) seat.classList.add('selected'); if (hasParticipated) seat.classList.add('participated'); }
         else { if (isPreselected || hasParticipated) seat.classList.add('attendance-hidden'); }
     });
+    updateStudentCount(); // Ensure count updates whenever styles change
 }
 
 function generateInitialChart() {
@@ -366,15 +334,16 @@ function generateInitialChart() {
     classStarted = false; originalSeating = null; attendanceVisible = true; preselectedStudents.clear(); participatedStudents.clear();
     setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
-    chartMessage.textContent = `Seating Chart for ${selectedClass} (${students.length} students)`;
+    // No chartMessage update needed (removed)
     const initialGroups = createStudentGroupsBySize(students, 2);
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     toggleDragAndDrop(false);
+    updateStudentCount(); // Update count initially
 }
 
 function generateSelectiveChart() {
-    const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); // UPDATED
+    const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); 
     const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
     const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
     if (namesToRegroup.length === 0) { showErrorAlert("No students are selected."); return; }
@@ -386,12 +355,11 @@ function generateSelectiveChart() {
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     generatedGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     unselectedNames.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles();
+    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateStudentCount();
 }
 
 function createSeatElement(studentName) {
     const seat = document.createElement('div');
-    // UPDATED: Name is now in a span to separate it from future role badges
     seat.className = 'seat draggable-item bg-white p-2 border border-gray-300 rounded-md shadow-sm text-center text-sm flex flex-col items-center justify-center min-h-[60px] font-semibold cursor-pointer';
     const nameSpan = document.createElement('span');
     nameSpan.className = 'student-name pointer-events-none';
@@ -419,7 +387,7 @@ function updateJigsawButtonVisibility() {
 function generateJigsawGroups() {
     const originalGroups = [];
     seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
-        originalGroups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); // UPDATED
+        originalGroups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); 
     });
     if (originalGroups.length < 2 || originalGroups.some(g => g.length < 2)) { showErrorAlert("Jigsaw requires 2+ groups of 2+ students."); return; }
     const maxGroupSize = Math.max(...originalGroups.map(g => g.length));
@@ -437,11 +405,6 @@ function generateJigsawGroups() {
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
     initializeQuill();
-    // --- MORE MENU LOGIC ---
-    moreOptionsBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent the global click from immediately closing it
-        moreOptionsMenu.classList.toggle('hidden');
-    });
     
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
@@ -450,12 +413,11 @@ async function initializePageSpecificApp() {
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
 
     // Roles Listeners
-    rolesBtn.addEventListener('click', () => { rolesPanel.classList.remove('hidden'); renderRolesUI(); });
-    toggleRolesViewBtn.addEventListener('click', () => {
-        toggleRolesPanelState(!isRolesPanelCollapsed);
+    rolesBtn.addEventListener('click', () => { 
+        rolesPanel.classList.remove('hidden'); 
+        renderRolesUI(); 
+        toggleRolesPanelState(false);
     });
-    
-    miniShiftBtn.addEventListener('click', shiftRoles);
     closeRolesBtn.addEventListener('click', () => rolesPanel.classList.add('hidden'));
     addCustomRoleBtn.addEventListener('click', handleCustomRoleAdd);
     customRoleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCustomRoleAdd(); });
@@ -463,6 +425,14 @@ async function initializePageSpecificApp() {
     shiftRolesBtn.addEventListener('click', shiftRoles);
     clearRolesBtn.addEventListener('click', clearRoles);
     makeElementDraggable(rolesPanel, rolesHeader);
+    toggleRolesViewBtn.addEventListener('click', () => toggleRolesPanelState(!isRolesPanelCollapsed));
+    miniShiftBtn.addEventListener('click', shiftRoles);
+
+    // More Menu Listeners
+    moreOptionsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moreOptionsMenu.classList.toggle('hidden');
+    });
 
     groupBtns.forEach(btn => btn.disabled = true);
     groupBtns.forEach(btn => { btn.addEventListener('click', (e) => { updateActiveButton(e.currentTarget); generateSelectiveChart(); }); });
@@ -471,7 +441,7 @@ async function initializePageSpecificApp() {
     toolsContent.addEventListener('contextmenu', (event) => {
         const seat = event.target.closest('.seat'); if (!seat) return;
         event.preventDefault();
-        const studentName = getStudentNameFromSeat(seat); // UPDATED
+        const studentName = getStudentNameFromSeat(seat); 
         const menuHtml = `<button class="context-menu-btn" data-action="markPresent" data-student="${studentName}">Mark as Present (Green)</button><button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button><div class="context-menu-divider"></div><button class="context-menu-btn" data-action="deselect" data-student="${studentName}">Deselect</button>`;
         seatContextMenu.innerHTML = menuHtml;
         seatContextMenu.style.top = `${event.pageY}px`; seatContextMenu.style.left = `${event.pageX}px`;
@@ -488,15 +458,17 @@ async function initializePageSpecificApp() {
     });
 
     document.addEventListener('click', (event) => {
-        // Close More Menu
+        if (event.target.closest('#seatContextMenu')) return;
+        if (!seatContextMenu.classList.contains('hidden')) seatContextMenu.classList.add('hidden');
+        
+        // Hide More Menu if clicked outside
         if (!moreOptionsBtn.contains(event.target) && !moreOptionsMenu.contains(event.target)) {
             moreOptionsMenu.classList.add('hidden');
         }
-        if (event.target.closest('#seatContextMenu')) return;
-        if (!seatContextMenu.classList.contains('hidden')) seatContextMenu.classList.add('hidden');
+
         const seat = event.target.closest('.seat');
         if (seat) {
-            const studentName = getStudentNameFromSeat(seat); // UPDATED
+            const studentName = getStudentNameFromSeat(seat); 
             if (classStarted) {
                 if (preselectedStudents.has(studentName)) preselectedStudents.delete(studentName);
                 else if (participatedStudents.has(studentName)) participatedStudents.delete(studentName);
@@ -510,19 +482,38 @@ async function initializePageSpecificApp() {
     });
 
     jigsawBtn.addEventListener('click', generateJigsawGroups);
-    selectAllBtn.addEventListener('click', () => { toolsContent.querySelectorAll('.seat').forEach(seat => preselectedStudents.add(getStudentNameFromSeat(seat))); applyAttendanceStyles(); }); // UPDATED
+    selectAllBtn.addEventListener('click', () => { toolsContent.querySelectorAll('.seat').forEach(seat => preselectedStudents.add(getStudentNameFromSeat(seat))); applyAttendanceStyles(); }); 
     deselectAllBtn.addEventListener('click', () => { preselectedStudents.clear(); participatedStudents.clear(); applyAttendanceStyles(); });
     
     startClassBtn.addEventListener('click', () => {
         classStarted = true; originalSeating = captureSeatingState();
         setupButtons.classList.add('hidden'); inClassButtons.classList.remove('hidden');
         originalSeatingBtn.disabled = false; preselectedStudents.clear();
-        toolsContent.querySelectorAll('.seat.selected').forEach(seat => preselectedStudents.add(getStudentNameFromSeat(seat))); // UPDATED
+        toolsContent.querySelectorAll('.seat.selected').forEach(seat => preselectedStudents.add(getStudentNameFromSeat(seat))); 
         updateJigsawButtonVisibility(); showSuccessAlert("Class started!");
     });
 
     originalSeatingBtn.addEventListener('click', () => { if (originalSeating) renderSeatingState(originalSeating); });
-    attendanceToggleBtn.addEventListener('click', () => { attendanceVisible = !attendanceVisible; attendanceToggleBtn.textContent = attendanceVisible ? "Arrange Mode" : "Attendance Mode"; toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); });
+    
+    // Updated Toggle Logic for Dual Icons
+    attendanceToggleBtn.addEventListener('click', () => { 
+        attendanceVisible = !attendanceVisible; 
+        
+        // Toggle Icons
+        if (attendanceVisible) {
+            // In Attendance Mode (show icon to switch to Arrange)
+            iconToArrange.classList.add('hidden');
+            iconToAttendance.classList.remove('hidden');
+        } else {
+            // In Arrange Mode (show icon to switch to Attendance)
+            iconToArrange.classList.remove('hidden');
+            iconToAttendance.classList.add('hidden');
+        }
+        
+        toggleDragAndDrop(!attendanceVisible); 
+        applyAttendanceStyles(); 
+    });
+
     showTimerBtn.addEventListener('click', () => { timerContainer.classList.remove('hidden'); });
     timerHideBtn.addEventListener('click', () => { timerContainer.classList.add('hidden'); stopTimerSound(); });
     timerPlayPauseBtn.addEventListener('click', () => { if (timerInterval) pauseTimer(); else playTimer(); });
@@ -542,11 +533,11 @@ function resetPageSpecificAppState() {
     if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
     classStarted = false; originalSeating = null; attendanceVisible = true;
     preselectedStudents.clear(); participatedStudents.clear();
-    activeRoles = []; roleRotationIndex = 0; // Reset roles
+    activeRoles = []; roleRotationIndex = 0;
     if (setupButtons) setupButtons.classList.remove('hidden');
     if (inClassButtons) inClassButtons.classList.add('hidden');
     if (classDropdown) populateDropdown('classDropdown', [], DEFAULT_CLASS_OPTION, "");
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
-    if (chartMessage) chartMessage.textContent = "Select a class and click a button to generate a chart.";
+    if (studentCountDisplay) studentCountDisplay.textContent = "";
 }
