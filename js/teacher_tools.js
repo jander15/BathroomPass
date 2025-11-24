@@ -26,6 +26,8 @@ let playIcon, pauseIcon;
 
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
+// NEW variables
+let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
 
 
 // --- Color Palette for Groups ---
@@ -52,7 +54,7 @@ function cacheToolsDOMElements() {
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
     showTimerBtn = document.getElementById('showTimerBtn');
-    jigsawBtn = document.getElementById('jigsawBtn'); // <-- Add this line
+    jigsawBtn = document.getElementById('jigsawBtn');
     timerContainer = document.getElementById('timerContainer');
     timerHeader = document.getElementById('timerHeader');
     timerHideBtn = document.getElementById('timerHideBtn');
@@ -64,6 +66,7 @@ function cacheToolsDOMElements() {
     seatContextMenu = document.getElementById('seatContextMenu');
     playIcon = document.getElementById('playIcon');
     pauseIcon = document.getElementById('pauseIcon');
+    
     modeTextBtn = document.getElementById('modeTextBtn');
     modeEmbedBtn = document.getElementById('modeEmbedBtn');
     embedControls = document.getElementById('embedControls');
@@ -72,12 +75,15 @@ function cacheToolsDOMElements() {
     quillEditorContainer = document.getElementById('quillEditorContainer');
     embedContainer = document.getElementById('embedContainer');
     contentFrame = document.getElementById('contentFrame');
+    
+    // NEW Caching
+    toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
+    instructionContainer = document.getElementById('instructionContainer');
+    toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
 }
 
 /**
  * Makes an HTML element draggable by its handle.
- * @param {HTMLElement} element The element to drag.
- * @param {HTMLElement} handle The part of the element that starts the drag.
  */
 function makeElementDraggable(element, handle) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -123,8 +129,8 @@ function updateTimerDisplay() {
 }
 
 function playTimer() {
-    stopTimerSound()
-    if (timerInterval) return; // Already running
+    stopTimerSound();
+    if (timerInterval) return;
 
     if (timeRemaining <= 0) {
         const minutes = parseInt(timerMinutesInput.value, 10) || 0;
@@ -133,8 +139,8 @@ function playTimer() {
     }
 
     if (timeRemaining > 0) {
-        playIcon.classList.add('hidden');    // Hide play icon
-        pauseIcon.classList.remove('hidden'); // Show pause icon
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
         
         timerInterval = setInterval(() => {
             timeRemaining--;
@@ -142,8 +148,8 @@ function playTimer() {
             if (timeRemaining <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                pauseIcon.classList.add('hidden');  // Hide pause icon
-                playIcon.classList.remove('hidden'); // Show play icon
+                pauseIcon.classList.add('hidden');
+                playIcon.classList.remove('hidden');
                 timerAudio.play();
                 showSuccessAlert("Time's up!");
             }
@@ -151,23 +157,21 @@ function playTimer() {
     }
 }
 
-/** Pauses the timer. */
 function pauseTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
-    pauseIcon.classList.add('hidden');  // Hide pause icon
-    playIcon.classList.remove('hidden'); // Show play icon
-    stopTimerSound()
+    pauseIcon.classList.add('hidden');
+    playIcon.classList.remove('hidden');
+    stopTimerSound();
 }
 
-/** Resets the timer. */
 function resetTimer() {
-    pauseTimer(); // This already resets the icon to 'play'
+    pauseTimer();
     timeRemaining = 0;
     timerMinutesInput.value = "5";
     timerSecondsInput.value = "00";
 }
-/** Stops the looping timer sound and resets it. */
+
 function stopTimerSound() {
     if (timerAudio) {
         timerAudio.pause();
@@ -185,12 +189,12 @@ function initializeSortable() {
         mirror: { constrainDimensions: true },
         plugins: [Draggable.Plugins.ResizeMirror],
     });
+    
+    sortableInstance.on('sortable:stop', () => {
+        updateJigsawButtonVisibility();
+    });
 }
 
-/**
- * Enables or disables the drag-and-drop functionality for the seating chart.
- * @param {boolean} enable - True to enable dragging, false to disable.
- */
 function toggleDragAndDrop(enable) {
     if (enable) {
         initializeSortable();
@@ -202,7 +206,6 @@ function toggleDragAndDrop(enable) {
     }
 }
 
-/** Updates the visual state of the generation buttons. */
 function updateActiveButton(activeBtn) {
     groupBtns.forEach(btn => {
         if (btn === activeBtn) btn.classList.add('active', 'bg-blue-700', 'text-white');
@@ -210,7 +213,6 @@ function updateActiveButton(activeBtn) {
     });
 }
 
-/** Shuffles an array in place. */
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -218,7 +220,6 @@ function shuffleArray(array) {
     }
 }
 
-/** Creates student groups by a specified size. */
 function createStudentGroupsBySize(students, groupSize) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
@@ -242,7 +243,6 @@ function createStudentGroupsBySize(students, groupSize) {
     return balancedGroups;
 }
 
-/** Creates a specific number of student groups. */
 function createStudentGroupsByCount(students, groupCount) {
     const shuffledStudents = [...students];
     shuffleArray(shuffledStudents);
@@ -256,7 +256,6 @@ function createStudentGroupsByCount(students, groupCount) {
     return groups;
 }
 
-/** Saves the current seating chart layout. */
 function captureSeatingState() {
     const groups = [];
     seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
@@ -266,7 +265,6 @@ function captureSeatingState() {
     return { groups, unselected };
 }
 
-/** Renders a captured seating chart layout. */
 function renderSeatingState(seatingState) {
     seatingChartGrid.innerHTML = '';
     unselectedStudentsGrid.innerHTML = '';
@@ -278,11 +276,10 @@ function renderSeatingState(seatingState) {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
     updateJigsawButtonVisibility();
-    toggleDragAndDrop(false); // Always disable drag on render
+    toggleDragAndDrop(false);
     applyAttendanceStyles();
 }
 
-/** Applies the correct visual style to all seats based on the current state. */
 function applyAttendanceStyles() {
     toolsContent.querySelectorAll('.seat').forEach(seat => {
         const studentName = seat.textContent;
@@ -300,7 +297,6 @@ function applyAttendanceStyles() {
     });
 }
 
-/** Generates the initial chart for a class. */
 function generateInitialChart() {
     const selectedClass = classDropdown.value;
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
@@ -326,10 +322,9 @@ function generateInitialChart() {
         seatingChartGrid.appendChild(createGroupContainerElement(group, color));
     });
     
-    toggleDragAndDrop(false); // Ensure dragging is OFF by default.
+    toggleDragAndDrop(false);
 }
 
-/** Groups selected students, preserving participation state. */
 function generateSelectiveChart() {
     const allStudents = Array.from(toolsContent.querySelectorAll('.seat')).map(seat => seat.textContent);
     const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
@@ -361,11 +356,10 @@ function generateSelectiveChart() {
         unselectedStudentsGrid.appendChild(createSeatElement(name));
     });
     updateJigsawButtonVisibility();
-    toggleDragAndDrop(!attendanceVisible); // Re-apply correct draggable state
+    toggleDragAndDrop(!attendanceVisible);
     applyAttendanceStyles();
 }
 
-/** Creates an individual student seat element. */
 function createSeatElement(studentName) {
     const seat = document.createElement('div');
     seat.textContent = studentName;
@@ -373,7 +367,6 @@ function createSeatElement(studentName) {
     return seat;
 }
 
-/** Creates a group container element. */
 function createGroupContainerElement(group, color) {
     const container = document.createElement('div');
     container.className = 'group-container draggable-item';
@@ -388,35 +381,23 @@ function createGroupContainerElement(group, color) {
     return container;
 }
 
-/**
- * Checks the current groups and shows the Jigsaw button only if
- * there are at least 2 groups and all groups have 2 or more students.
- */
 function updateJigsawButtonVisibility() {
     if (inClassButtons && !inClassButtons.classList.contains('hidden')) {
         const groups = Array.from(seatingChartGrid.querySelectorAll('.group-container'));
-        
-        // The condition is changed from >= 3 to >= 2
         const allGroupsAreBigEnough = groups.every(group => group.querySelectorAll('.seat').length >= 2);
         const canJigsaw = groups.length >= 2 && allGroupsAreBigEnough;
-
         jigsawBtn.classList.toggle('hidden', !canJigsaw);
     } else {
         jigsawBtn.classList.add('hidden');
     }
 }
 
-/**
- * Reads the current groups and regroups them into new "jigsaw" groups,
- * preventing any new group from having only one student.
- */
 function generateJigsawGroups() {
     const originalGroups = [];
     seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
         originalGroups.push(Array.from(container.querySelectorAll('.seat')).map(seat => seat.textContent));
     });
 
-    // Final check for the new condition (groups of 2+)
     if (originalGroups.length < 2 || originalGroups.some(g => g.length < 2)) {
         showErrorAlert("Jigsaw requires at least two groups, each with 2 or more students.");
         return;
@@ -425,17 +406,14 @@ function generateJigsawGroups() {
     const maxGroupSize = Math.max(...originalGroups.map(g => g.length));
     const tempGroups = Array.from({ length: maxGroupSize }, () => []);
 
-    // Perform the initial "transpose" operation
     originalGroups.forEach(originalGroup => {
         originalGroup.forEach((student, index) => {
             tempGroups[index].push(student);
         });
     });
 
-    // --- NEW: Algorithm to prevent groups of 1 ---
     const finalGroups = [];
     const leftovers = [];
-    // Separate the viable groups from the single-person "leftover" groups
     tempGroups.forEach(group => {
         if (group.length <= 1) {
             leftovers.push(...group);
@@ -444,7 +422,6 @@ function generateJigsawGroups() {
         }
     });
 
-    // Distribute the leftovers evenly among the larger, final groups
     if (finalGroups.length > 0) {
         let groupIndex = 0;
         leftovers.forEach(student => {
@@ -452,13 +429,9 @@ function generateJigsawGroups() {
             groupIndex++;
         });
     } else if (leftovers.length > 0) {
-        // This handles the edge case where no groups of 2+ were formed.
-        // It puts all students into a single group to prevent data loss.
         finalGroups.push(leftovers);
     }
-    // --- End of new algorithm ---
 
-    // Render the new, balanced groups to the DOM
     seatingChartGrid.innerHTML = '';
     finalGroups.forEach((group, index) => {
         if (group.length > 0) {
@@ -472,9 +445,8 @@ function generateJigsawGroups() {
     updateJigsawButtonVisibility();
 }
 
-/** Initializes the Quill Rich Text Editor. */
 function initializeQuill() {
-    if (quillInstance) return; // Already initialized
+    if (quillInstance) return;
 
     quillInstance = new Quill('#quillEditorContainer', {
         theme: 'snow',
@@ -485,14 +457,13 @@ function initializeQuill() {
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                 [{ 'align': [] }],
-                ['image', 'link', 'formula'], // Added 'formula' here
+                ['image', 'link', 'formula'],
                 ['clean']
             ]
         }
     });
 }
 
-/** Switches to the Text Editor view. */
 function showTextMode() {
     modeTextBtn.classList.add('bg-blue-600', 'text-white');
     modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700');
@@ -503,12 +474,21 @@ function showTextMode() {
     embedControls.classList.add('hidden');
     embedContainer.classList.add('hidden');
     
-    // Show Quill (Quill wraps the container in its own structure)
-    document.querySelector('.ql-toolbar').classList.remove('hidden');
+    // Show Quill toolbar and container
+    // Note: Quill usually modifies the DOM to put the toolbar before the container. 
+    // We find the toolbar by its class since Quill generates it.
+    const toolbar = document.querySelector('.ql-toolbar');
+    if(toolbar) {
+        toolbar.classList.remove('hidden');
+        // Ensure the toggle button says 'Hide' if we are switching back to text mode
+        if(toggleToolbarBtn.textContent === "Show Tools") {
+             toolbar.classList.add('hidden');
+        }
+    }
     quillEditorContainer.classList.remove('hidden');
+    toggleToolbarBtn.classList.remove('hidden'); // Show the toggle button in text mode
 }
 
-/** Switches to the Embed (Google Doc) view. */
 function showEmbedMode() {
     modeEmbedBtn.classList.add('bg-blue-600', 'text-white');
     modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700');
@@ -519,32 +499,55 @@ function showEmbedMode() {
     embedControls.classList.remove('hidden');
     embedContainer.classList.remove('hidden');
 
-    // Hide Quill
-    document.querySelector('.ql-toolbar').classList.add('hidden');
+    // Hide Quill toolbar and container
+    const toolbar = document.querySelector('.ql-toolbar');
+    if(toolbar) toolbar.classList.add('hidden');
     quillEditorContainer.classList.add('hidden');
+    toggleToolbarBtn.classList.add('hidden'); // Hide the toggle button in embed mode
 }
 
-/** Loads the URL into the iframe. */
 function loadEmbedUrl() {
     let url = embedUrlInput.value.trim();
     if (!url) return;
-
-    // Simple check to ensure it's a valid URL structure
     if (!url.startsWith('http')) {
         url = 'https://' + url;
     }
-
     contentFrame.src = url;
 }
 
-/** Initializes the Teacher Tools page. */
+// NEW: Function to toggle the Quill toolbar visibility
+function toggleQuillToolbar() {
+    const toolbar = document.querySelector('.ql-toolbar');
+    if (!toolbar) return;
+    
+    if (toolbar.classList.contains('hidden')) {
+        toolbar.classList.remove('hidden');
+        toggleToolbarBtn.textContent = "Hide Tools";
+    } else {
+        toolbar.classList.add('hidden');
+        toggleToolbarBtn.textContent = "Show Tools";
+    }
+}
+
+// NEW: Function to toggle the entire instruction container visibility
+function toggleInstructions() {
+    instructionContainer.classList.toggle('hidden');
+    // Update the button style to indicate state? 
+    // For now just toggling visibility is fine.
+}
+
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
 
     initializeQuill();
+    
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
+    
+    // NEW Event Listeners
+    toggleToolbarBtn.addEventListener('click', toggleQuillToolbar);
+    toggleInstructionsBtn.addEventListener('click', toggleInstructions);
 
     groupBtns.forEach(btn => btn.disabled = true);
     
@@ -561,11 +564,10 @@ async function initializePageSpecificApp() {
         const seat = event.target.closest('.seat');
         if (!seat) return;
 
-        event.preventDefault(); // Stop the browser's default right-click menu
+        event.preventDefault();
 
         const studentName = seat.textContent;
 
-        // Build a consistent, non-conditional menu every time.
         const menuHtml = `
             <button class="context-menu-btn" data-action="markPresent" data-student="${studentName}">Mark as Present (Green)</button>
             <button class="context-menu-btn" data-action="markTardy" data-student="${studentName}">Mark as Tardy (Yellow)</button>
@@ -585,12 +587,11 @@ async function initializePageSpecificApp() {
 
         const { action, student } = button.dataset;
 
-        // More robust logic to handle the consistent menu options
         if (action === 'markPresent') {
-            participatedStudents.delete(student); // Ensure it's not in the other set
+            participatedStudents.delete(student);
             preselectedStudents.add(student);
         } else if (action === 'markTardy') {
-            preselectedStudents.delete(student); // Ensure it's not in the other set
+            preselectedStudents.delete(student);
             participatedStudents.add(student);
         } else if (action === 'deselect') {
             preselectedStudents.delete(student);
@@ -598,16 +599,14 @@ async function initializePageSpecificApp() {
         }
 
         applyAttendanceStyles();
-        seatContextMenu.classList.add('hidden'); // Hide menu after action
+        seatContextMenu.classList.add('hidden');
     });
 
     document.addEventListener('click', (event) => {
-        // If the click was on a menu item, let the menu's own handler deal with it.
         if (event.target.closest('#seatContextMenu')) {
             return;
         }
 
-        // Any click outside the menu should hide it.
         if (!seatContextMenu.classList.contains('hidden')) {
             seatContextMenu.classList.add('hidden');
         }
@@ -624,7 +623,6 @@ async function initializePageSpecificApp() {
                     participatedStudents.add(studentName);
                 }
             } else {
-                // BEFORE class starts: a single click toggles selection (green).
                 if (preselectedStudents.has(studentName)) {
                     preselectedStudents.delete(studentName);
                 } else {
@@ -636,7 +634,6 @@ async function initializePageSpecificApp() {
     });
 
     jigsawBtn.addEventListener('click', generateJigsawGroups);
-
 
     selectAllBtn.addEventListener('click', () => {
         toolsContent.querySelectorAll('.seat').forEach(seat => {
@@ -682,7 +679,7 @@ async function initializePageSpecificApp() {
 
     timerHideBtn.addEventListener('click', () => {
         timerContainer.classList.add('hidden');
-        stopTimerSound(); // Stop the sound on hide
+        stopTimerSound();
     });
 
     timerPlayPauseBtn.addEventListener('click', () => {
@@ -712,7 +709,6 @@ async function initializePageSpecificApp() {
     }
 }
 
-/** Resets the page state. */
 function resetPageSpecificAppState() {
     if (sortableInstance) {
         sortableInstance.destroy();
