@@ -11,6 +11,7 @@ let setupButtons, inClassButtons;
 let groupBtns = [];
 let sortableInstance = null;
 let seatContextMenu;
+let moreOptionsBtn, moreOptionsMenu;
 
 // --- State Tracking ---
 let classStarted = false;
@@ -75,7 +76,9 @@ function cacheToolsDOMElements() {
     setupButtons = document.getElementById('setupButtons');
     inClassButtons = document.getElementById('inClassButtons');
     groupBtns = [generatePairsBtn, generateThreesBtn, generateFoursBtn, generateGroupsByCountBtn];
-    
+    moreOptionsBtn = document.getElementById('moreOptionsBtn');
+    moreOptionsMenu = document.getElementById('moreOptionsMenu');
+
     showTimerBtn = document.getElementById('showTimerBtn');
     jigsawBtn = document.getElementById('jigsawBtn');
     rolesBtn = document.getElementById('rolesBtn'); // New
@@ -434,6 +437,11 @@ function generateJigsawGroups() {
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
     initializeQuill();
+    // --- MORE MENU LOGIC ---
+    moreOptionsBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent the global click from immediately closing it
+        moreOptionsMenu.classList.toggle('hidden');
+    });
     
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
@@ -480,6 +488,10 @@ async function initializePageSpecificApp() {
     });
 
     document.addEventListener('click', (event) => {
+        // Close More Menu
+        if (!moreOptionsBtn.contains(event.target) && !moreOptionsMenu.contains(event.target)) {
+            moreOptionsMenu.classList.add('hidden');
+        }
         if (event.target.closest('#seatContextMenu')) return;
         if (!seatContextMenu.classList.contains('hidden')) seatContextMenu.classList.add('hidden');
         const seat = event.target.closest('.seat');
