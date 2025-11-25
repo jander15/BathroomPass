@@ -32,7 +32,6 @@ let playIcon, pauseIcon;
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
 let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
-let bgColorPicker; // New Color Picker
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
@@ -46,7 +45,7 @@ let isGroupNumbersVisible = false;
 
 // Menu State
 let moreOptionsBtn, moreOptionsMenu;
-let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn;
+let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn, rolesTitleExpanded;
 let isRolesPanelCollapsed = false;
 
 // --- Color Palette ---
@@ -103,7 +102,6 @@ function cacheToolsDOMElements() {
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
     toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
-    bgColorPicker = document.getElementById('bgColorPicker');
 
     // Roles
     rolesPanel = document.getElementById('rolesPanel');
@@ -120,6 +118,7 @@ function cacheToolsDOMElements() {
     rolesMiniControls = document.getElementById('rolesMiniControls');
     toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
     miniShiftBtn = document.getElementById('miniShiftBtn');
+    rolesTitleExpanded = document.getElementById('rolesTitleExpanded');
 
     // Group Numbers
     groupsPanel = document.getElementById('groupsPanel');
@@ -133,14 +132,6 @@ function cacheToolsDOMElements() {
     iconToArrange = document.getElementById('iconToArrange');
     iconToAttendance = document.getElementById('iconToAttendance');
     studentCountDisplay = document.getElementById('studentCountDisplay');
-}
-
-function makeElementDraggable(element, handle) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    const dragMouseDown = (e) => { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; };
-    const elementDrag = (e) => { e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; element.style.top = (element.offsetTop - pos2) + "px"; element.style.left = (element.offsetLeft - pos1) + "px"; };
-    const closeDragElement = () => { document.onmouseup = null; document.onmousemove = null; };
-    handle.onmousedown = dragMouseDown;
 }
 
 // --- HELPER: Get Student Name Safely ---
@@ -221,10 +212,16 @@ function toggleRolesPanelState(collapse) {
     if (collapse) {
         rolesFullContent.classList.add('hidden');
         rolesMiniControls.classList.remove('hidden');
+        rolesTitleExpanded.classList.add('hidden');
+        rolesPanel.classList.remove('w-96');
+        rolesPanel.classList.add('w-auto');
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
     } else {
         rolesFullContent.classList.remove('hidden');
         rolesMiniControls.classList.add('hidden');
+        rolesTitleExpanded.classList.remove('hidden');
+        rolesPanel.classList.remove('w-auto');
+        rolesPanel.classList.add('w-96');
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
     }
 }
@@ -314,7 +311,6 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
-    // 1. Configure Use of Inline Styles for Sizes
     const Size = Quill.import('attributors/style/size');
     Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '24px', '36px', '48px', '64px'];
     Quill.register(Size, true);
@@ -330,7 +326,7 @@ function initializeQuill() {
         modules: {
             imageResize: { displaySize: true },
             toolbar: [ 
-                [{ 'size': Size.whitelist }], // Use our whitelist
+                [{ 'size': Size.whitelist }], 
                 ['bold', 'italic', 'underline', 'strike'], 
                 [{ 'color': [] }, { 'background': [] }], 
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
@@ -341,25 +337,30 @@ function initializeQuill() {
         }
     });
 
-    // 2. Hide Toolbar by Default
     document.querySelector('.ql-toolbar').classList.add('hidden');
-    
-    // 3. Set Default Text Size (36px)
-    // We need to wait for editor to be ready
     setTimeout(() => {
         quillInstance.format('size', '36px');
-        // Optional: Add some placeholder text if empty
         if (quillInstance.getText().trim().length === 0) {
-            quillInstance.setText("\n"); // Ensure a line exists
+            quillInstance.setText("\n");
             quillInstance.formatLine(0, 1, 'size', '36px');
         }
     }, 100);
 }
 
+// NEW: Color Palette Logic
+function setWidgetBg(color) {
+    if (!instructionContainer || !quillEditorContainer) return;
+    // Remove existing BG classes to avoid conflicts
+    instructionContainer.classList.remove('bg-white', 'bg-yellow-50', 'bg-green-50', 'bg-blue-50', 'bg-pink-50', 'bg-purple-50');
+    quillEditorContainer.classList.remove('bg-white', 'bg-yellow-50', 'bg-green-50', 'bg-blue-50', 'bg-pink-50', 'bg-purple-50');
+    
+    instructionContainer.style.backgroundColor = color;
+    quillEditorContainer.style.backgroundColor = color;
+}
+
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
     toggleToolbarBtn.classList.remove('hidden'); 
-    // Restore toolbar state if button says "Hide" (meaning it should be shown)
     const toolbar = document.querySelector('.ql-toolbar');
     if(toggleToolbarBtn.textContent === "Hide Tools") toolbar.classList.remove('hidden');
     else toolbar.classList.add('hidden');
@@ -370,11 +371,6 @@ function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-tool
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
-}
-function updateBackgroundColor() {
-    const color = bgColorPicker.value;
-    instructionContainer.style.backgroundColor = color;
-    quillEditorContainer.style.backgroundColor = color;
 }
 
 function initializeSortable() {
@@ -511,7 +507,6 @@ async function initializePageSpecificApp() {
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
     toggleToolbarBtn.addEventListener('click', toggleQuillToolbar);
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
-    bgColorPicker.addEventListener('input', updateBackgroundColor);
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 
