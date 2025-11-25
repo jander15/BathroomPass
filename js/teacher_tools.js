@@ -32,7 +32,9 @@ let playIcon, pauseIcon;
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
 let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
-let bgControlContainer, bgColorBtn, bgColorMenu; // New Color Vars
+let bgControlContainer, bgColorBtn, bgColorMenu; 
+// New header toggle elements
+let instructionHeader, hideHeaderBtn, showHeaderBtn;
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
@@ -120,6 +122,11 @@ function cacheToolsDOMElements() {
     bgControlContainer = document.getElementById('bgControlContainer');
     bgColorBtn = document.getElementById('bgColorBtn');
     bgColorMenu = document.getElementById('bgColorMenu');
+
+    // Header Collapse Elements
+    instructionHeader = document.getElementById('instructionHeader');
+    hideHeaderBtn = document.getElementById('hideHeaderBtn');
+    showHeaderBtn = document.getElementById('showHeaderBtn');
 
     // Roles
     rolesPanel = document.getElementById('rolesPanel');
@@ -329,7 +336,7 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
-    // 1. Configure Sizes with 4 options
+    // 1. Configure Size Whitelist (24, 36, 48, 60)
     const Size = Quill.import('attributors/style/size');
     Size.whitelist = ['24px', '36px', '48px', '60px'];
     Quill.register(Size, true);
@@ -358,22 +365,22 @@ function initializeQuill() {
 
     document.querySelector('.ql-toolbar').classList.add('hidden');
     
-    // 2. Set Default Size (60px) and Align Center
+    // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
-        quillInstance.format('size', '48px'); // Set a reasonable fallback first
-        quillInstance.format('align', 'center'); // Set center align
+        quillInstance.format('size', '48px'); 
+        quillInstance.format('align', 'center'); 
         
         if (quillInstance.getText().trim().length === 0) {
             quillInstance.setText("\n");
-            quillInstance.formatLine(0, 1, 'size', '60px'); // Explicit 60px for new text
+            quillInstance.formatLine(0, 1, 'size', '48px'); 
             quillInstance.formatLine(0, 1, 'align', 'center');
         }
     }, 100);
     
-    renderBgColorMenu(); // Setup the new color menu
+    renderBgColorMenu();
 }
 
-// NEW: Render the Color Menu
+// NEW: Render the Color Menu Grid
 function renderBgColorMenu() {
     bgColorMenu.innerHTML = '';
     bgColors.forEach(color => {
@@ -381,7 +388,7 @@ function renderBgColorMenu() {
         btn.className = 'w-8 h-8 rounded-md border border-gray-200 shadow-sm hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500';
         btn.style.backgroundColor = color;
         btn.onclick = (e) => {
-            e.stopPropagation(); // Prevent closing immediately
+            e.stopPropagation(); 
             updateBackgroundColor(color);
             bgColorMenu.classList.add('hidden');
         };
@@ -392,13 +399,25 @@ function renderBgColorMenu() {
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
-    bgColorBtn.style.backgroundColor = color; // Update the button preview
+    bgColorBtn.style.backgroundColor = color; // Update preview button
+}
+
+// Collapsible Header Logic
+function toggleHeaderVisibility(show) {
+    if (show) {
+        instructionHeader.classList.remove('hidden');
+        showHeaderBtn.classList.add('hidden');
+    } else {
+        instructionHeader.classList.add('hidden');
+        showHeaderBtn.classList.remove('hidden');
+    }
 }
 
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
     toggleToolbarBtn.classList.remove('hidden');
-    // Show BG Control
+    
+    // SHOW BG Controls in Text Mode
     bgControlContainer.classList.remove('hidden');
     
     const toolbar = document.querySelector('.ql-toolbar');
@@ -406,7 +425,7 @@ function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white')
     else toolbar.classList.add('hidden');
 }
 function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); toggleToolbarBtn.classList.add('hidden'); 
-    // Hide BG Control
+    // HIDE BG Controls in Embed Mode
     bgControlContainer.classList.add('hidden');
 }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
@@ -556,6 +575,10 @@ async function initializePageSpecificApp() {
         e.stopPropagation();
         bgColorMenu.classList.toggle('hidden');
     });
+    
+    // Header Collapse Listeners
+    hideHeaderBtn.addEventListener('click', () => toggleHeaderVisibility(false));
+    showHeaderBtn.addEventListener('click', () => toggleHeaderVisibility(true));
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 

@@ -48,21 +48,31 @@
     <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-4">
 
         <style>
-            /* Force Quill to display the data-value as the label */
-            .ql-snow .ql-picker.ql-size .ql-picker-label::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item::before {
-                content: attr(data-value) !important;
-            }
-            /* Fallback if something is empty */
-            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value=""]::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=""]::before {
-                content: '48px' !important; /* Match default */
+            /* 1. Clean Labels for Font Size Dropdown */
+            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24px"]::before,
+            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { content: '24' !important; }
+
+            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36px"]::before,
+            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { content: '36' !important; }
+
+            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48px"]::before,
+            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { content: '48' !important; }
+
+            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="60px"]::before,
+            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="60px"]::before { content: '60' !important; }
+
+            /* Fallback / Default Label */
+            .ql-snow .ql-picker.ql-size .ql-picker-label::before { content: '48' !important; }
+
+            /* 2. Enforce Default Styling on the Editor Content */
+            #quillEditorContainer .ql-editor {
+                font-size: 48px;
+                text-align: center;
+                line-height: 1.3;
             }
             
             /* Make the dropdown items large enough to read */
-            .ql-snow .ql-picker.ql-size {
-                width: 80px !important;
-            }
+            .ql-snow .ql-picker.ql-size { width: 60px !important; }
         </style>
 
         <div class="bg-white p-2 rounded-lg border border-gray-200 flex flex-wrap items-center gap-2 shadow-sm relative z-20">
@@ -122,7 +132,6 @@
         <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
             
             <div class="flex flex-wrap gap-4 mb-4 empty:hidden">
-                
                 <div id="timerContainer" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Timer</div>
                     <div class="flex items-center gap-1 font-mono text-lg text-gray-700">
@@ -142,11 +151,10 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
                         </button>
                         <button id="timerHideBtn" class="p-1.5 text-gray-400 hover:text-red-500 rounded-full transition-colors ml-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1-.708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
                         </button>
                     </div>
                 </div>
-
                 <div id="rolesPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-96 flex flex-col overflow-hidden transition-all duration-200">
                     <div id="rolesHeader" class="bg-white p-0 flex items-center gap-3 px-3 py-2 h-12">
                         <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Roles</div>
@@ -174,7 +182,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div id="groupsPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Groups</div>
                     <button id="rotateGroupsBtn" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200 flex items-center gap-1">
@@ -183,11 +190,11 @@
                     <div class="h-6 w-px bg-gray-200 mx-1"></div>
                     <button id="closeGroupsBtn" class="text-gray-400 hover:text-gray-600 text-lg leading-none p-1">&times;</button>
                 </div>
-
             </div>
 
-            <div id="instructionContainer" class="hidden w-full bg-yellow-100 border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">
-                <div class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center flex-wrap">
+            <div id="instructionContainer" class="hidden relative w-full bg-yellow-100 border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">
+                
+                <div id="instructionHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center flex-wrap">
                     <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
                     <button id="modeEmbedBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Google Doc/Slides</button>
                     
@@ -197,7 +204,12 @@
                             </div>
                     </div>
 
-                    <button id="toggleToolbarBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300 ml-auto">Show Tools</button>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button id="toggleToolbarBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Show Tools</button>
+                        <button id="hideHeaderBtn" class="text-gray-400 hover:text-gray-600 p-1" title="Hide Controls">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>
+                        </button>
+                    </div>
                     
                     <div id="embedControls" class="hidden flex-grow flex gap-2 items-center ml-2">
                         <input type="text" id="embedUrlInput" placeholder="Paste Google Doc/Slides Link here..." class="flex-grow p-1 text-sm border border-gray-300 rounded">
@@ -205,6 +217,10 @@
                     </div>
                 </div>
                 
+                <button id="showHeaderBtn" class="hidden absolute top-1 right-1 z-50 bg-white/80 hover:bg-white text-gray-500 hover:text-indigo-600 p-1 rounded shadow-sm border border-gray-200 backdrop-blur-sm transition-all" title="Show Controls">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                </button>
+
                 <div id="quillEditorContainer" class="bg-yellow-100" style="height: 85px; resize: vertical; overflow: auto;"></div>
                 <div id="embedContainer" class="hidden w-full bg-white" style="height: 85px; resize: vertical; overflow: auto;">
                     <iframe id="contentFrame" class="w-full h-full border-0"></iframe>
