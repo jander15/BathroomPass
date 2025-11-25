@@ -31,7 +31,7 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
+let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn, toggleFullScreenBtn;
 let bgControlContainer, bgColorBtn, bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
@@ -54,18 +54,7 @@ let isRolesPanelCollapsed = false;
 // --- Color Palettes ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
 const roleColors = [ 'bg-red-100 text-red-800 border-red-200', 'bg-orange-100 text-orange-800 border-orange-200', 'bg-purple-100 text-purple-800 border-purple-200', 'bg-pink-100 text-pink-800 border-pink-200', 'bg-gray-100 text-gray-800 border-gray-200', 'bg-rose-100 text-rose-800 border-rose-200', 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200', 'bg-stone-200 text-stone-800 border-stone-300' ];
-
-// New Background Palette (Bright Colors)
-const bgColors = [
-    '#fefce8', // Default Yellow
-    '#ffffff', // White
-    '#fef08a', // Bright Yellow
-    '#bbf7d0', // Bright Green
-    '#bfdbfe', // Bright Blue
-    '#fbcfe8', // Bright Pink
-    '#e9d5ff', // Bright Purple
-    '#fed7aa'  // Bright Orange
-];
+const bgColors = [ '#fefce8', '#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#e9d5ff', '#fed7aa' ];
 
 function cacheToolsDOMElements() {
     classDropdown = document.getElementById('classDropdown');
@@ -117,6 +106,7 @@ function cacheToolsDOMElements() {
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
     toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
+    toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
     bgControlContainer = document.getElementById('bgControlContainer');
@@ -182,7 +172,6 @@ function updateStudentCount() {
     const currentClass = classDropdown.value;
     const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
     const presentCount = preselectedStudents.size + participatedStudents.size;
-    
     if (studentCountDisplay) {
         studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
     }
@@ -336,7 +325,7 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
-    // 1. Configure Size Whitelist (24, 36, 48, 60)
+    // 1. Configure Size Whitelist
     const Size = Quill.import('attributors/style/size');
     Size.whitelist = ['24px', '36px', '48px', '60px'];
     Quill.register(Size, true);
@@ -413,6 +402,22 @@ function toggleHeaderVisibility(show) {
     }
 }
 
+function toggleFullScreen() {
+    const isFS = instructionContainer.classList.toggle('instruction-fullscreen');
+    quillEditorContainer.classList.toggle('editor-fullscreen');
+    quillEditorContainer.classList.toggle('editor-normal');
+    embedContainer.classList.toggle('editor-fullscreen');
+    embedContainer.classList.toggle('editor-normal');
+
+    if(isFS) {
+        // Enter Full Screen
+        toggleFullScreenBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrows-angle-contract" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707zM15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707z"/></svg>`;
+    } else {
+        // Exit Full Screen
+        toggleFullScreenBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>`;
+    }
+}
+
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
     toggleToolbarBtn.classList.remove('hidden');
@@ -429,7 +434,7 @@ function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white
     bgControlContainer.classList.add('hidden');
 }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
-function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-toolbar'); if (!toolbar) return; if (toolbar.classList.contains('hidden')) { toolbar.classList.remove('hidden'); toggleToolbarBtn.textContent = "Hide Tools"; } else { toolbar.classList.add('hidden'); toggleToolbarBtn.textContent = "Show Tools"; } }
+function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-toolbar'); if (!toolbar) return; if (toolbar.classList.contains('hidden')) { toolbar.classList.remove('hidden'); toggleToolbarBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`; } else { toolbar.classList.add('hidden'); toggleToolbarBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`; } }
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
@@ -579,6 +584,9 @@ async function initializePageSpecificApp() {
     // Header Collapse Listeners
     hideHeaderBtn.addEventListener('click', () => toggleHeaderVisibility(false));
     showHeaderBtn.addEventListener('click', () => toggleHeaderVisibility(true));
+
+    // Full Screen Listener
+    toggleFullScreenBtn.addEventListener('click', toggleFullScreen);
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 
