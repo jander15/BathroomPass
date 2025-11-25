@@ -390,3 +390,54 @@ input[type=number]::-webkit-outer-spin-button {
     display: block; /* Keep display block but hide with opacity/pointer-events for transition */
     visibility: hidden;
 }
+
+/* --- Dashboard Widget Styles --- */
+.dashboard-widget {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #cbd5e1; /* Slate-300 */
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    z-index: 40; /* Above student tiles (z-index 10) but below modals */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.dashboard-widget:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: #94a3b8; /* Slate-400 */
+}
+
+.widget-header {
+    cursor: move;
+    padding: 0.5rem 0.75rem;
+    background-color: #f1f5f9; /* Slate-100 */
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+.widget-body {
+    padding: 0.75rem;
+}
+
+/* Custom styling for the minimalist input arrows */
+.timer-btn-mini {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    line-height: 1;
+    color: #64748b;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+.timer-btn-mini:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+}
