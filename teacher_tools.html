@@ -71,10 +71,19 @@
             <button id="rolesBtn" class="toolbar-btn" title="Roles">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
             </button>
+            <button id="groupNumBtn" class="toolbar-btn" title="Group Numbers">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M2.5 1.25a.5.5 0 0 1 .5.5V14a.5.5 0 0 1-1 0V2.5h-.75a.5.5 0 0 1 0-1h1.25zm3.962 1.686a.5.5 0 0 1 .963.272l-.943 3.334h2.211a.5.5 0 0 1 0 1H6.29l-1.61 5.693a.5.5 0 0 1-.962-.272l1.61-5.693H3.117a.5.5 0 0 1 0-1h2.211l.943-3.334a.5.5 0 0 1 .153-.334z"/>
+                    <path d="M11.5 1a.5.5 0 0 1 .5.5v1.5h1.5a.5.5 0 0 1 0 1H12v1.5a.5.5 0 0 1-1 0V4h-1.5a.5.5 0 0 1 0-1H11V1.5a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+            </button>
+            
             <button id="toggleInstructionsBtn" class="toolbar-btn" title="Instructions">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>
             </button>
+
             <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
             <div id="setupButtons" class="flex items-center gap-2">
                 <button id="startClassBtn" class="toolbar-btn toolbar-btn-primary w-auto px-4 space-x-2" title="Start Class">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg><span>Start</span>
@@ -104,7 +113,6 @@
                 
                 <div id="timerContainer" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Timer</div>
-                    
                     <div class="flex items-center gap-1 font-mono text-lg text-gray-700">
                         <button id="minUpBtn" class="hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded px-1 text-xs">▲</button>
                         <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
@@ -112,9 +120,7 @@
                         <span class="text-gray-400 text-sm font-normal mx-0.5">:</span>
                         <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
                     </div>
-
                     <div class="h-6 w-px bg-gray-200 mx-1"></div>
-
                     <div class="flex gap-1">
                         <button id="timerPlayPauseBtn" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
                             <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>
@@ -130,9 +136,9 @@
                 </div>
 
                 <div id="rolesPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-96 flex flex-col overflow-hidden">
-                    <div id="rolesHeader" class="bg-gray-50 p-2 flex justify-between items-center h-12">
+                    <div id="rolesHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex justify-between items-center h-12">
                         <div class="flex items-center gap-3">
-                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Roles</span>
+                            <span class="text-xs font-bold text-gray-600 uppercase tracking-wide ml-1">Roles</span>
                             <div id="rolesMiniControls" class="hidden flex items-center gap-2">
                                 <button id="miniShiftBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold hover:bg-amber-200 border border-amber-200 flex items-center gap-1">
                                     Shift <span class="text-lg leading-none">↻</span>
@@ -148,7 +154,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div id="rolesFullContent" class="p-3 space-y-3 border-t border-gray-200">
                         <div id="activeRolesList" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-gray-50 rounded border border-dashed border-gray-300 text-xs">
                             <span class="text-gray-400 italic">Select roles below...</span>
@@ -166,6 +171,19 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="groupsPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-48 flex flex-col">
+                    <div id="groupsHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-600 uppercase tracking-wide">Group #</span>
+                        <button id="closeGroupsBtn" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+                    </div>
+                    <div class="p-3 bg-gray-50">
+                        <button id="rotateGroupsBtn" class="w-full bg-blue-500 text-white py-1.5 rounded text-sm font-semibold hover:bg-blue-600 shadow-sm flex items-center justify-center gap-2">
+                            Rotate <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             <div id="instructionContainer" class="hidden w-full bg-white border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">

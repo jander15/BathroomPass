@@ -6,7 +6,7 @@ let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
 let selectAllBtn, deselectAllBtn;
-let startClassBtn, originalSeatingBtn, attendanceToggleBtn, jigsawBtn, rolesBtn;
+let startClassBtn, originalSeatingBtn, attendanceToggleBtn, jigsawBtn, rolesBtn, groupNumBtn;
 let setupButtons, inClassButtons; 
 let groupBtns = [];
 let sortableInstance = null;
@@ -22,7 +22,7 @@ let participatedStudents = new Set();
 let attendanceVisible = true;
 
 // Timer State
-let showTimerBtn, timerContainer, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
+let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let minUpBtn, minDownBtn;
 let timeRemaining = 0;
 let timerInterval = null;
@@ -39,9 +39,13 @@ let activeRoles = [];
 let roleRotationIndex = 0;
 const defaultRoles = ["Facilitator", "Recorder", "Presenter", "Timekeeper", "Materials", "Reflector", "Encourager", "Spy"];
 
+// Group Number State
+let groupsPanel, closeGroupsBtn, rotateGroupsBtn;
+let isGroupNumbersVisible = false;
+
 // Menu State
 let moreOptionsBtn, moreOptionsMenu;
-let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn; // Changed to rolesMiniControls
+let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn;
 let isRolesPanelCollapsed = false;
 
 // --- Color Palette ---
@@ -69,10 +73,12 @@ function cacheToolsDOMElements() {
     
     showTimerBtn = document.getElementById('showTimerBtn');
     jigsawBtn = document.getElementById('jigsawBtn');
-    rolesBtn = document.getElementById('rolesBtn'); 
+    rolesBtn = document.getElementById('rolesBtn');
+    groupNumBtn = document.getElementById('groupNumBtn'); // New Button
 
     // Timer
     timerContainer = document.getElementById('timerContainer');
+    timerHeader = document.getElementById('timerHeader');
     timerHideBtn = document.getElementById('timerHideBtn');
     timerMinutesInput = document.getElementById('timerMinutes');
     timerSecondsInput = document.getElementById('timerSeconds');
@@ -113,6 +119,11 @@ function cacheToolsDOMElements() {
     toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
     miniShiftBtn = document.getElementById('miniShiftBtn');
 
+    // Group Numbers
+    groupsPanel = document.getElementById('groupsPanel');
+    closeGroupsBtn = document.getElementById('closeGroupsBtn');
+    rotateGroupsBtn = document.getElementById('rotateGroupsBtn');
+
     // Menu & Misc
     moreOptionsBtn = document.getElementById('moreOptionsBtn');
     moreOptionsMenu = document.getElementById('moreOptionsMenu');
@@ -145,6 +156,7 @@ function updateStudentCount() {
     const currentClass = classDropdown.value;
     const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
     const presentCount = preselectedStudents.size + participatedStudents.size;
+    
     if (studentCountDisplay) {
         studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
     }
@@ -247,6 +259,69 @@ function clearRoles() {
     roleRotationIndex = 0;
 }
 
+// --- GROUP NUMBER FUNCTIONS ---
+function updateGroupNumbers() {
+    const groups = document.querySelectorAll('.group-container');
+    groups.forEach((group, index) => {
+        // Remove existing badge if any
+        const existing = group.querySelector('.group-number-badge');
+        if (existing) existing.remove();
+
+        if (isGroupNumbersVisible) {
+            const badge = document.createElement('div');
+            badge.className = 'group-number-badge';
+            badge.textContent = index + 1;
+            group.appendChild(badge);
+        }
+    });
+}
+
+function rotateGroups() {
+    const groups = Array.from(seatingChartGrid.querySelectorAll('.group-container'));
+    if (groups.length < 2) {
+        showErrorAlert("Need at least 2 groups to rotate.");
+        return;
+    }
+
+    // 1. Extract all students from each group into an array of arrays
+    //    groupStudents[0] = [StudentA, StudentB...] from Container 0
+    const groupStudents = groups.map(group => {
+        return Array.from(group.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat));
+    });
+
+    // 2. Perform the rotation (Right Shift of CONTENT)
+    //    Container 1 gets content of Container 0.
+    //    Container 0 gets content of Container Last.
+    //    So we unshift the last element to the front of the array.
+    groupStudents.unshift(groupStudents.pop());
+
+    // 3. Re-render chart with shifted data
+    seatingChartGrid.innerHTML = '';
+    // Note: We keep 'unselectedStudents' as they are, we just need to re-append them after.
+    // Actually, renderSeatingState rebuilds from scratch. 
+    // We can just manually rebuild the grid here to preserve colors/structure.
+    
+    groupStudents.forEach((students, index) => {
+        const color = groupColors[index % groupColors.length];
+        // We must reuse createGroupContainerElement but populate with shifted students
+        const container = createGroupContainerElement(students, color);
+        seatingChartGrid.appendChild(container);
+    });
+
+    // Re-initialize drag/drop if needed (renderSeatingState usually does this logic)
+    toggleDragAndDrop(!attendanceVisible);
+    applyAttendanceStyles();
+    updateJigsawButtonVisibility();
+    // 4. Ensure numbers persist
+    updateGroupNumbers();
+    
+    // Also re-apply roles if they exist, because we just wiped the HTML
+    if (activeRoles.length > 0) {
+        distributeRoles();
+    }
+}
+
+
 // --- EDITOR & CHART ---
 function initializeQuill() {
     if (quillInstance) return;
@@ -311,7 +386,7 @@ function renderSeatingState(seatingState) {
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     seatingState.groups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     seatingState.unselected.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles(); updateStudentCount();
+    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
 }
 
 function applyAttendanceStyles() {
@@ -334,7 +409,7 @@ function generateInitialChart() {
     const initialGroups = createStudentGroupsBySize(students, 2);
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
-    toggleDragAndDrop(false); updateStudentCount();
+    toggleDragAndDrop(false); updateStudentCount(); updateGroupNumbers();
 }
 
 function generateSelectiveChart() {
@@ -350,7 +425,7 @@ function generateSelectiveChart() {
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     generatedGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     unselectedNames.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateStudentCount();
+    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
 }
 
 function createSeatElement(studentName) {
@@ -393,7 +468,7 @@ function generateJigsawGroups() {
     if (finalGroups.length > 0) { let i = 0; leftovers.forEach(student => { finalGroups[i % finalGroups.length].push(student); i++; }); } else if (leftovers.length > 0) finalGroups.push(leftovers);
     seatingChartGrid.innerHTML = '';
     finalGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
-    toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateJigsawButtonVisibility();
+    toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateJigsawButtonVisibility(); updateGroupNumbers();
 }
 
 // --- MAIN INIT ---
@@ -424,6 +499,21 @@ async function initializePageSpecificApp() {
     clearRolesBtn.addEventListener('click', clearRoles);
     toggleRolesViewBtn.addEventListener('click', () => toggleRolesPanelState(!isRolesPanelCollapsed));
     miniShiftBtn.addEventListener('click', shiftRoles);
+
+    // Group Number Listeners
+    groupNumBtn.addEventListener('click', () => {
+        const isHidden = groupsPanel.classList.toggle('hidden');
+        toggleButtonState('groupNumBtn', !isHidden);
+        isGroupNumbersVisible = !isHidden;
+        updateGroupNumbers();
+    });
+    closeGroupsBtn.addEventListener('click', () => {
+        groupsPanel.classList.add('hidden');
+        toggleButtonState('groupNumBtn', false);
+        isGroupNumbersVisible = false;
+        updateGroupNumbers();
+    });
+    rotateGroupsBtn.addEventListener('click', rotateGroups);
 
     // More Menu Listeners
     moreOptionsBtn.addEventListener('click', (e) => {
@@ -542,4 +632,13 @@ function resetPageSpecificAppState() {
     if (seatingChartGrid) seatingChartGrid.innerHTML = '';
     if (unselectedStudentsGrid) unselectedStudentsGrid.innerHTML = '';
     if (studentCountDisplay) studentCountDisplay.textContent = "";
+    // Reset widget visibility
+    if (timerContainer) timerContainer.classList.add('hidden');
+    if (rolesPanel) rolesPanel.classList.add('hidden');
+    if (groupsPanel) groupsPanel.classList.add('hidden');
+    isGroupNumbersVisible = false;
+    toggleButtonState('showTimerBtn', false);
+    toggleButtonState('rolesBtn', false);
+    toggleButtonState('groupNumBtn', false);
+    toggleButtonState('toggleInstructionsBtn', false);
 }

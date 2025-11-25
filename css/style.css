@@ -441,3 +441,27 @@ input[type=number]::-webkit-outer-spin-button {
     background-color: #e2e8f0;
     color: #0f172a;
 }
+/* --- Group Number Badges --- */
+.group-container {
+    position: relative; /* Ensure badge is positioned relative to the group */
+}
+
+.group-number-badge {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 28px;
+    height: 28px;
+    background-color: #3b82f6; /* Blue-500 */
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    z-index: 30; /* Above seats */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    pointer-events: none; /* Let clicks pass through */
+}
