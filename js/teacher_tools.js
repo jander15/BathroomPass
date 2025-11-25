@@ -105,7 +105,7 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
-    showToolbarBtn = document.getElementById('showToolbarBtn'); // Renamed from toggleToolbarBtn
+    showToolbarBtn = document.getElementById('showToolbarBtn'); 
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
@@ -354,17 +354,7 @@ function initializeQuill() {
         }
     });
 
-    // INJECT CLOSE BUTTON into Toolbar
-    const toolbar = document.querySelector('.ql-toolbar');
-    if (toolbar) {
-        toolbar.classList.add('hidden'); // Start hidden
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'ql-toolbar-close';
-        closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
-        closeBtn.title = "Hide Tools";
-        closeBtn.onclick = toggleQuillToolbar;
-        toolbar.appendChild(closeBtn);
-    }
+    document.querySelector('.ql-toolbar').classList.add('hidden');
     
     // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
@@ -400,7 +390,7 @@ function renderBgColorMenu() {
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
-    bgColorBtn.style.backgroundColor = color; 
+    bgColorBtn.style.backgroundColor = color; // Update preview button
 }
 
 // Collapsible Header Logic
@@ -449,7 +439,8 @@ function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white')
     bgControlContainer.classList.remove('hidden');
     
     const toolbar = document.querySelector('.ql-toolbar');
-    if(!toolbar.classList.contains('hidden')) showToolbarBtn.classList.add('hidden');
+    if(!toolbar.classList.contains('hidden')) showToolbarBtn.textContent = "Hide Tools";
+    else showToolbarBtn.textContent = "Show Tools";
 }
 function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); 
     // HIDE BG Controls in Embed Mode
@@ -457,21 +448,22 @@ function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white
 }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
-// Modified Logic: Show button is in header, Hide button is in toolbar
+// UPDATED Toggle Logic
 function toggleQuillToolbar() { 
     const toolbar = document.querySelector('.ql-toolbar'); 
     if (!toolbar) return; 
     
     if (toolbar.classList.contains('hidden')) { 
-        // User clicked "Show" (header button)
+        // User clicked "Show Tools"
         toolbar.classList.remove('hidden'); 
-        showToolbarBtn.classList.add('hidden'); // Hide the header button
+        showToolbarBtn.textContent = "Hide Tools";
     } else { 
-        // User clicked "Hide" (toolbar button)
+        // User clicked "Hide Tools"
         toolbar.classList.add('hidden'); 
-        showToolbarBtn.classList.remove('hidden'); // Show the header button
+        showToolbarBtn.textContent = "Show Tools";
     } 
 }
+
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
