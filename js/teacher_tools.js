@@ -22,7 +22,7 @@ let participatedStudents = new Set();
 let attendanceVisible = true;
 
 // Timer State
-let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
+let showTimerBtn, timerContainer, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let minUpBtn, minDownBtn;
 let timeRemaining = 0;
 let timerInterval = null;
@@ -41,7 +41,7 @@ const defaultRoles = ["Facilitator", "Recorder", "Presenter", "Timekeeper", "Mat
 
 // Menu State
 let moreOptionsBtn, moreOptionsMenu;
-let rolesFullContent, rolesMiniContent, toggleRolesViewBtn, miniShiftBtn;
+let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn; // Changed to rolesMiniControls
 let isRolesPanelCollapsed = false;
 
 // --- Color Palette ---
@@ -73,7 +73,6 @@ function cacheToolsDOMElements() {
 
     // Timer
     timerContainer = document.getElementById('timerContainer');
-    timerHeader = document.getElementById('timerHeader');
     timerHideBtn = document.getElementById('timerHideBtn');
     timerMinutesInput = document.getElementById('timerMinutes');
     timerSecondsInput = document.getElementById('timerSeconds');
@@ -110,7 +109,7 @@ function cacheToolsDOMElements() {
     customRoleInput = document.getElementById('customRoleInput');
     addCustomRoleBtn = document.getElementById('addCustomRoleBtn');
     rolesFullContent = document.getElementById('rolesFullContent');
-    rolesMiniContent = document.getElementById('rolesMiniContent');
+    rolesMiniControls = document.getElementById('rolesMiniControls');
     toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
     miniShiftBtn = document.getElementById('miniShiftBtn');
 
@@ -132,13 +131,20 @@ function getStudentNameFromSeat(seat) {
     return clone.textContent.trim();
 }
 
+// --- HELPER: Toggle Toolbar Button Active State ---
+function toggleButtonState(btnId, isActive) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (isActive) btn.classList.add('active');
+    else btn.classList.remove('active');
+}
+
 // --- STUDENT COUNT HELPER ---
 function updateStudentCount() {
     if (!appState.data.allNamesFromSheet || !classDropdown.value) return;
     const currentClass = classDropdown.value;
     const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
     const presentCount = preselectedStudents.size + participatedStudents.size;
-    
     if (studentCountDisplay) {
         studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
     }
@@ -192,11 +198,11 @@ function toggleRolesPanelState(collapse) {
     isRolesPanelCollapsed = collapse;
     if (collapse) {
         rolesFullContent.classList.add('hidden');
-        rolesMiniContent.classList.remove('hidden');
+        rolesMiniControls.classList.remove('hidden');
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
     } else {
         rolesFullContent.classList.remove('hidden');
-        rolesMiniContent.classList.add('hidden');
+        rolesMiniControls.classList.add('hidden');
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
     }
 }
@@ -261,7 +267,10 @@ function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white')
 function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); toggleToolbarBtn.classList.add('hidden'); }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-toolbar'); if (!toolbar) return; if (toolbar.classList.contains('hidden')) { toolbar.classList.remove('hidden'); toggleToolbarBtn.textContent = "Hide Tools"; } else { toolbar.classList.add('hidden'); toggleToolbarBtn.textContent = "Show Tools"; } }
-function toggleInstructions() { instructionContainer.classList.toggle('hidden'); }
+function toggleInstructions() { 
+    const isHidden = instructionContainer.classList.toggle('hidden');
+    toggleButtonState('toggleInstructionsBtn', !isHidden);
+}
 
 function initializeSortable() {
     if (sortableInstance) sortableInstance.destroy();
@@ -400,11 +409,14 @@ async function initializePageSpecificApp() {
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 
-        rolesPanel.classList.remove('hidden'); 
-        renderRolesUI(); 
-        toggleRolesPanelState(false);
+        const isHidden = rolesPanel.classList.toggle('hidden');
+        toggleButtonState('rolesBtn', !isHidden);
+        if(!isHidden) { renderRolesUI(); toggleRolesPanelState(false); }
     });
-    closeRolesBtn.addEventListener('click', () => rolesPanel.classList.add('hidden'));
+    closeRolesBtn.addEventListener('click', () => {
+        rolesPanel.classList.add('hidden');
+        toggleButtonState('rolesBtn', false);
+    });
     addCustomRoleBtn.addEventListener('click', handleCustomRoleAdd);
     customRoleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCustomRoleAdd(); });
     assignRolesBtn.addEventListener('click', assignRolesToGroups);
@@ -483,7 +495,6 @@ async function initializePageSpecificApp() {
 
     originalSeatingBtn.addEventListener('click', () => { if (originalSeating) renderSeatingState(originalSeating); });
     
-    // UPDATED TOGGLE LISTENER
     attendanceToggleBtn.addEventListener('click', () => { 
         attendanceVisible = !attendanceVisible; 
         
@@ -499,8 +510,15 @@ async function initializePageSpecificApp() {
         applyAttendanceStyles(); 
     });
 
-    showTimerBtn.addEventListener('click', () => { timerContainer.classList.remove('hidden'); });
-    timerHideBtn.addEventListener('click', () => { timerContainer.classList.add('hidden'); stopTimerSound(); });
+    showTimerBtn.addEventListener('click', () => {
+        const isHidden = timerContainer.classList.toggle('hidden');
+        toggleButtonState('showTimerBtn', !isHidden);
+    });
+    timerHideBtn.addEventListener('click', () => {
+        timerContainer.classList.add('hidden');
+        toggleButtonState('showTimerBtn', false);
+        stopTimerSound();
+    });
     timerPlayPauseBtn.addEventListener('click', () => { if (timerInterval) pauseTimer(); else playTimer(); });
     timerResetBtn.addEventListener('click', resetTimer);
 
