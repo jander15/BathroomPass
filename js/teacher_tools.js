@@ -23,7 +23,7 @@ let attendanceVisible = true;
 
 // Timer State
 let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
-let minUpBtn, minDownBtn; // New buttons
+let minUpBtn, minDownBtn;
 let timeRemaining = 0;
 let timerInterval = null;
 let playIcon, pauseIcon;
@@ -123,14 +123,7 @@ function cacheToolsDOMElements() {
     studentCountDisplay = document.getElementById('studentCountDisplay');
 }
 
-function makeElementDraggable(element, handle) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    const dragMouseDown = (e) => { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; };
-    const elementDrag = (e) => { e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; element.style.top = (element.offsetTop - pos2) + "px"; element.style.left = (element.offsetLeft - pos1) + "px"; };
-    const closeDragElement = () => { document.onmouseup = null; document.onmousemove = null; };
-    handle.onmousedown = dragMouseDown;
-}
-
+// --- HELPER: Get Student Name Safely ---
 function getStudentNameFromSeat(seat) {
     const nameSpan = seat.querySelector('.student-name');
     if (nameSpan) return nameSpan.textContent;
@@ -139,11 +132,13 @@ function getStudentNameFromSeat(seat) {
     return clone.textContent.trim();
 }
 
+// --- STUDENT COUNT HELPER ---
 function updateStudentCount() {
     if (!appState.data.allNamesFromSheet || !classDropdown.value) return;
     const currentClass = classDropdown.value;
     const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
     const presentCount = preselectedStudents.size + participatedStudents.size;
+    
     if (studentCountDisplay) {
         studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
     }
@@ -160,7 +155,6 @@ function adjustTimerMinutes(amount) {
     let current = parseInt(timerMinutesInput.value, 10) || 0;
     let next = Math.max(0, current + amount);
     timerMinutesInput.value = next;
-    // If timer isn't running, update the internal time state immediately
     if (!timerInterval) {
         timeRemaining = (next * 60) + (parseInt(timerSecondsInput.value, 10) || 0);
     }
@@ -416,7 +410,6 @@ async function initializePageSpecificApp() {
     assignRolesBtn.addEventListener('click', assignRolesToGroups);
     shiftRolesBtn.addEventListener('click', shiftRoles);
     clearRolesBtn.addEventListener('click', clearRoles);
-    makeElementDraggable(rolesPanel, rolesHeader);
     toggleRolesViewBtn.addEventListener('click', () => toggleRolesPanelState(!isRolesPanelCollapsed));
     miniShiftBtn.addEventListener('click', shiftRoles);
 
@@ -490,6 +483,7 @@ async function initializePageSpecificApp() {
 
     originalSeatingBtn.addEventListener('click', () => { if (originalSeating) renderSeatingState(originalSeating); });
     
+    // UPDATED TOGGLE LISTENER
     attendanceToggleBtn.addEventListener('click', () => { 
         attendanceVisible = !attendanceVisible; 
         
@@ -509,7 +503,6 @@ async function initializePageSpecificApp() {
     timerHideBtn.addEventListener('click', () => { timerContainer.classList.add('hidden'); stopTimerSound(); });
     timerPlayPauseBtn.addEventListener('click', () => { if (timerInterval) pauseTimer(); else playTimer(); });
     timerResetBtn.addEventListener('click', resetTimer);
-    makeElementDraggable(timerContainer, timerHeader);
 
     if (appState.currentUser.email && appState.currentUser.idToken) {
         try {

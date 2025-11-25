@@ -45,7 +45,8 @@
         
         <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Randomized Seating Chart</h1>
         
-    <div id="toolsContent" class="relative bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-4 min-h-[800px]"> 
+    <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-4">
+
         <div class="bg-white p-2 rounded-lg border border-gray-200 flex flex-wrap items-center gap-2 shadow-sm relative z-20">
             <div class="relative">
                 <select id="classDropdown" class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-80 p-2 pr-8 cursor-pointer font-medium truncate"></select>
@@ -97,71 +98,71 @@
             </div>
         </div>
 
-        <div id="timerContainer" class="dashboard-widget hidden w-40" style="top: 80px; right: 20px;">
-            <div id="timerHeader" class="widget-header">
-                <span>Timer</span>
-                <div class="flex gap-1">
-                    <button id="timerHideBtn" class="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-            </div>
-            <div class="widget-body flex flex-col items-center gap-3">
-                <div class="flex items-center justify-center gap-1 font-mono text-xl text-gray-700">
-                    <div class="flex flex-col items-center">
-                        <button id="minUpBtn" class="timer-btn-mini mb-1">▲</button>
-                        <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-8 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none">
-                        <button id="minDownBtn" class="timer-btn-mini mt-1">▼</button>
-                    </div>
-                    <span class="pb-1">:</span>
-                    <div class="flex flex-col items-center justify-center pt-6">
-                        <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-8 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none">
-                    </div>
-                </div>
-                <div class="flex w-full gap-2">
-                    <button id="timerPlayPauseBtn" class="flex-1 py-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 flex justify-center">
-                        <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>
-                        <svg id="pauseIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>
-                    </button>
-                    <button id="timerResetBtn" class="flex-1 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 flex justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="rolesPanel" class="dashboard-widget hidden w-64" style="top: 80px; right: 180px;">
-            <div id="rolesHeader" class="widget-header">
-                <span>Group Roles</span>
-                <div class="flex items-center gap-1">
-                    <button id="toggleRolesViewBtn" class="text-gray-400 hover:text-indigo-600 p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>
-                    </button>
-                    <button id="closeRolesBtn" class="text-gray-400 hover:text-red-500 p-1 font-bold text-lg leading-none">&times;</button>
-                </div>
-            </div>
-
-            <div id="rolesMiniContent" class="widget-body bg-gray-50 hidden">
-                <button id="miniShiftBtn" class="w-full bg-amber-500 text-white py-2 rounded text-sm font-semibold hover:bg-amber-600 shadow-sm">Shift Roles ↻</button>
-            </div>
-
-            <div id="rolesFullContent" class="widget-body space-y-3">
-                <div id="activeRolesList" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-gray-50 rounded border border-dashed border-gray-300 text-xs">
-                    <span class="text-gray-400 italic">Select roles below...</span>
-                </div>
-                <div class="flex gap-2">
-                    <button id="assignRolesBtn" class="flex-1 bg-indigo-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-indigo-700">Assign</button>
-                    <button id="shiftRolesBtn" class="flex-1 bg-amber-500 text-white py-1.5 rounded text-xs font-semibold hover:bg-amber-600 hidden">Shift ↻</button>
-                </div>
-                <button id="clearRolesBtn" class="w-full py-1 text-xs text-red-500 hover:text-red-700 hover:underline">Clear All</button>
-                <hr class="border-gray-100">
-                <div id="defaultRolesBank" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
-                <div class="flex gap-1 pt-1">
-                    <input type="text" id="customRoleInput" placeholder="Add custom..." class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500">
-                    <button id="addCustomRoleBtn" class="bg-gray-100 text-gray-600 px-2 rounded border border-gray-300 hover:bg-gray-200">+</button>
-                </div>
-            </div>
-        </div>
-
         <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
+            
+            <div class="flex flex-wrap gap-4 mb-4 empty:hidden">
+                
+                <div id="timerContainer" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-auto">
+                    <div class="bg-gray-100 p-2 border-b border-gray-300 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-600 uppercase tracking-wide">Timer</span>
+                        <button id="timerHideBtn" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+                    </div>
+                    <div class="p-3 flex flex-col items-center gap-3">
+                        <div class="flex items-center justify-center gap-1 font-mono text-xl text-gray-700">
+                            <div class="flex flex-col items-center">
+                                <button id="minUpBtn" class="timer-btn-mini mb-1">▲</button>
+                                <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-8 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none">
+                                <button id="minDownBtn" class="timer-btn-mini mt-1">▼</button>
+                            </div>
+                            <span class="pb-1">:</span>
+                            <div class="flex flex-col items-center justify-center pt-6">
+                                <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-8 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none">
+                            </div>
+                        </div>
+                        <div class="flex w-full gap-2">
+                            <button id="timerPlayPauseBtn" class="flex-1 py-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 flex justify-center">
+                                <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>
+                                <svg id="pauseIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>
+                            </button>
+                            <button id="timerResetBtn" class="flex-1 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 flex justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="rolesPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-64 flex flex-col">
+                    <div id="rolesHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-600 uppercase tracking-wide">Group Roles</span>
+                        <div class="flex items-center gap-1">
+                            <button id="toggleRolesViewBtn" class="text-gray-400 hover:text-indigo-600 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg></button>
+                            <button id="closeRolesBtn" class="text-gray-400 hover:text-red-500 p-1 text-lg leading-none">&times;</button>
+                        </div>
+                    </div>
+                    
+                    <div id="rolesMiniContent" class="p-3 bg-gray-50 hidden">
+                        <button id="miniShiftBtn" class="w-full bg-amber-500 text-white py-1.5 rounded text-sm font-semibold hover:bg-amber-600 shadow-sm">Shift Roles ↻</button>
+                    </div>
+
+                    <div id="rolesFullContent" class="p-3 space-y-3">
+                        <div id="activeRolesList" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-gray-50 rounded border border-dashed border-gray-300 text-xs">
+                            <span class="text-gray-400 italic">Select roles below...</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="assignRolesBtn" class="flex-1 bg-indigo-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-indigo-700">Assign</button>
+                            <button id="shiftRolesBtn" class="flex-1 bg-amber-500 text-white py-1.5 rounded text-xs font-semibold hover:bg-amber-600 hidden">Shift ↻</button>
+                        </div>
+                        <button id="clearRolesBtn" class="w-full py-1 text-xs text-red-500 hover:text-red-700 hover:underline">Clear All</button>
+                        <hr class="border-gray-100">
+                        <div id="defaultRolesBank" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
+                        <div class="flex gap-1 pt-1">
+                            <input type="text" id="customRoleInput" placeholder="Add custom..." class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500">
+                            <button id="addCustomRoleBtn" class="bg-gray-100 text-gray-600 px-2 rounded border border-gray-300 hover:bg-gray-200">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="instructionContainer" class="w-full bg-white border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">
                 <div class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center">
                     <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
