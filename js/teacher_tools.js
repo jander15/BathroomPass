@@ -32,7 +32,7 @@ let playIcon, pauseIcon;
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
 let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
-let bgColorSelect; // Changed from picker to select
+let bgControlContainer, bgColorBtn, bgColorMenu; // New Color Vars
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
@@ -49,9 +49,21 @@ let moreOptionsBtn, moreOptionsMenu;
 let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn, rolesTitleExpanded;
 let isRolesPanelCollapsed = false;
 
-// --- Color Palette ---
+// --- Color Palettes ---
 const groupColors = [ { bg: '#fef2f2', border: '#fca5a5' }, { bg: '#fff7ed', border: '#fdba74' }, { bg: '#fefce8', border: '#fde047' }, { bg: '#f7fee7', border: '#bef264' }, { bg: '#ecfdf5', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' }, { bg: '#f5f3ff', border: '#c4b5fd' }, { bg: '#faf5ff', border: '#d8b4fe' }, { bg: '#fdf2f8', border: '#f9a8d4' }];
 const roleColors = [ 'bg-red-100 text-red-800 border-red-200', 'bg-orange-100 text-orange-800 border-orange-200', 'bg-purple-100 text-purple-800 border-purple-200', 'bg-pink-100 text-pink-800 border-pink-200', 'bg-gray-100 text-gray-800 border-gray-200', 'bg-rose-100 text-rose-800 border-rose-200', 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200', 'bg-stone-200 text-stone-800 border-stone-300' ];
+
+// New Background Palette (Bright Colors)
+const bgColors = [
+    '#fefce8', // Default Yellow
+    '#ffffff', // White
+    '#fef08a', // Bright Yellow
+    '#bbf7d0', // Bright Green
+    '#bfdbfe', // Bright Blue
+    '#fbcfe8', // Bright Pink
+    '#e9d5ff', // Bright Purple
+    '#fed7aa'  // Bright Orange
+];
 
 function cacheToolsDOMElements() {
     classDropdown = document.getElementById('classDropdown');
@@ -103,7 +115,11 @@ function cacheToolsDOMElements() {
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
     toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
-    bgColorSelect = document.getElementById('bgColorSelect'); // Updated
+    
+    // BG Color Elements
+    bgControlContainer = document.getElementById('bgControlContainer');
+    bgColorBtn = document.getElementById('bgColorBtn');
+    bgColorMenu = document.getElementById('bgColorMenu');
 
     // Roles
     rolesPanel = document.getElementById('rolesPanel');
@@ -313,7 +329,7 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
-    // 1. Update the Size Whitelist with 4 large options
+    // 1. Configure Sizes with 4 options
     const Size = Quill.import('attributors/style/size');
     Size.whitelist = ['24px', '36px', '48px', '60px'];
     Quill.register(Size, true);
@@ -329,7 +345,7 @@ function initializeQuill() {
         modules: {
             imageResize: { displaySize: true },
             toolbar: [ 
-                [{ 'size': Size.whitelist }], // Use our new whitelist
+                [{ 'size': Size.whitelist }], 
                 ['bold', 'italic', 'underline', 'strike'], 
                 [{ 'color': [] }, { 'background': [] }], 
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
@@ -342,31 +358,57 @@ function initializeQuill() {
 
     document.querySelector('.ql-toolbar').classList.add('hidden');
     
-    // 2. Set Default Size to 48px
+    // 2. Set Default Size (60px) and Align Center
     setTimeout(() => {
-        quillInstance.format('size', '48px');
+        quillInstance.format('size', '48px'); // Set a reasonable fallback first
+        quillInstance.format('align', 'center'); // Set center align
+        
         if (quillInstance.getText().trim().length === 0) {
             quillInstance.setText("\n");
-            quillInstance.formatLine(0, 1, 'size', '48px');
+            quillInstance.formatLine(0, 1, 'size', '60px'); // Explicit 60px for new text
+            quillInstance.formatLine(0, 1, 'align', 'center');
         }
     }, 100);
+    
+    renderBgColorMenu(); // Setup the new color menu
 }
 
-// UPDATED: Background Color Logic with Dropdown
-function updateBackgroundColor() {
-    const color = bgColorSelect.value;
+// NEW: Render the Color Menu
+function renderBgColorMenu() {
+    bgColorMenu.innerHTML = '';
+    bgColors.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'w-8 h-8 rounded-md border border-gray-200 shadow-sm hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500';
+        btn.style.backgroundColor = color;
+        btn.onclick = (e) => {
+            e.stopPropagation(); // Prevent closing immediately
+            updateBackgroundColor(color);
+            bgColorMenu.classList.add('hidden');
+        };
+        bgColorMenu.appendChild(btn);
+    });
+}
+
+function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
+    bgColorBtn.style.backgroundColor = color; // Update the button preview
 }
 
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
-    toggleToolbarBtn.classList.remove('hidden'); 
+    toggleToolbarBtn.classList.remove('hidden');
+    // Show BG Control
+    bgControlContainer.classList.remove('hidden');
+    
     const toolbar = document.querySelector('.ql-toolbar');
     if(toggleToolbarBtn.textContent === "Hide Tools") toolbar.classList.remove('hidden');
     else toolbar.classList.add('hidden');
 }
-function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); toggleToolbarBtn.classList.add('hidden'); }
+function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); toggleToolbarBtn.classList.add('hidden'); 
+    // Hide BG Control
+    bgControlContainer.classList.add('hidden');
+}
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-toolbar'); if (!toolbar) return; if (toolbar.classList.contains('hidden')) { toolbar.classList.remove('hidden'); toggleToolbarBtn.textContent = "Hide Tools"; } else { toolbar.classList.add('hidden'); toggleToolbarBtn.textContent = "Show Tools"; } }
 function toggleInstructions() { 
@@ -508,7 +550,12 @@ async function initializePageSpecificApp() {
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
     toggleToolbarBtn.addEventListener('click', toggleQuillToolbar);
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
-    bgColorSelect.addEventListener('change', updateBackgroundColor); // Use 'change' for select
+    
+    // BG Menu Listeners
+    bgColorBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        bgColorMenu.classList.toggle('hidden');
+    });
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 
@@ -582,6 +629,10 @@ async function initializePageSpecificApp() {
         
         if (!moreOptionsBtn.contains(event.target) && !moreOptionsMenu.contains(event.target)) {
             moreOptionsMenu.classList.add('hidden');
+        }
+        
+        if (bgColorMenu && !bgColorBtn.contains(event.target) && !bgColorMenu.contains(event.target)) {
+            bgColorMenu.classList.add('hidden');
         }
 
         const seat = event.target.closest('.seat');
