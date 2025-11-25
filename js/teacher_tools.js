@@ -6,7 +6,7 @@ let generatePairsBtn, generateThreesBtn, generateFoursBtn;
 let groupCountInput, generateGroupsByCountBtn;
 let unselectedStudentsGrid;
 let selectAllBtn, deselectAllBtn;
-let startClassBtn, originalSeatingBtn, attendanceToggleBtn, jigsawBtn, rolesBtn, groupNumBtn;
+let startClassBtn, originalSeatingBtn, attendanceToggleBtn, jigsawBtn, rolesBtn;
 let setupButtons, inClassButtons; 
 let groupBtns = [];
 let sortableInstance = null;
@@ -22,7 +22,7 @@ let participatedStudents = new Set();
 let attendanceVisible = true;
 
 // Timer State
-let showTimerBtn, timerContainer, timerHeader, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
+let showTimerBtn, timerContainer, timerHideBtn, timerMinutesInput, timerSecondsInput, timerPlayPauseBtn, timerResetBtn, timerAudio;
 let minUpBtn, minDownBtn;
 let timeRemaining = 0;
 let timerInterval = null;
@@ -40,12 +40,12 @@ let roleRotationIndex = 0;
 const defaultRoles = ["Facilitator", "Recorder", "Presenter", "Timekeeper", "Materials", "Reflector", "Encourager", "Spy"];
 
 // Group Number State
-let groupsPanel, closeGroupsBtn, rotateGroupsBtn;
+let groupsPanel, closeGroupsBtn, rotateGroupsBtn, groupNumBtn;
 let isGroupNumbersVisible = false;
 
 // Menu State
 let moreOptionsBtn, moreOptionsMenu;
-let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn;
+let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn, rolesTitleExpanded;
 let isRolesPanelCollapsed = false;
 
 // --- Color Palette ---
@@ -73,8 +73,8 @@ function cacheToolsDOMElements() {
     
     showTimerBtn = document.getElementById('showTimerBtn');
     jigsawBtn = document.getElementById('jigsawBtn');
-    rolesBtn = document.getElementById('rolesBtn');
-    groupNumBtn = document.getElementById('groupNumBtn'); // New Button
+    rolesBtn = document.getElementById('rolesBtn'); 
+    groupNumBtn = document.getElementById('groupNumBtn');
 
     // Timer
     timerContainer = document.getElementById('timerContainer');
@@ -118,6 +118,7 @@ function cacheToolsDOMElements() {
     rolesMiniControls = document.getElementById('rolesMiniControls');
     toggleRolesViewBtn = document.getElementById('toggleRolesViewBtn');
     miniShiftBtn = document.getElementById('miniShiftBtn');
+    rolesTitleExpanded = document.getElementById('rolesTitleExpanded');
 
     // Group Numbers
     groupsPanel = document.getElementById('groupsPanel');
@@ -206,15 +207,24 @@ function renderRolesUI() {
 function addRole(roleName) { if (roleName && !activeRoles.includes(roleName)) { activeRoles.push(roleName); renderRolesUI(); } }
 function removeRole(index) { activeRoles.splice(index, 1); renderRolesUI(); }
 function handleCustomRoleAdd() { const name = customRoleInput.value.trim(); if (name) { addRole(name); customRoleInput.value = ''; } }
+
 function toggleRolesPanelState(collapse) {
     isRolesPanelCollapsed = collapse;
     if (collapse) {
+        // Collapse: Hide content, show mini controls, shrink width
         rolesFullContent.classList.add('hidden');
         rolesMiniControls.classList.remove('hidden');
+        rolesTitleExpanded.classList.add('hidden'); // Hide title
+        rolesPanel.classList.remove('w-96');
+        rolesPanel.classList.add('w-auto'); // Auto width for mini bar
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
     } else {
+        // Expand: Show content, hide mini controls, restore width
         rolesFullContent.classList.remove('hidden');
         rolesMiniControls.classList.add('hidden');
+        rolesTitleExpanded.classList.remove('hidden'); // Show title
+        rolesPanel.classList.remove('w-auto');
+        rolesPanel.classList.add('w-96'); // Fixed width for full panel
         toggleRolesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`;
     }
 }
@@ -263,10 +273,8 @@ function clearRoles() {
 function updateGroupNumbers() {
     const groups = document.querySelectorAll('.group-container');
     groups.forEach((group, index) => {
-        // Remove existing badge if any
         const existing = group.querySelector('.group-number-badge');
         if (existing) existing.remove();
-
         if (isGroupNumbersVisible) {
             const badge = document.createElement('div');
             badge.className = 'group-number-badge';
@@ -282,43 +290,21 @@ function rotateGroups() {
         showErrorAlert("Need at least 2 groups to rotate.");
         return;
     }
-
-    // 1. Extract all students from each group into an array of arrays
-    //    groupStudents[0] = [StudentA, StudentB...] from Container 0
     const groupStudents = groups.map(group => {
         return Array.from(group.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat));
     });
-
-    // 2. Perform the rotation (Right Shift of CONTENT)
-    //    Container 1 gets content of Container 0.
-    //    Container 0 gets content of Container Last.
-    //    So we unshift the last element to the front of the array.
-    groupStudents.unshift(groupStudents.pop());
-
-    // 3. Re-render chart with shifted data
+    groupStudents.unshift(groupStudents.pop()); // Shift Right
     seatingChartGrid.innerHTML = '';
-    // Note: We keep 'unselectedStudents' as they are, we just need to re-append them after.
-    // Actually, renderSeatingState rebuilds from scratch. 
-    // We can just manually rebuild the grid here to preserve colors/structure.
-    
     groupStudents.forEach((students, index) => {
         const color = groupColors[index % groupColors.length];
-        // We must reuse createGroupContainerElement but populate with shifted students
         const container = createGroupContainerElement(students, color);
         seatingChartGrid.appendChild(container);
     });
-
-    // Re-initialize drag/drop if needed (renderSeatingState usually does this logic)
     toggleDragAndDrop(!attendanceVisible);
     applyAttendanceStyles();
     updateJigsawButtonVisibility();
-    // 4. Ensure numbers persist
     updateGroupNumbers();
-    
-    // Also re-apply roles if they exist, because we just wiped the HTML
-    if (activeRoles.length > 0) {
-        distributeRoles();
-    }
+    if (activeRoles.length > 0) distributeRoles();
 }
 
 
