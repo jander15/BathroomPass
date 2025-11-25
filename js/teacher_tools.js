@@ -31,7 +31,7 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn, toggleFullScreenBtn;
+let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
 let bgControlContainer, bgColorBtn, bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
@@ -47,7 +47,7 @@ let groupsPanel, closeGroupsBtn, rotateGroupsBtn, groupNumBtn;
 let isGroupNumbersVisible = false;
 
 // Menu State
-let moreOptionsBtn, moreOptionsMenu;
+let moreOptionsBtn, moreOptionsMenu, appFullScreenBtn;
 let rolesFullContent, rolesMiniControls, toggleRolesViewBtn, miniShiftBtn, rolesTitleExpanded;
 let isRolesPanelCollapsed = false;
 
@@ -105,7 +105,7 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
-    toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
+    showToolbarBtn = document.getElementById('showToolbarBtn'); // Renamed from toggleToolbarBtn
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
@@ -143,6 +143,7 @@ function cacheToolsDOMElements() {
     // Menu & Misc
     moreOptionsBtn = document.getElementById('moreOptionsBtn');
     moreOptionsMenu = document.getElementById('moreOptionsMenu');
+    appFullScreenBtn = document.getElementById('appFullScreenBtn');
     seatContextMenu = document.getElementById('seatContextMenu');
     iconToArrange = document.getElementById('iconToArrange');
     iconToAttendance = document.getElementById('iconToAttendance');
@@ -172,6 +173,7 @@ function updateStudentCount() {
     const currentClass = classDropdown.value;
     const totalStudents = appState.data.allNamesFromSheet.filter(s => s.Class === currentClass).length;
     const presentCount = preselectedStudents.size + participatedStudents.size;
+    
     if (studentCountDisplay) {
         studentCountDisplay.textContent = `Present: ${presentCount} / ${totalStudents}`;
     }
@@ -352,7 +354,17 @@ function initializeQuill() {
         }
     });
 
-    document.querySelector('.ql-toolbar').classList.add('hidden');
+    // INJECT CLOSE BUTTON into Toolbar
+    const toolbar = document.querySelector('.ql-toolbar');
+    if (toolbar) {
+        toolbar.classList.add('hidden'); // Start hidden
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'ql-toolbar-close';
+        closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
+        closeBtn.title = "Hide Tools";
+        closeBtn.onclick = toggleQuillToolbar;
+        toolbar.appendChild(closeBtn);
+    }
     
     // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
@@ -388,7 +400,7 @@ function renderBgColorMenu() {
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
-    bgColorBtn.style.backgroundColor = color; // Update preview button
+    bgColorBtn.style.backgroundColor = color; 
 }
 
 // Collapsible Header Logic
@@ -402,6 +414,18 @@ function toggleHeaderVisibility(show) {
     }
 }
 
+// App Full Screen Logic
+function toggleAppFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+            console.error(`Error enabling full-screen mode: ${err.message} (${err.name})`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// Instruction Full Screen Logic
 function toggleFullScreen() {
     const isFS = instructionContainer.classList.toggle('instruction-fullscreen');
     quillEditorContainer.classList.toggle('editor-fullscreen');
@@ -420,21 +444,34 @@ function toggleFullScreen() {
 
 function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
-    toggleToolbarBtn.classList.remove('hidden');
-    
-    // SHOW BG Controls in Text Mode
+    showToolbarBtn.classList.remove('hidden');
+    // Show BG Control
     bgControlContainer.classList.remove('hidden');
     
     const toolbar = document.querySelector('.ql-toolbar');
-    if(toggleToolbarBtn.textContent === "Hide Tools") toolbar.classList.remove('hidden');
-    else toolbar.classList.add('hidden');
+    if(!toolbar.classList.contains('hidden')) showToolbarBtn.classList.add('hidden');
 }
-function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); toggleToolbarBtn.classList.add('hidden'); 
+function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); 
     // HIDE BG Controls in Embed Mode
     bgControlContainer.classList.add('hidden');
 }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
-function toggleQuillToolbar() { const toolbar = document.querySelector('.ql-toolbar'); if (!toolbar) return; if (toolbar.classList.contains('hidden')) { toolbar.classList.remove('hidden'); toggleToolbarBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`; } else { toolbar.classList.add('hidden'); toggleToolbarBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>`; } }
+
+// Modified Logic: Show button is in header, Hide button is in toolbar
+function toggleQuillToolbar() { 
+    const toolbar = document.querySelector('.ql-toolbar'); 
+    if (!toolbar) return; 
+    
+    if (toolbar.classList.contains('hidden')) { 
+        // User clicked "Show" (header button)
+        toolbar.classList.remove('hidden'); 
+        showToolbarBtn.classList.add('hidden'); // Hide the header button
+    } else { 
+        // User clicked "Hide" (toolbar button)
+        toolbar.classList.add('hidden'); 
+        showToolbarBtn.classList.remove('hidden'); // Show the header button
+    } 
+}
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
@@ -572,7 +609,7 @@ async function initializePageSpecificApp() {
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
-    toggleToolbarBtn.addEventListener('click', toggleQuillToolbar);
+    showToolbarBtn.addEventListener('click', toggleQuillToolbar); // Update listener
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
     
     // BG Menu Listeners
@@ -587,6 +624,9 @@ async function initializePageSpecificApp() {
 
     // Full Screen Listener
     toggleFullScreenBtn.addEventListener('click', toggleFullScreen);
+    
+    // NEW: App Full Screen Listener
+    appFullScreenBtn.addEventListener('click', toggleAppFullScreen);
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 
