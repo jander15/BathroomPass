@@ -32,6 +32,7 @@ let playIcon, pauseIcon;
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
 let toggleInstructionsBtn, instructionContainer, toggleToolbarBtn;
+let bgColorSelect; // Changed from picker to select
 
 // Roles State
 let rolesPanel, rolesHeader, closeRolesBtn, activeRolesList, assignRolesBtn, shiftRolesBtn, clearRolesBtn, defaultRolesBank, customRoleInput, addCustomRoleBtn;
@@ -102,6 +103,7 @@ function cacheToolsDOMElements() {
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
     toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
+    bgColorSelect = document.getElementById('bgColorSelect'); // Updated
 
     // Roles
     rolesPanel = document.getElementById('rolesPanel');
@@ -311,8 +313,9 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
+    // 1. Update the Size Whitelist with 4 large options
     const Size = Quill.import('attributors/style/size');
-    Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '24px', '36px', '48px', '64px'];
+    Size.whitelist = ['24px', '36px', '48px', '60px'];
     Quill.register(Size, true);
 
     try {
@@ -326,7 +329,7 @@ function initializeQuill() {
         modules: {
             imageResize: { displaySize: true },
             toolbar: [ 
-                [{ 'size': Size.whitelist }], 
+                [{ 'size': Size.whitelist }], // Use our new whitelist
                 ['bold', 'italic', 'underline', 'strike'], 
                 [{ 'color': [] }, { 'background': [] }], 
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
@@ -338,22 +341,20 @@ function initializeQuill() {
     });
 
     document.querySelector('.ql-toolbar').classList.add('hidden');
+    
+    // 2. Set Default Size to 48px
     setTimeout(() => {
-        quillInstance.format('size', '36px');
+        quillInstance.format('size', '48px');
         if (quillInstance.getText().trim().length === 0) {
             quillInstance.setText("\n");
-            quillInstance.formatLine(0, 1, 'size', '36px');
+            quillInstance.formatLine(0, 1, 'size', '48px');
         }
     }, 100);
 }
 
-// NEW: Color Palette Logic
-function setWidgetBg(color) {
-    if (!instructionContainer || !quillEditorContainer) return;
-    // Remove existing BG classes to avoid conflicts
-    instructionContainer.classList.remove('bg-white', 'bg-yellow-50', 'bg-green-50', 'bg-blue-50', 'bg-pink-50', 'bg-purple-50');
-    quillEditorContainer.classList.remove('bg-white', 'bg-yellow-50', 'bg-green-50', 'bg-blue-50', 'bg-pink-50', 'bg-purple-50');
-    
+// UPDATED: Background Color Logic with Dropdown
+function updateBackgroundColor() {
+    const color = bgColorSelect.value;
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
 }
@@ -507,6 +508,7 @@ async function initializePageSpecificApp() {
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
     toggleToolbarBtn.addEventListener('click', toggleQuillToolbar);
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
+    bgColorSelect.addEventListener('change', updateBackgroundColor); // Use 'change' for select
 
     // Roles Listeners
     rolesBtn.addEventListener('click', () => { 

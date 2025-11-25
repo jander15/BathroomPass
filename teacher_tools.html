@@ -48,15 +48,20 @@
     <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-6xl space-y-4">
 
         <style>
-            /* Force Quill to display the data-value (12px, 14px) as the label */
+            /* Force Quill to display the data-value as the label */
             .ql-snow .ql-picker.ql-size .ql-picker-label::before,
             .ql-snow .ql-picker.ql-size .ql-picker-item::before {
                 content: attr(data-value) !important;
             }
-            /* Fallback for the default (empty) value */
+            /* Fallback if something is empty */
             .ql-snow .ql-picker.ql-size .ql-picker-label[data-value=""]::before,
             .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=""]::before {
-                content: 'Normal' !important;
+                content: '48px' !important; /* Match default */
+            }
+            
+            /* Make the dropdown items large enough to read */
+            .ql-snow .ql-picker.ql-size {
+                width: 80px !important;
             }
         </style>
 
@@ -186,13 +191,18 @@
                     <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
                     <button id="modeEmbedBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Google Doc/Slides</button>
                     
-                    <div id="bgPalette" class="flex items-center gap-1 ml-2">
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-white hover:scale-110 transition-transform" onclick="setWidgetBg('#ffffff')" title="White"></button>
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-yellow-50 hover:scale-110 transition-transform" onclick="setWidgetBg('#fefce8')" title="Yellow"></button>
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-green-50 hover:scale-110 transition-transform" onclick="setWidgetBg('#f0fdf4')" title="Green"></button>
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-blue-50 hover:scale-110 transition-transform" onclick="setWidgetBg('#eff6ff')" title="Blue"></button>
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-pink-50 hover:scale-110 transition-transform" onclick="setWidgetBg('#fdf2f8')" title="Pink"></button>
-                        <button class="w-5 h-5 rounded-full border border-gray-300 bg-purple-50 hover:scale-110 transition-transform" onclick="setWidgetBg('#faf5ff')" title="Purple"></button>
+                    <div class="flex items-center gap-2 ml-2">
+                        <span class="text-xs font-bold text-gray-500 uppercase">BG:</span>
+                        <select id="bgColorSelect" class="text-xs border border-gray-300 rounded p-1 bg-white text-gray-700 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                            <option value="#fefce8">Pale Yellow</option>
+                            <option value="#ffffff">White</option>
+                            <option value="#fef08a">Bright Yellow</option>
+                            <option value="#bbf7d0">Bright Green</option>
+                            <option value="#bfdbfe">Bright Blue</option>
+                            <option value="#fbcfe8">Bright Pink</option>
+                            <option value="#e9d5ff">Bright Purple</option>
+                            <option value="#fed7aa">Bright Orange</option>
+                        </select>
                     </div>
 
                     <button id="toggleToolbarBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300 ml-auto">Show Tools</button>
