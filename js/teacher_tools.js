@@ -432,15 +432,34 @@ function toggleFullScreen() {
     }
 }
 
-function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
-    quillEditorContainer.classList.remove('hidden'); 
-    showToolbarBtn.classList.remove('hidden');
-    // Show BG Control
-    bgControlContainer.classList.remove('hidden');
+function showTextMode() { 
+    // 1. Update Tab Styles
+    modeTextBtn.classList.add('bg-blue-600', 'text-white'); 
+    modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
+    modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); 
+    modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); 
     
+    // 2. Show/Hide Areas
+    embedControls.classList.add('hidden'); 
+    embedContainer.classList.add('hidden'); 
+    bgControlContainer.classList.remove('hidden'); // Show BG controls
+    
+    quillEditorContainer.classList.remove('hidden'); 
+    if (showToolbarBtn) showToolbarBtn.classList.remove('hidden'); 
+    
+    // 3. Sync Toolbar Button State (Only update style/title, not text)
     const toolbar = document.querySelector('.ql-toolbar');
-    if(!toolbar.classList.contains('hidden')) showToolbarBtn.textContent = "Hide Tools";
-    else showToolbarBtn.textContent = "Show Tools";
+    if (toolbar && showToolbarBtn) {
+        if (toolbar.classList.contains('hidden')) {
+            // Toolbar is hidden
+            showToolbarBtn.title = "Show Tools";
+            showToolbarBtn.classList.remove('bg-gray-300', 'text-indigo-700');
+        } else {
+            // Toolbar is visible
+            showToolbarBtn.title = "Hide Tools";
+            showToolbarBtn.classList.add('bg-gray-300', 'text-indigo-700');
+        }
+    }
 }
 function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); 
     // HIDE BG Controls in Embed Mode
@@ -453,15 +472,22 @@ function toggleQuillToolbar() {
     const toolbar = document.querySelector('.ql-toolbar'); 
     if (!toolbar) return; 
     
-    if (toolbar.classList.contains('hidden')) { 
-        // User clicked "Show Tools"
-        toolbar.classList.remove('hidden'); 
-        showToolbarBtn.textContent = "Hide Tools";
-    } else { 
-        // User clicked "Hide Tools"
-        toolbar.classList.add('hidden'); 
-        showToolbarBtn.textContent = "Show Tools";
-    } 
+    // Toggle the hidden class
+    const isHidden = toolbar.classList.toggle('hidden');
+    
+    // Update the tooltip title, but DO NOT touch the innerHTML (the icon)
+    if (showToolbarBtn) {
+        showToolbarBtn.title = isHidden ? "Show Tools" : "Hide Tools";
+        
+        // Optional: Add visual feedback (active state)
+        if (!isHidden) {
+            showToolbarBtn.classList.add('bg-gray-300', 'text-indigo-700');
+            showToolbarBtn.classList.remove('text-gray-500');
+        } else {
+            showToolbarBtn.classList.remove('bg-gray-300', 'text-indigo-700');
+            showToolbarBtn.classList.add('text-gray-500');
+        }
+    }
 }
 
 function toggleInstructions() { 
