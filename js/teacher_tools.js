@@ -389,7 +389,7 @@ function renderBgColorMenu() {
 
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
-    quillEditorContainer.style.backgroundColor = color;
+    //quillEditorContainer.style.backgroundColor = color;
     bgColorBtn.style.backgroundColor = color; // Update preview button
 }
 
