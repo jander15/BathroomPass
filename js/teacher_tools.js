@@ -31,8 +31,8 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, toggleFullScreenBtn;
-let bgControlContainer, bgColorBtn, bgColorMenu; 
+let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
+let bgColorMenu; // Removed bgControlContainer, bgColorBtn
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
 
@@ -105,11 +105,10 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
+    showToolbarBtn = document.getElementById('showToolbarBtn'); 
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
-    bgControlContainer = document.getElementById('bgControlContainer');
-    bgColorBtn = document.getElementById('bgColorBtn');
     bgColorMenu = document.getElementById('bgColorMenu');
 
     // Header Collapse Elements
@@ -326,7 +325,6 @@ function rotateGroups() {
 function initializeQuill() {
     if (quillInstance) return;
     
-    // 1. Configure Size Whitelist
     const Size = Quill.import('attributors/style/size');
     Size.whitelist = ['24px', '36px', '48px', '60px'];
     Quill.register(Size, true);
@@ -353,11 +351,41 @@ function initializeQuill() {
         }
     });
 
-    // 2. Set Default Size (48px) and Align Center
+    // INJECT BACKGROUND COLOR BUTTON into Toolbar
+    const toolbar = document.querySelector('.ql-toolbar');
+    if (toolbar) {
+        toolbar.classList.add('hidden'); // Start hidden
+        
+        // Create BG Color Trigger
+        const bgBtn = document.createElement('span');
+        bgBtn.className = 'ql-widget-bg-btn';
+        bgBtn.title = "Widget Background Color";
+        bgBtn.onclick = (e) => {
+             e.stopPropagation();
+             // Reposition the menu relative to this button
+             const rect = bgBtn.getBoundingClientRect();
+             // Because we have overflow issues, we append menu to body temporarily or just position fixed
+             bgColorMenu.style.position = 'fixed';
+             bgColorMenu.style.top = (rect.bottom + 5) + 'px';
+             bgColorMenu.style.left = rect.left + 'px';
+             bgColorMenu.classList.toggle('hidden');
+        };
+        
+        // Insert it at the beginning of toolbar
+        toolbar.insertBefore(bgBtn, toolbar.firstChild);
+        
+        // Insert Close Button at end
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'ql-toolbar-close';
+        closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
+        closeBtn.title = "Hide Tools";
+        closeBtn.onclick = toggleQuillToolbar;
+        toolbar.appendChild(closeBtn);
+    }
+    
     setTimeout(() => {
         quillInstance.format('size', '48px'); 
         quillInstance.format('align', 'center'); 
-        
         if (quillInstance.getText().trim().length === 0) {
             quillInstance.setText("\n");
             quillInstance.formatLine(0, 1, 'size', '48px'); 
@@ -368,7 +396,6 @@ function initializeQuill() {
     renderBgColorMenu();
 }
 
-// NEW: Render the Color Menu Grid
 function renderBgColorMenu() {
     bgColorMenu.innerHTML = '';
     bgColors.forEach(color => {
@@ -387,7 +414,9 @@ function renderBgColorMenu() {
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
-    bgColorBtn.style.backgroundColor = color; // Update preview button
+    // Update the preview button in toolbar
+    const previewBtn = document.querySelector('.ql-widget-bg-btn');
+    if(previewBtn) previewBtn.style.backgroundColor = color;
 }
 
 // Collapsible Header Logic
@@ -396,10 +425,12 @@ function toggleHeaderVisibility(show) {
     if (show) {
         instructionHeader.classList.remove('hidden');
         showHeaderBtn.classList.add('hidden');
-        // Logic: If we are in Text Mode, show toolbar again
-        if (embedContainer.classList.contains('hidden')) {
-            if (toolbar) toolbar.classList.remove('hidden');
-        }
+        // Restore toolbar visibility logic (if it was open)
+        // For simplicity, we keep it hidden by default or respect user choice?
+        // The prompt says "Hide toolbar as well".
+        // So showing header -> Toolbar starts hidden usually.
+        if (toolbar) toolbar.classList.add('hidden');
+        if (showToolbarBtn) showToolbarBtn.classList.remove('hidden');
     } else {
         instructionHeader.classList.add('hidden');
         showHeaderBtn.classList.remove('hidden');
@@ -435,40 +466,30 @@ function toggleFullScreen() {
     }
 }
 
-function showTextMode() { 
-    modeTextBtn.classList.add('bg-blue-600', 'text-white'); 
-    modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
-    modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); 
-    modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); 
-    
-    embedControls.classList.add('hidden'); 
-    embedContainer.classList.add('hidden'); 
-    bgControlContainer.classList.remove('hidden'); // Show BG controls
-    
+function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
+    showToolbarBtn.classList.remove('hidden');
     
-    // Always show toolbar when entering text mode
     const toolbar = document.querySelector('.ql-toolbar');
-    if(toolbar) toolbar.classList.remove('hidden');
+    if(!toolbar.classList.contains('hidden')) showToolbarBtn.classList.add('hidden');
 }
-
-function showEmbedMode() { 
-    modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); 
-    modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
-    modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); 
-    modeTextBtn.classList.remove('bg-blue-600', 'text-white'); 
-    
-    embedControls.classList.remove('hidden'); 
-    embedContainer.classList.remove('hidden'); 
-    bgControlContainer.classList.add('hidden'); // Hide BG controls
-    
-    const toolbar = document.querySelector('.ql-toolbar'); 
-    if(toolbar) toolbar.classList.add('hidden'); 
-    quillEditorContainer.classList.add('hidden'); 
-}
-
+function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); }
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
+function toggleQuillToolbar() { 
+    const toolbar = document.querySelector('.ql-toolbar'); 
+    if (!toolbar) return; 
+    
+    if (toolbar.classList.contains('hidden')) { 
+        // Show
+        toolbar.classList.remove('hidden'); 
+        showToolbarBtn.classList.add('hidden'); 
+    } else { 
+        // Hide
+        toolbar.classList.add('hidden'); 
+        showToolbarBtn.classList.remove('hidden'); 
+    } 
+}
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
@@ -606,6 +627,7 @@ async function initializePageSpecificApp() {
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
+    showToolbarBtn.addEventListener('click', toggleQuillToolbar); // Update listener
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
     
     // BG Menu Listeners
