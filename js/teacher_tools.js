@@ -31,7 +31,7 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
+let toggleInstructionsBtn, instructionContainer, toggleFullScreenBtn;
 let bgControlContainer, bgColorBtn, bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
@@ -105,7 +105,6 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
-    showToolbarBtn = document.getElementById('showToolbarBtn'); 
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
@@ -354,8 +353,6 @@ function initializeQuill() {
         }
     });
 
-    document.querySelector('.ql-toolbar').classList.add('hidden');
-    
     // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
         quillInstance.format('size', '48px'); 
@@ -389,18 +386,24 @@ function renderBgColorMenu() {
 
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
-    //quillEditorContainer.style.backgroundColor = color;
+    quillEditorContainer.style.backgroundColor = color;
     bgColorBtn.style.backgroundColor = color; // Update preview button
 }
 
 // Collapsible Header Logic
 function toggleHeaderVisibility(show) {
+    const toolbar = document.querySelector('.ql-toolbar');
     if (show) {
         instructionHeader.classList.remove('hidden');
         showHeaderBtn.classList.add('hidden');
+        // Logic: If we are in Text Mode, show toolbar again
+        if (embedContainer.classList.contains('hidden')) {
+            if (toolbar) toolbar.classList.remove('hidden');
+        }
     } else {
         instructionHeader.classList.add('hidden');
         showHeaderBtn.classList.remove('hidden');
+        if (toolbar) toolbar.classList.add('hidden');
     }
 }
 
@@ -433,62 +436,38 @@ function toggleFullScreen() {
 }
 
 function showTextMode() { 
-    // 1. Update Tab Styles
     modeTextBtn.classList.add('bg-blue-600', 'text-white'); 
     modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
     modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); 
     modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); 
     
-    // 2. Show/Hide Areas
     embedControls.classList.add('hidden'); 
     embedContainer.classList.add('hidden'); 
     bgControlContainer.classList.remove('hidden'); // Show BG controls
     
     quillEditorContainer.classList.remove('hidden'); 
-    if (showToolbarBtn) showToolbarBtn.classList.remove('hidden'); 
     
-    // 3. Sync Toolbar Button State (Only update style/title, not text)
+    // Always show toolbar when entering text mode
     const toolbar = document.querySelector('.ql-toolbar');
-    if (toolbar && showToolbarBtn) {
-        if (toolbar.classList.contains('hidden')) {
-            // Toolbar is hidden
-            showToolbarBtn.title = "Show Tools";
-            showToolbarBtn.classList.remove('bg-gray-300', 'text-indigo-700');
-        } else {
-            // Toolbar is visible
-            showToolbarBtn.title = "Hide Tools";
-            showToolbarBtn.classList.add('bg-gray-300', 'text-indigo-700');
-        }
-    }
+    if(toolbar) toolbar.classList.remove('hidden');
 }
-function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); 
-    // HIDE BG Controls in Embed Mode
-    bgControlContainer.classList.add('hidden');
-}
-function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
-// UPDATED Toggle Logic
-function toggleQuillToolbar() { 
+function showEmbedMode() { 
+    modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); 
+    modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
+    modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); 
+    modeTextBtn.classList.remove('bg-blue-600', 'text-white'); 
+    
+    embedControls.classList.remove('hidden'); 
+    embedContainer.classList.remove('hidden'); 
+    bgControlContainer.classList.add('hidden'); // Hide BG controls
+    
     const toolbar = document.querySelector('.ql-toolbar'); 
-    if (!toolbar) return; 
-    
-    // Toggle the hidden class
-    const isHidden = toolbar.classList.toggle('hidden');
-    
-    // Update the tooltip title, but DO NOT touch the innerHTML (the icon)
-    if (showToolbarBtn) {
-        showToolbarBtn.title = isHidden ? "Show Tools" : "Hide Tools";
-        
-        // Optional: Add visual feedback (active state)
-        if (!isHidden) {
-            showToolbarBtn.classList.add('bg-gray-300', 'text-indigo-700');
-            showToolbarBtn.classList.remove('text-gray-500');
-        } else {
-            showToolbarBtn.classList.remove('bg-gray-300', 'text-indigo-700');
-            showToolbarBtn.classList.add('text-gray-500');
-        }
-    }
+    if(toolbar) toolbar.classList.add('hidden'); 
+    quillEditorContainer.classList.add('hidden'); 
 }
+
+function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
@@ -627,7 +606,6 @@ async function initializePageSpecificApp() {
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
-    showToolbarBtn.addEventListener('click', toggleQuillToolbar); // Update listener
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
     
     // BG Menu Listeners
