@@ -31,8 +31,8 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, toggleFullScreenBtn;
-let bgControlContainer, bgColorBtn, bgColorMenu; 
+let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
+let bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
 
@@ -105,11 +105,10 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
+    showToolbarBtn = document.getElementById('showToolbarBtn'); 
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
-    bgControlContainer = document.getElementById('bgControlContainer');
-    bgColorBtn = document.getElementById('bgColorBtn');
     bgColorMenu = document.getElementById('bgColorMenu');
 
     // Header Collapse Elements
@@ -353,6 +352,37 @@ function initializeQuill() {
         }
     });
 
+    // INJECT CLOSE BUTTON into Toolbar
+    const toolbar = document.querySelector('.ql-toolbar');
+    if (toolbar) {
+        toolbar.classList.add('hidden'); // Start hidden
+        
+        // Create BG Color Trigger
+        const bgBtn = document.createElement('span');
+        bgBtn.className = 'ql-widget-bg-btn';
+        bgBtn.title = "Widget Background Color";
+        bgBtn.onclick = (e) => {
+             e.stopPropagation();
+             // Reposition the menu relative to this button
+             const rect = bgBtn.getBoundingClientRect();
+             bgColorMenu.style.position = 'fixed';
+             bgColorMenu.style.top = (rect.bottom + 5) + 'px';
+             bgColorMenu.style.left = rect.left + 'px';
+             bgColorMenu.classList.toggle('hidden');
+        };
+        
+        // Insert it at the beginning of toolbar
+        toolbar.insertBefore(bgBtn, toolbar.firstChild);
+        
+        // Insert Close Button at end
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'ql-toolbar-close';
+        closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
+        closeBtn.title = "Hide Tools";
+        closeBtn.onclick = toggleQuillToolbar;
+        toolbar.appendChild(closeBtn);
+    }
+    
     // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
         quillInstance.format('size', '48px'); 
@@ -450,6 +480,13 @@ function showTextMode() {
     // Always show toolbar when entering text mode
     const toolbar = document.querySelector('.ql-toolbar');
     if(toolbar) toolbar.classList.remove('hidden');
+    
+    if (showToolbarBtn) showToolbarBtn.classList.remove('hidden');
+    
+    // Sync the "Show Tools" button state
+    if(showToolbarBtn && toolbar && !toolbar.classList.contains('hidden')) {
+         showToolbarBtn.classList.add('hidden'); // Hide the header button if toolbar is open
+    }
 }
 
 function showEmbedMode() { 
@@ -465,9 +502,26 @@ function showEmbedMode() {
     const toolbar = document.querySelector('.ql-toolbar'); 
     if(toolbar) toolbar.classList.add('hidden'); 
     quillEditorContainer.classList.add('hidden'); 
+    if(showToolbarBtn) showToolbarBtn.classList.add('hidden'); 
 }
 
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
+
+// UPDATED Toggle Logic
+function toggleQuillToolbar() { 
+    const toolbar = document.querySelector('.ql-toolbar'); 
+    if (!toolbar) return; 
+    
+    if (toolbar.classList.contains('hidden')) { 
+        // User clicked "Show Tools" (Header Button)
+        toolbar.classList.remove('hidden'); 
+        showToolbarBtn.classList.add('hidden'); // Hide the header button
+    } else { 
+        // User clicked "Close" (Toolbar Button)
+        toolbar.classList.add('hidden'); 
+        showToolbarBtn.classList.remove('hidden'); // Show the header button
+    } 
+}
 
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
@@ -500,43 +554,50 @@ function createStudentGroupsByCount(students, groupCount) {
     shuffledStudents.forEach(student => { groups[groupIndex % groupCount].push(student); groupIndex++; }); return groups;
 }
 
-function captureSeatingState() {
-    const groups = [];
-    seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
-        groups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); 
-    });
-    const unselected = Array.from(unselectedStudentsGrid.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); 
-    return { groups, unselected };
-}
-
-function renderSeatingState(seatingState) {
-    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
-    seatingState.groups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
-    seatingState.unselected.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
-}
-
-function applyAttendanceStyles() {
-    toolsContent.querySelectorAll('.seat').forEach(seat => {
-        const studentName = getStudentNameFromSeat(seat); 
-        const isPreselected = preselectedStudents.has(studentName);
-        const hasParticipated = participatedStudents.has(studentName);
-        seat.classList.remove('selected', 'participated', 'attendance-hidden');
-        if (attendanceVisible) { if (isPreselected) seat.classList.add('selected'); if (hasParticipated) seat.classList.add('participated'); }
-        else { if (isPreselected || hasParticipated) seat.classList.add('attendance-hidden'); }
-    });
-    updateStudentCount();
-}
-
+// UPDATED: Initial Chart Generation (Checks active button)
 function generateInitialChart() {
-    const selectedClass = classDropdown.value; if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
-    classStarted = false; originalSeating = null; attendanceVisible = true; preselectedStudents.clear(); participatedStudents.clear();
-    setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
+    const selectedClass = classDropdown.value; 
+    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
+    
+    classStarted = false; 
+    originalSeating = null; 
+    attendanceVisible = true; 
+    preselectedStudents.clear(); 
+    participatedStudents.clear();
+    
+    setupButtons.classList.remove('hidden'); 
+    inClassButtons.classList.add('hidden'); 
+    startClassBtn.disabled = false;
+    
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
-    const initialGroups = createStudentGroupsBySize(students, 2);
-    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
-    initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
-    toggleDragAndDrop(false); updateStudentCount(); updateGroupNumbers();
+    
+    // Determine which mode is active
+    let generatedGroups = [];
+    const activeBtn = document.querySelector('.group-btn.active');
+    
+    if (activeBtn && activeBtn.id === 'generateGroupsByCountBtn') {
+        const count = parseInt(groupCountInput.value, 10);
+        generatedGroups = createStudentGroupsByCount(students, count);
+    } else {
+        // Default to Pairs (2) if no button is active yet, or use the active size
+        let size = 2;
+        if (activeBtn && activeBtn.dataset.groupsize) {
+            size = parseInt(activeBtn.dataset.groupsize, 10);
+        }
+        generatedGroups = createStudentGroupsBySize(students, size);
+    }
+
+    seatingChartGrid.innerHTML = ''; 
+    unselectedStudentsGrid.innerHTML = '';
+    
+    generatedGroups.forEach((group, index) => { 
+        const color = groupColors[index % groupColors.length]; 
+        seatingChartGrid.appendChild(createGroupContainerElement(group, color)); 
+    });
+    
+    toggleDragAndDrop(false); 
+    updateStudentCount(); 
+    updateGroupNumbers();
 }
 
 function generateSelectiveChart() {
@@ -544,15 +605,36 @@ function generateSelectiveChart() {
     const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
     const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
     if (namesToRegroup.length === 0) { showErrorAlert("No students are selected."); return; }
+    
     const activeModeBtn = document.querySelector('.group-btn.active');
     if (!activeModeBtn) { showErrorAlert("Select a grouping method."); return; }
-    const mode = activeModeBtn.id; let generatedGroups;
-    if (mode === 'generateGroupsByCountBtn') { const count = parseInt(groupCountInput.value, 10); generatedGroups = createStudentGroupsByCount(namesToRegroup, count); }
-    else { const size = parseInt(activeModeBtn.dataset.groupsize, 10); generatedGroups = createStudentGroupsBySize(namesToRegroup, size); }
-    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
-    generatedGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
+    
+    const mode = activeModeBtn.id; 
+    let generatedGroups;
+    
+    if (mode === 'generateGroupsByCountBtn') { 
+        const count = parseInt(groupCountInput.value, 10); 
+        generatedGroups = createStudentGroupsByCount(namesToRegroup, count); 
+    } else { 
+        const size = parseInt(activeModeBtn.dataset.groupsize, 10); 
+        generatedGroups = createStudentGroupsBySize(namesToRegroup, size); 
+    }
+    
+    seatingChartGrid.innerHTML = ''; 
+    unselectedStudentsGrid.innerHTML = '';
+    
+    generatedGroups.forEach((group, index) => { 
+        const color = groupColors[index % groupColors.length]; 
+        seatingChartGrid.appendChild(createGroupContainerElement(group, color)); 
+    });
+    
     unselectedNames.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
+    
+    updateJigsawButtonVisibility(); 
+    toggleDragAndDrop(!attendanceVisible); 
+    applyAttendanceStyles(); 
+    updateStudentCount(); 
+    updateGroupNumbers();
 }
 
 function createSeatElement(studentName) {
@@ -606,6 +688,7 @@ async function initializePageSpecificApp() {
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
+    showToolbarBtn.addEventListener('click', toggleQuillToolbar); // Update listener
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
     
     // BG Menu Listeners
@@ -667,8 +750,26 @@ async function initializePageSpecificApp() {
     minUpBtn.addEventListener('click', () => adjustTimerMinutes(1));
     minDownBtn.addEventListener('click', () => adjustTimerMinutes(-1));
 
+    // UPDATED: Group Button Listeners (Context Aware)
     groupBtns.forEach(btn => btn.disabled = true);
-    groupBtns.forEach(btn => { btn.addEventListener('click', (e) => { updateActiveButton(e.currentTarget); generateSelectiveChart(); }); });
+    groupBtns.forEach(btn => { 
+        btn.addEventListener('click', (e) => { 
+            updateActiveButton(e.currentTarget); 
+            if (!classStarted) {
+                generateInitialChart(); // Regenerate all
+            } else {
+                generateSelectiveChart(); // Regroup selected
+            }
+        }); 
+    });
+    
+    // UPDATED: Group Count Input Listener
+    groupCountInput.addEventListener('change', () => {
+       if (!classStarted && document.getElementById('generateGroupsByCountBtn').classList.contains('active')) {
+           generateInitialChart();
+       }
+    });
+
     classDropdown.addEventListener('change', generateInitialChart);
 
     toolsContent.addEventListener('contextmenu', (event) => {
