@@ -31,7 +31,7 @@ let playIcon, pauseIcon;
 // Editor State
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
-let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
+let toggleInstructionsBtn, instructionContainer, toggleFullScreenBtn;
 let bgControlContainer, bgColorBtn, bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
@@ -105,7 +105,6 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
-    showToolbarBtn = document.getElementById('showToolbarBtn'); 
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
@@ -353,18 +352,6 @@ function initializeQuill() {
             ]
         }
     });
-
-    // INJECT CLOSE BUTTON into Toolbar
-    const toolbar = document.querySelector('.ql-toolbar');
-    if (toolbar) {
-        toolbar.classList.add('hidden'); // Start hidden
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'ql-toolbar-close';
-        closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
-        closeBtn.title = "Hide Tools";
-        closeBtn.onclick = toggleQuillToolbar;
-        toolbar.appendChild(closeBtn);
-    }
     
     // 2. Set Default Size (48px) and Align Center
     setTimeout(() => {
@@ -463,13 +450,7 @@ function showTextMode() {
     // Always show toolbar when entering text mode
     const toolbar = document.querySelector('.ql-toolbar');
     if(toolbar) toolbar.classList.remove('hidden');
-    
-    if (showToolbarBtn) showToolbarBtn.classList.remove('hidden');
-    
-    // Sync the "Show Tools" button state
-    if(showToolbarBtn && toolbar && !toolbar.classList.contains('hidden')) {
-         showToolbarBtn.classList.add('hidden'); // Hide the header button if toolbar is open
-    }
+        
 }
 
 function showEmbedMode() { 
@@ -485,26 +466,9 @@ function showEmbedMode() {
     const toolbar = document.querySelector('.ql-toolbar'); 
     if(toolbar) toolbar.classList.add('hidden'); 
     quillEditorContainer.classList.add('hidden'); 
-    if(showToolbarBtn) showToolbarBtn.classList.add('hidden'); 
 }
 
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
-
-// UPDATED Toggle Logic (Handles both buttons)
-function toggleQuillToolbar() { 
-    const toolbar = document.querySelector('.ql-toolbar'); 
-    if (!toolbar) return; 
-    
-    if (toolbar.classList.contains('hidden')) { 
-        // User clicked "Show Tools" (Header Button)
-        toolbar.classList.remove('hidden'); 
-        showToolbarBtn.classList.add('hidden'); // Hide the header button
-    } else { 
-        // User clicked "Close" (Toolbar Button)
-        toolbar.classList.add('hidden'); 
-        showToolbarBtn.classList.remove('hidden'); // Show the header button
-    } 
-}
 
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
@@ -670,7 +634,6 @@ async function initializePageSpecificApp() {
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
     loadEmbedBtn.addEventListener('click', loadEmbedUrl);
-    showToolbarBtn.addEventListener('click', toggleQuillToolbar); // Update listener
     toggleInstructionsBtn.addEventListener('click', toggleInstructions);
     
     // BG Menu Listeners
