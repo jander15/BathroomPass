@@ -45,200 +45,190 @@
         
         <h1 class="text-4xl font-bold text-white mb-6 p-2 w-full text-center">Seating Chart</h1>
         
-    <div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-[98vw] space-y-4">
+<div id="toolsContent" class="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-[98vw] space-y-4">
 
-        <style>
-            /* Font Size Dropdown Labels */
-            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24px"]::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { content: '24' !important; }
-            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36px"]::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { content: '36' !important; }
-            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48px"]::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { content: '48' !important; }
-            .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="60px"]::before,
-            .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="60px"]::before { content: '60' !important; }
-            .ql-snow .ql-picker.ql-size .ql-picker-label::before { content: '48' !important; }
-            .ql-snow .ql-picker.ql-size { width: 60px !important; }
+    <style>
+        /* Font Size Labels */
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { content: '24' !important; }
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { content: '36' !important; }
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { content: '48' !important; }
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="60px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="60px"]::before { content: '60' !important; }
+        .ql-snow .ql-picker.ql-size .ql-picker-label::before { content: '48' !important; }
+        .ql-snow .ql-picker.ql-size { width: 60px !important; }
 
-            /* Editor Default Styling */
-            #quillEditorContainer .ql-editor {
-                font-size: 48px;
-                text-align: center;
-                line-height: 1.3;
-            }
+        #quillEditorContainer .ql-editor {
+            font-size: 48px;
+            text-align: center;
+            line-height: 1.3;
+        }
 
-            /* TOOLBAR STYLING: Keep it white and separate */
-            .ql-toolbar.ql-snow {
-                background-color: #ffffff !important;
-                border-color: #d1d5db !important; /* Gray-300 */
-                border-bottom: 1px solid #e5e7eb !important;
-                z-index: 10;
-                position: relative;
-            }
+        /* TOOLBAR STYLING */
+        .ql-toolbar.ql-snow {
+            background-color: #ffffff !important;
+            border-color: #d1d5db !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            z-index: 20;
+            position: relative;
+        }
+        
+        /* Close Button in Toolbar */
+        .ql-toolbar-close {
+            float: right !important;
+            cursor: pointer;
+            color: #6b7280;
+            margin-top: 4px;
+            margin-right: 4px;
+        }
+        .ql-toolbar-close:hover { color: #ef4444; }
 
-            /* Full Screen Override Classes */
-            .instruction-fullscreen {
-                position: fixed !important;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 100 !important;
-                height: 100vh !important;
-                width: 100vw !important;
-                margin: 0 !important;
-                border-radius: 0 !important;
-                display: flex;
-                flex-direction: column;
-            }
-            .editor-fullscreen { height: auto !important; flex-grow: 1; resize: none !important; }
-            .editor-normal { height: 100px; resize: vertical; overflow: auto; }
-        </style>
+        /* Full Screen Classes */
+        .instruction-fullscreen {
+            position: fixed !important; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 100 !important; height: 100vh !important; width: 100vw !important;
+            margin: 0 !important; border-radius: 0 !important;
+            display: flex; flex-direction: column;
+        }
+        .editor-fullscreen { height: auto !important; flex-grow: 1; resize: none !important; }
+        .editor-normal { height: 100px; resize: vertical; overflow: auto; }
+    </style>
 
-        <div class="bg-white p-2 rounded-lg border border-gray-200 flex flex-wrap items-center gap-2 shadow-sm relative z-20">
-            <div class="relative">
-                <select id="classDropdown" class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-80 p-2 pr-8 cursor-pointer font-medium truncate"></select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
-            </div>
-            <div class="h-6 w-px bg-gray-300 mx-1"></div>
-            <button id="generatePairsBtn" data-groupsize="2" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Pairs">2</button>
-            <button id="generateThreesBtn" data-groupsize="3" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Threes">3</button>
-            <button id="generateFoursBtn" data-groupsize="4" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Fours">4</button>
-            <div class="flex items-center bg-gray-50 rounded-md border border-gray-300 ml-1">
-                <input type="number" id="groupCountInput" value="8" min="1" class="w-10 p-1 bg-transparent text-center text-sm focus:outline-none" title="Number of Groups">
-                <button id="generateGroupsByCountBtn" class="group-btn px-2 text-gray-500 hover:text-indigo-600 border-l border-gray-300" title="Generate by Count">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lightning-fill" viewBox="0 0 16 16"><path d="M5.52.359A.5.5 0 0 1 6 0h4a.5.5 0 0 1 .474.658L8.694 6H12.5a.5.5 0 0 1 .395.807l-7 9a.5.5 0 0 1-.873-.454L6.823 9.5H3.5a.5.5 0 0 1-.48-.641l2.5-8.5z"/></svg>
-                </button>
-            </div>
-            <div class="h-6 w-px bg-gray-300 mx-1"></div>
-            <button id="showTimerBtn" class="toolbar-btn" title="Timer">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
-            </button>
-            <button id="rolesBtn" class="toolbar-btn" title="Roles">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
-            </button>
-            <button id="groupNumBtn" class="toolbar-btn text-xl" title="Group Numbers">🔢</button>
-            <button id="toggleInstructionsBtn" class="toolbar-btn" title="Instructions">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>
-            </button>
-
-            <div class="h-6 w-px bg-gray-300 mx-1"></div>
-
-            <div id="setupButtons" class="flex items-center gap-2">
-                <button id="startClassBtn" class="toolbar-btn toolbar-btn-primary w-auto px-4 space-x-2" title="Start Class">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg><span>Start</span>
-                </button>
-            </div>
-            <div id="inClassButtons" class="flex items-center gap-2 hidden">
-                <button id="jigsawBtn" class="toolbar-btn hidden text-teal-600 hover:bg-teal-50" title="Jigsaw Groups"><span class="text-xl">🧩</span></button>
-                <button id="originalSeatingBtn" class="toolbar-btn text-indigo-600 hover:bg-indigo-50" title="Original Seating"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/></svg></button>
-                <button id="attendanceToggleBtn" class="toolbar-btn text-gray-600 hover:bg-gray-100" title="Switch Mode">
-                    <svg id="iconToArrange" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 13.5V7h1v6.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7h1v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm11-11V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/><path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/></svg>
-                    <svg id="iconToAttendance" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 0a.5.5 0 0 1 .5.5.5.5 0 0 0 .5.5.5.5 0 0 1 .5.5V2a.5.5 0 0 1-.5.5h-5A.5.5 0 0 1 5 2v-.5a.5.5 0 0 1 .5-.5.5.5 0 0 0 .5-.5.5.5 0 0 1 .5-.5h3z"/><path d="M3 2.5a.5.5 0 0 1 .5-.5H4a.5.5 0 0 0 0-1h-.5A1.5 1.5 0 0 0 2 2.5v12A1.5 1.5 0 0 0 3.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-12A1.5 1.5 0 0 0 12.5 1H12a.5.5 0 0 0 0 1h.5a.5.5 0 0 1 .5.5v12a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-12z"/><path d="M10.854 7.854a.5.5 0 0 0-.708-.708L7.5 9.793 6.354 8.646a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l3-3z"/></svg>
-                </button>
-            </div>
-            <div class="flex-grow"></div>
-            <div class="relative flex items-center gap-2">
-                <button id="appFullScreenBtn" class="toolbar-btn" title="Presentation Mode (Browser Full Screen)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/></svg>
-                </button>
-
-                <button id="moreOptionsBtn" class="toolbar-btn" title="More Options"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg></button>
-                <div id="moreOptionsMenu" class="hidden dropdown-menu absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
-                    <button id="selectAllBtn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Select All</button>
-                    <button id="deselectAllBtn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Deselect All</button>
-                </div>
-            </div>
+    <div class="bg-white p-2 rounded-lg border border-gray-200 flex flex-wrap items-center gap-2 shadow-sm relative z-20">
+        <div class="relative">
+            <select id="classDropdown" class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block w-80 p-2 pr-8 cursor-pointer font-medium truncate"></select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg></div>
         </div>
-
-        <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
-            
-            <div class="flex flex-wrap gap-4 mb-4 empty:hidden">
-                <div id="timerContainer" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Timer</div>
-                    <div class="flex items-center gap-1 font-mono text-lg text-gray-700">
-                        <button id="minUpBtn" class="hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded px-1 text-xs">▲</button>
-                        <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
-                        <button id="minDownBtn" class="hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded px-1 text-xs">▼</button>
-                        <span class="text-gray-400 text-sm font-normal mx-0.5">:</span>
-                        <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
-                    </div>
-                    <div class="h-6 w-px bg-gray-200 mx-1"></div>
-                    <div class="flex gap-1">
-                        <button id="timerPlayPauseBtn" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"><svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg><svg id="pauseIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg></button>
-                        <button id="timerResetBtn" class="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg></button>
-                        <button id="timerHideBtn" class="p-1.5 text-gray-400 hover:text-red-500 rounded-full transition-colors ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1-.708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button>
-                    </div>
-                </div>
-                <div id="rolesPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-96 flex flex-col overflow-hidden transition-all duration-200">
-                    <div id="rolesHeader" class="bg-white p-0 flex items-center gap-3 px-3 py-2 h-12">
-                        <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Roles</div>
-                        <div id="rolesMiniControls" class="hidden flex items-center gap-2 flex-grow"><button id="miniShiftBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold hover:bg-amber-200 border border-amber-200 flex items-center gap-1 w-full justify-center">Shift <span class="text-lg leading-none">↻</span></button></div>
-                        <div id="rolesTitleExpanded" class="text-sm font-semibold text-gray-700 flex-grow">Manage</div>
-                        <div class="flex items-center gap-1"><button id="toggleRolesViewBtn" class="text-gray-400 hover:text-indigo-600 p-1.5 rounded hover:bg-gray-100"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg></button><button id="closeRolesBtn" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-gray-100 ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
-                    </div>
-                    <div id="rolesFullContent" class="p-3 space-y-3 border-t border-gray-200 bg-gray-50">
-                        <div id="activeRolesList" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-white rounded border border-dashed border-gray-300 text-xs"><span class="text-gray-400 italic">Select roles below...</span></div>
-                        <div class="flex gap-2"><button id="assignRolesBtn" class="flex-1 bg-indigo-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-indigo-700">Assign to Groups</button><button id="shiftRolesBtn" class="flex-1 bg-amber-500 text-white py-1.5 rounded text-xs font-semibold hover:bg-amber-600 hidden">Shift ↻</button></div>
-                        <button id="clearRolesBtn" class="w-full py-1 text-xs text-red-500 hover:text-red-700 hover:underline text-center">Clear Roles from Students</button>
-                        <hr class="border-gray-200"><div id="defaultRolesBank" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
-                        <div class="flex gap-1 pt-1"><input type="text" id="customRoleInput" placeholder="Add custom..." class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500"><button id="addCustomRoleBtn" class="bg-white text-gray-600 px-2 rounded border border-gray-300 hover:bg-gray-50 font-bold">+</button></div>
-                    </div>
-                </div>
-                <div id="groupsPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Groups</div>
-                    <button id="rotateGroupsBtn" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200 flex items-center gap-1">Rotate <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg></button>
-                    <div class="h-6 w-px bg-gray-200 mx-1"></div>
-                    <button id="closeGroupsBtn" class="text-gray-400 hover:text-gray-600 text-lg leading-none p-1">&times;</button>
-                </div>
-            </div>
-
-            <div id="instructionContainer" class="hidden relative w-full bg-yellow-100 border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">
-                
-                <div id="instructionHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center flex-wrap">
-                    <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
-                    <button id="modeEmbedBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Google Doc/Slides</button>
-                    
-                    <div id="bgControlContainer" class="relative ml-2">
-                        <button id="bgColorBtn" class="w-8 h-6 border border-gray-300 rounded shadow-sm bg-yellow-100 hover:ring-2 hover:ring-indigo-500 focus:outline-none" title="Background Color"></button>
-                        <div id="bgColorMenu" class="hidden absolute left-0 top-full mt-1 p-2 bg-white border border-gray-200 rounded-md shadow-xl z-50 grid grid-cols-4 gap-2 w-40"></div>
-                    </div>
-
-                    <div id="embedControls" class="hidden flex-grow flex gap-2 items-center ml-2">
-                        <input type="text" id="embedUrlInput" placeholder="Paste Google Doc/Slides Link here..." class="flex-grow p-1 text-sm border border-gray-300 rounded">
-                        <button id="loadEmbedBtn" class="px-3 py-1 text-xs bg-green-600 text-white rounded shadow-sm">Load</button>
-                    </div>
-
-                    <div class="ml-auto flex items-center gap-2">
-                        <button id="toggleFullScreenBtn" class="text-gray-500 hover:text-indigo-600 p-1 rounded hover:bg-gray-200" title="Full Screen">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>
-                        </button>
-                        <button id="hideHeaderBtn" class="text-gray-400 hover:text-gray-600 p-1" title="Hide Controls">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>
-                        </button>
-                    </div>
-                    
-                    
-                </div>
-                
-                <button id="showHeaderBtn" class="hidden absolute top-1 right-1 z-50 bg-white/80 hover:bg-white text-gray-500 hover:text-indigo-600 p-1 rounded shadow-sm border border-gray-200 backdrop-blur-sm transition-all" title="Show Controls">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
-                </button>
-
-                <div id="quillEditorContainer" class="editor-normal bg-yellow-100"></div>
-                <div id="embedContainer" class="editor-normal hidden w-full bg-white">
-                    <iframe id="contentFrame" class="w-full h-full border-0"></iframe>
-                </div>
-            </div>
-
-            <div id="seatingChartGrid" class="grid grid-cols-8 gap-4 mt-4"></div>
-            <div id="studentCountDisplay" class="text-center text-sm text-gray-600 font-semibold mt-2 mb-2"></div>
-
-            <div id="unselectedStudentsSection" class="mt-2 pt-4 border-t-2 border-gray-300">
-                <h3 class="text-lg font-semibold text-gray-700 mb-4 text-center">Unselected Students</h3>
-                <div id="unselectedStudentsGrid" class="flex flex-wrap justify-center gap-4 min-h-[100px]"></div>
+        <div class="h-6 w-px bg-gray-300 mx-1"></div>
+        <button id="generatePairsBtn" data-groupsize="2" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Pairs">2</button>
+        <button id="generateThreesBtn" data-groupsize="3" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Threes">3</button>
+        <button id="generateFoursBtn" data-groupsize="4" class="group-btn toolbar-btn font-bold font-mono text-lg" title="Fours">4</button>
+        <div class="flex items-center bg-gray-50 rounded-md border border-gray-300 ml-1">
+            <input type="number" id="groupCountInput" value="8" min="1" class="w-10 p-1 bg-transparent text-center text-sm focus:outline-none" title="Number of Groups">
+            <button id="generateGroupsByCountBtn" class="group-btn px-2 text-gray-500 hover:text-indigo-600 border-l border-gray-300" title="Generate by Count"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lightning-fill" viewBox="0 0 16 16"><path d="M5.52.359A.5.5 0 0 1 6 0h4a.5.5 0 0 1 .474.658L8.694 6H12.5a.5.5 0 0 1 .395.807l-7 9a.5.5 0 0 1-.873-.454L6.823 9.5H3.5a.5.5 0 0 1-.48-.641l2.5-8.5z"/></svg></button>
+        </div>
+        <div class="h-6 w-px bg-gray-300 mx-1"></div>
+        <button id="showTimerBtn" class="toolbar-btn" title="Timer"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg></button>
+        <button id="rolesBtn" class="toolbar-btn" title="Roles"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg></button>
+        <button id="groupNumBtn" class="toolbar-btn text-xl" title="Group Numbers">🔢</button>
+        <button id="toggleInstructionsBtn" class="toolbar-btn" title="Instructions"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg></button>
+        <div class="h-6 w-px bg-gray-300 mx-1"></div>
+        <div id="setupButtons" class="flex items-center gap-2">
+            <button id="startClassBtn" class="toolbar-btn toolbar-btn-primary w-auto px-4 space-x-2" title="Start Class"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg><span>Start</span></button>
+        </div>
+        <div id="inClassButtons" class="flex items-center gap-2 hidden">
+            <button id="jigsawBtn" class="toolbar-btn hidden text-teal-600 hover:bg-teal-50" title="Jigsaw Groups"><span class="text-xl">🧩</span></button>
+            <button id="originalSeatingBtn" class="toolbar-btn text-indigo-600 hover:bg-indigo-50" title="Original Seating"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/></svg></button>
+            <button id="attendanceToggleBtn" class="toolbar-btn text-gray-600 hover:bg-gray-100" title="Switch Mode">
+                <svg id="iconToArrange" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 13.5V7h1v6.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7h1v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm11-11V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/><path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/></svg>
+                <svg id="iconToAttendance" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 0a.5.5 0 0 1 .5.5.5.5 0 0 0 .5.5.5.5 0 0 1 .5.5V2a.5.5 0 0 1-.5.5h-5A.5.5 0 0 1 5 2v-.5a.5.5 0 0 1 .5-.5.5.5 0 0 0 .5-.5.5.5 0 0 1 .5-.5h3z"/><path d="M3 2.5a.5.5 0 0 1 .5-.5H4a.5.5 0 0 0 0-1h-.5A1.5 1.5 0 0 0 2 2.5v12A1.5 1.5 0 0 0 3.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-12A1.5 1.5 0 0 0 12.5 1H12a.5.5 0 0 0 0 1h.5a.5.5 0 0 1 .5.5v12a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-12z"/><path d="M10.854 7.854a.5.5 0 0 0-.708-.708L7.5 9.793 6.354 8.646a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l3-3z"/></svg>
+            </button>
+        </div>
+        <div class="flex-grow"></div>
+        <div class="relative flex items-center gap-2">
+            <button id="appFullScreenBtn" class="toolbar-btn" title="Presentation Mode (Browser Full Screen)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/></svg></button>
+            <button id="moreOptionsBtn" class="toolbar-btn" title="More Options"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg></button>
+            <div id="moreOptionsMenu" class="hidden dropdown-menu absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
+                <button id="selectAllBtn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Select All</button>
+                <button id="deselectAllBtn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Deselect All</button>
             </div>
         </div>
     </div>
+
+    <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 min-h-[50vh]">
+        
+        <div class="flex flex-wrap gap-4 mb-4 empty:hidden">
+            <div id="timerContainer" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Timer</div>
+                <div class="flex items-center gap-1 font-mono text-lg text-gray-700">
+                    <button id="minUpBtn" class="hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded px-1 text-xs">▲</button>
+                    <input type="number" id="timerMinutes" value="5" min="0" max="99" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
+                    <button id="minDownBtn" class="hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded px-1 text-xs">▼</button>
+                    <span class="text-gray-400 text-sm font-normal mx-0.5">:</span>
+                    <input type="number" id="timerSeconds" value="00" min="0" max="59" class="w-6 p-0 text-center border-none focus:ring-0 bg-transparent appearance-none font-bold">
+                </div>
+                <div class="h-6 w-px bg-gray-200 mx-1"></div>
+                <div class="flex gap-1">
+                    <button id="timerPlayPauseBtn" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"><svg id="playIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg><svg id="pauseIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg></button>
+                    <button id="timerResetBtn" class="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg></button>
+                    <button id="timerHideBtn" class="p-1.5 text-gray-400 hover:text-red-500 rounded-full transition-colors ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1-.708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button>
+                </div>
+            </div>
+            <div id="rolesPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm w-96 flex flex-col overflow-hidden transition-all duration-200">
+                <div id="rolesHeader" class="bg-white p-0 flex items-center gap-3 px-3 py-2 h-12">
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Roles</div>
+                    <div id="rolesMiniControls" class="hidden flex items-center gap-2 flex-grow"><button id="miniShiftBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold hover:bg-amber-200 border border-amber-200 flex items-center gap-1 w-full justify-center">Shift <span class="text-lg leading-none">↻</span></button></div>
+                    <div id="rolesTitleExpanded" class="text-sm font-semibold text-gray-700 flex-grow">Manage</div>
+                    <div class="flex items-center gap-1"><button id="toggleRolesViewBtn" class="text-gray-400 hover:text-indigo-600 p-1.5 rounded hover:bg-gray-100"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg></button><button id="closeRolesBtn" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-gray-100 ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
+                </div>
+                <div id="rolesFullContent" class="p-3 space-y-3 border-t border-gray-200 bg-gray-50">
+                    <div id="activeRolesList" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-white rounded border border-dashed border-gray-300 text-xs"><span class="text-gray-400 italic">Select roles below...</span></div>
+                    <div class="flex gap-2"><button id="assignRolesBtn" class="flex-1 bg-indigo-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-indigo-700">Assign to Groups</button><button id="shiftRolesBtn" class="flex-1 bg-amber-500 text-white py-1.5 rounded text-xs font-semibold hover:bg-amber-600 hidden">Shift ↻</button></div>
+                    <button id="clearRolesBtn" class="w-full py-1 text-xs text-red-500 hover:text-red-700 hover:underline text-center">Clear Roles from Students</button>
+                    <hr class="border-gray-200"><div id="defaultRolesBank" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
+                    <div class="flex gap-1 pt-1"><input type="text" id="customRoleInput" placeholder="Add custom..." class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500"><button id="addCustomRoleBtn" class="bg-white text-gray-600 px-2 rounded border border-gray-300 hover:bg-gray-50 font-bold">+</button></div>
+                </div>
+            </div>
+            <div id="groupsPanel" class="hidden bg-white border border-gray-300 rounded-md shadow-sm flex items-center gap-3 px-3 py-2 h-12">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide border-r border-gray-200 pr-3 mr-1 h-full flex items-center">Groups</div>
+                <button id="rotateGroupsBtn" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200 flex items-center gap-1">Rotate <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg></button>
+                <div class="h-6 w-px bg-gray-200 mx-1"></div>
+                <button id="closeGroupsBtn" class="text-gray-400 hover:text-gray-600 text-lg leading-none p-1">&times;</button>
+            </div>
+        </div>
+
+        <div id="instructionContainer" class="hidden relative w-full bg-yellow-100 border border-gray-300 rounded-md shadow-sm overflow-hidden mb-4">
+            
+            <div id="instructionHeader" class="bg-gray-100 p-2 border-b border-gray-300 flex gap-2 items-center flex-wrap">
+                <button id="modeTextBtn" class="px-3 py-1 text-xs bg-blue-600 text-white rounded shadow-sm">Text Editor</button>
+                <button id="modeEmbedBtn" class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded shadow-sm hover:bg-gray-300">Google Doc/Slides</button>
+                
+                <div id="bgControlContainer" class="relative ml-2">
+                    <button id="bgColorBtn" class="w-8 h-6 border border-gray-300 rounded shadow-sm bg-yellow-100 hover:ring-2 hover:ring-indigo-500 focus:outline-none" title="Background Color"></button>
+                    <div id="bgColorMenu" class="hidden absolute left-0 top-full mt-1 p-2 bg-white border border-gray-200 rounded-md shadow-xl z-50 grid grid-cols-4 gap-2 w-40">
+                        </div>
+                </div>
+
+                <button id="showToolbarBtn" class="text-gray-500 hover:text-indigo-600 p-1 rounded hover:bg-gray-200 ml-2" title="Show Toolbar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tools" viewBox="0 0 16 16"><path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.356 3.356a1 1 0 0 0 1.414 0l1.586-1.586a1 1 0 0 0 0-1.414l-3.356-3.356a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3c0-.269-.035-.53-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814L1 0Zm9.646 10.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708Z"/></svg>
+                </button>
+                
+                <div id="embedControls" class="hidden flex-grow flex gap-2 items-center ml-2">
+                    <input type="text" id="embedUrlInput" placeholder="Paste Google Doc/Slides Link here..." class="flex-grow p-1 text-sm border border-gray-300 rounded">
+                    <button id="loadEmbedBtn" class="px-3 py-1 text-xs bg-green-600 text-white rounded shadow-sm">Load</button>
+                </div>
+
+                <div class="ml-auto flex items-center gap-2">
+                    <button id="toggleFullScreenBtn" class="text-gray-500 hover:text-indigo-600 p-1 rounded hover:bg-gray-200" title="Full Screen">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>
+                    </button>
+                    <button id="hideHeaderBtn" class="text-gray-400 hover:text-gray-600 p-1" title="Hide Controls">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <button id="showHeaderBtn" class="hidden absolute top-1 right-1 z-50 bg-white/80 hover:bg-white text-gray-500 hover:text-indigo-600 p-1 rounded shadow-sm border border-gray-200 backdrop-blur-sm transition-all" title="Show Controls">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+            </button>
+
+            <div id="quillEditorContainer" class="editor-normal bg-yellow-100"></div>
+            <div id="embedContainer" class="editor-normal hidden w-full bg-white">
+                <iframe id="contentFrame" class="w-full h-full border-0"></iframe>
+            </div>
+        </div>
+
+        <div id="seatingChartGrid" class="grid grid-cols-8 gap-4 mt-4"></div>
+        <div id="studentCountDisplay" class="text-center text-sm text-gray-600 font-semibold mt-2 mb-2"></div>
+
+        <div id="unselectedStudentsSection" class="mt-2 pt-4 border-t-2 border-gray-300">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 text-center">Unselected Students</h3>
+            <div id="unselectedStudentsGrid" class="flex flex-wrap justify-center gap-4 min-h-[100px]"></div>
+        </div>
+    </div>
+</div>
 
     <div id="seatContextMenu" class="hidden absolute z-50 bg-white border border-gray-300 rounded-md shadow-lg py-1 w-48">
     </div>
