@@ -32,7 +32,7 @@ let playIcon, pauseIcon;
 let quillInstance;
 let modeTextBtn, modeEmbedBtn, embedControls, embedUrlInput, loadEmbedBtn, quillEditorContainer, embedContainer, contentFrame;
 let toggleInstructionsBtn, instructionContainer, showToolbarBtn, toggleFullScreenBtn;
-let bgColorMenu; 
+let bgControlContainer, bgColorBtn, bgColorMenu; 
 // New header toggle elements
 let instructionHeader, hideHeaderBtn, showHeaderBtn;
 
@@ -109,6 +109,8 @@ function cacheToolsDOMElements() {
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
+    bgControlContainer = document.getElementById('bgControlContainer');
+    bgColorBtn = document.getElementById('bgColorBtn');
     bgColorMenu = document.getElementById('bgColorMenu');
 
     // Header Collapse Elements
@@ -356,25 +358,6 @@ function initializeQuill() {
     const toolbar = document.querySelector('.ql-toolbar');
     if (toolbar) {
         toolbar.classList.add('hidden'); // Start hidden
-        
-        // Create BG Color Trigger
-        const bgBtn = document.createElement('span');
-        bgBtn.className = 'ql-widget-bg-btn';
-        bgBtn.title = "Widget Background Color";
-        bgBtn.onclick = (e) => {
-             e.stopPropagation();
-             // Reposition the menu relative to this button
-             const rect = bgBtn.getBoundingClientRect();
-             bgColorMenu.style.position = 'fixed';
-             bgColorMenu.style.top = (rect.bottom + 5) + 'px';
-             bgColorMenu.style.left = rect.left + 'px';
-             bgColorMenu.classList.toggle('hidden');
-        };
-        
-        // Insert it at the beginning of toolbar
-        toolbar.insertBefore(bgBtn, toolbar.firstChild);
-        
-        // Insert Close Button at end
         const closeBtn = document.createElement('span');
         closeBtn.className = 'ql-toolbar-close';
         closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/></svg>`;
@@ -507,7 +490,7 @@ function showEmbedMode() {
 
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
-// UPDATED Toggle Logic
+// UPDATED Toggle Logic (Handles both buttons)
 function toggleQuillToolbar() { 
     const toolbar = document.querySelector('.ql-toolbar'); 
     if (!toolbar) return; 
@@ -554,7 +537,7 @@ function createStudentGroupsByCount(students, groupCount) {
     shuffledStudents.forEach(student => { groups[groupIndex % groupCount].push(student); groupIndex++; }); return groups;
 }
 
-// UPDATED: Initial Chart Generation (Checks active button)
+// UPDATED: Initial Chart Generation
 function generateInitialChart() {
     const selectedClass = classDropdown.value; 
     if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
@@ -571,7 +554,7 @@ function generateInitialChart() {
     
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
     
-    // Determine which mode is active
+    // Determine mode
     let generatedGroups = [];
     const activeBtn = document.querySelector('.group-btn.active');
     
@@ -579,7 +562,6 @@ function generateInitialChart() {
         const count = parseInt(groupCountInput.value, 10);
         generatedGroups = createStudentGroupsByCount(students, count);
     } else {
-        // Default to Pairs (2) if no button is active yet, or use the active size
         let size = 2;
         if (activeBtn && activeBtn.dataset.groupsize) {
             size = parseInt(activeBtn.dataset.groupsize, 10);
@@ -750,7 +732,6 @@ async function initializePageSpecificApp() {
     minUpBtn.addEventListener('click', () => adjustTimerMinutes(1));
     minDownBtn.addEventListener('click', () => adjustTimerMinutes(-1));
 
-    // UPDATED: Group Button Listeners (Context Aware)
     groupBtns.forEach(btn => btn.disabled = true);
     groupBtns.forEach(btn => { 
         btn.addEventListener('click', (e) => { 
