@@ -828,6 +828,24 @@ async function initializePageSpecificApp() {
         applyAttendanceStyles(); 
     });
 
+    function applyAttendanceStyles() {
+    toolsContent.querySelectorAll('.seat').forEach(seat => {
+        const studentName = seat.textContent;
+        const isPreselected = preselectedStudents.has(studentName);
+        const hasParticipated = participatedStudents.has(studentName);
+        seat.classList.remove('selected', 'participated', 'attendance-hidden');
+        if (attendanceVisible) {
+            if (isPreselected) seat.classList.add('selected');
+            if (hasParticipated) seat.classList.add('participated');
+        } else {
+            if (isPreselected || hasParticipated) {
+                seat.classList.add('attendance-hidden');
+            }
+        }
+    });
+}
+
+
     showTimerBtn.addEventListener('click', () => {
         const isHidden = timerContainer.classList.toggle('hidden');
         toggleButtonState('showTimerBtn', !isHidden);
