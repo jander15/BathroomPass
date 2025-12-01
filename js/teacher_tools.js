@@ -105,7 +105,7 @@ function cacheToolsDOMElements() {
     contentFrame = document.getElementById('contentFrame');
     toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
     instructionContainer = document.getElementById('instructionContainer');
-    showToolbarBtn = document.getElementById('showToolbarBtn'); 
+    showToolbarBtn = document.getElementById('showToolbarBtn'); // Renamed from toggleToolbarBtn
     toggleFullScreenBtn = document.getElementById('toggleFullScreenBtn');
     
     // BG Color Elements
@@ -400,23 +400,17 @@ function renderBgColorMenu() {
 function updateBackgroundColor(color) {
     instructionContainer.style.backgroundColor = color;
     quillEditorContainer.style.backgroundColor = color;
-    bgColorBtn.style.backgroundColor = color; // Update preview button
+    bgColorBtn.style.backgroundColor = color; 
 }
 
 // Collapsible Header Logic
 function toggleHeaderVisibility(show) {
-    const toolbar = document.querySelector('.ql-toolbar');
     if (show) {
         instructionHeader.classList.remove('hidden');
         showHeaderBtn.classList.add('hidden');
-        // Logic: If we are in Text Mode, show toolbar again
-        if (embedContainer.classList.contains('hidden')) {
-            if (toolbar) toolbar.classList.remove('hidden');
-        }
     } else {
         instructionHeader.classList.add('hidden');
         showHeaderBtn.classList.remove('hidden');
-        if (toolbar) toolbar.classList.add('hidden');
     }
 }
 
@@ -448,64 +442,36 @@ function toggleFullScreen() {
     }
 }
 
-function showTextMode() { 
-    modeTextBtn.classList.add('bg-blue-600', 'text-white'); 
-    modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
-    modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); 
-    modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); 
-    
-    embedControls.classList.add('hidden'); 
-    embedContainer.classList.add('hidden'); 
-    bgControlContainer.classList.remove('hidden'); // Show BG controls
-    
+function showTextMode() { modeTextBtn.classList.add('bg-blue-600', 'text-white'); modeTextBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.add('bg-gray-200', 'text-gray-700'); modeEmbedBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.add('hidden'); embedContainer.classList.add('hidden'); 
     quillEditorContainer.classList.remove('hidden'); 
+    showToolbarBtn.classList.remove('hidden');
+    // Show BG Control
+    bgControlContainer.classList.remove('hidden');
     
-    // Always show toolbar when entering text mode
     const toolbar = document.querySelector('.ql-toolbar');
-    if(toolbar) toolbar.classList.remove('hidden');
-    
-    if (showToolbarBtn) showToolbarBtn.classList.remove('hidden');
-    
-    // Sync the "Show Tools" button state
-    if(showToolbarBtn && toolbar && !toolbar.classList.contains('hidden')) {
-         showToolbarBtn.classList.add('hidden'); // Hide the header button if toolbar is open
-    }
+    if(!toolbar.classList.contains('hidden')) showToolbarBtn.classList.add('hidden');
 }
-
-function showEmbedMode() { 
-    modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); 
-    modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); 
-    modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); 
-    modeTextBtn.classList.remove('bg-blue-600', 'text-white'); 
-    
-    embedControls.classList.remove('hidden'); 
-    embedContainer.classList.remove('hidden'); 
-    bgControlContainer.classList.add('hidden'); // Hide BG controls
-    
-    const toolbar = document.querySelector('.ql-toolbar'); 
-    if(toolbar) toolbar.classList.add('hidden'); 
-    quillEditorContainer.classList.add('hidden'); 
-    if(showToolbarBtn) showToolbarBtn.classList.add('hidden'); 
+function showEmbedMode() { modeEmbedBtn.classList.add('bg-blue-600', 'text-white'); modeEmbedBtn.classList.remove('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.add('bg-gray-200', 'text-gray-700'); modeTextBtn.classList.remove('bg-blue-600', 'text-white'); embedControls.classList.remove('hidden'); embedContainer.classList.remove('hidden'); const toolbar = document.querySelector('.ql-toolbar'); if(toolbar) toolbar.classList.add('hidden'); quillEditorContainer.classList.add('hidden'); showToolbarBtn.classList.add('hidden'); 
+    // HIDE BG Controls in Embed Mode
+    bgControlContainer.classList.add('hidden');
 }
-
 function loadEmbedUrl() { let url = embedUrlInput.value.trim(); if (!url) return; if (!url.startsWith('http')) url = 'https://' + url; contentFrame.src = url; }
 
-// UPDATED Toggle Logic (Handles both buttons)
+// Modified Logic: Show button is in header, Hide button is in toolbar
 function toggleQuillToolbar() { 
     const toolbar = document.querySelector('.ql-toolbar'); 
     if (!toolbar) return; 
     
     if (toolbar.classList.contains('hidden')) { 
-        // User clicked "Show Tools" (Header Button)
+        // User clicked "Show" (header button)
         toolbar.classList.remove('hidden'); 
         showToolbarBtn.classList.add('hidden'); // Hide the header button
     } else { 
-        // User clicked "Close" (Toolbar Button)
+        // User clicked "Hide" (toolbar button)
         toolbar.classList.add('hidden'); 
         showToolbarBtn.classList.remove('hidden'); // Show the header button
     } 
 }
-
 function toggleInstructions() { 
     const isHidden = instructionContainer.classList.toggle('hidden');
     toggleButtonState('toggleInstructionsBtn', !isHidden);
@@ -537,49 +503,43 @@ function createStudentGroupsByCount(students, groupCount) {
     shuffledStudents.forEach(student => { groups[groupIndex % groupCount].push(student); groupIndex++; }); return groups;
 }
 
-// UPDATED: Initial Chart Generation
-function generateInitialChart() {
-    const selectedClass = classDropdown.value; 
-    if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
-    
-    classStarted = false; 
-    originalSeating = null; 
-    attendanceVisible = true; 
-    preselectedStudents.clear(); 
-    participatedStudents.clear();
-    
-    setupButtons.classList.remove('hidden'); 
-    inClassButtons.classList.add('hidden'); 
-    startClassBtn.disabled = false;
-    
-    const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
-    
-    // Determine mode
-    let generatedGroups = [];
-    const activeBtn = document.querySelector('.group-btn.active');
-    
-    if (activeBtn && activeBtn.id === 'generateGroupsByCountBtn') {
-        const count = parseInt(groupCountInput.value, 10);
-        generatedGroups = createStudentGroupsByCount(students, count);
-    } else {
-        let size = 2;
-        if (activeBtn && activeBtn.dataset.groupsize) {
-            size = parseInt(activeBtn.dataset.groupsize, 10);
-        }
-        generatedGroups = createStudentGroupsBySize(students, size);
-    }
-
-    seatingChartGrid.innerHTML = ''; 
-    unselectedStudentsGrid.innerHTML = '';
-    
-    generatedGroups.forEach((group, index) => { 
-        const color = groupColors[index % groupColors.length]; 
-        seatingChartGrid.appendChild(createGroupContainerElement(group, color)); 
+function captureSeatingState() {
+    const groups = [];
+    seatingChartGrid.querySelectorAll('.group-container').forEach(container => {
+        groups.push(Array.from(container.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat))); 
     });
-    
-    toggleDragAndDrop(false); 
-    updateStudentCount(); 
-    updateGroupNumbers();
+    const unselected = Array.from(unselectedStudentsGrid.querySelectorAll('.seat')).map(seat => getStudentNameFromSeat(seat)); 
+    return { groups, unselected };
+}
+
+function renderSeatingState(seatingState) {
+    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
+    seatingState.groups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
+    seatingState.unselected.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
+    updateJigsawButtonVisibility(); toggleDragAndDrop(false); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
+}
+
+function applyAttendanceStyles() {
+    toolsContent.querySelectorAll('.seat').forEach(seat => {
+        const studentName = getStudentNameFromSeat(seat); 
+        const isPreselected = preselectedStudents.has(studentName);
+        const hasParticipated = participatedStudents.has(studentName);
+        seat.classList.remove('selected', 'participated', 'attendance-hidden');
+        if (attendanceVisible) { if (isPreselected) seat.classList.add('selected'); if (hasParticipated) seat.classList.add('participated'); }
+        else { if (isPreselected || hasParticipated) seat.classList.add('attendance-hidden'); }
+    });
+    updateStudentCount();
+}
+
+function generateInitialChart() {
+    const selectedClass = classDropdown.value; if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
+    classStarted = false; originalSeating = null; attendanceVisible = true; preselectedStudents.clear(); participatedStudents.clear();
+    setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
+    const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
+    const initialGroups = createStudentGroupsBySize(students, 2);
+    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
+    initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
+    toggleDragAndDrop(false); updateStudentCount(); updateGroupNumbers();
 }
 
 function generateSelectiveChart() {
@@ -587,36 +547,15 @@ function generateSelectiveChart() {
     const namesToRegroup = allStudents.filter(name => preselectedStudents.has(name) || participatedStudents.has(name));
     const unselectedNames = allStudents.filter(name => !preselectedStudents.has(name) && !participatedStudents.has(name));
     if (namesToRegroup.length === 0) { showErrorAlert("No students are selected."); return; }
-    
     const activeModeBtn = document.querySelector('.group-btn.active');
     if (!activeModeBtn) { showErrorAlert("Select a grouping method."); return; }
-    
-    const mode = activeModeBtn.id; 
-    let generatedGroups;
-    
-    if (mode === 'generateGroupsByCountBtn') { 
-        const count = parseInt(groupCountInput.value, 10); 
-        generatedGroups = createStudentGroupsByCount(namesToRegroup, count); 
-    } else { 
-        const size = parseInt(activeModeBtn.dataset.groupsize, 10); 
-        generatedGroups = createStudentGroupsBySize(namesToRegroup, size); 
-    }
-    
-    seatingChartGrid.innerHTML = ''; 
-    unselectedStudentsGrid.innerHTML = '';
-    
-    generatedGroups.forEach((group, index) => { 
-        const color = groupColors[index % groupColors.length]; 
-        seatingChartGrid.appendChild(createGroupContainerElement(group, color)); 
-    });
-    
+    const mode = activeModeBtn.id; let generatedGroups;
+    if (mode === 'generateGroupsByCountBtn') { const count = parseInt(groupCountInput.value, 10); generatedGroups = createStudentGroupsByCount(namesToRegroup, count); }
+    else { const size = parseInt(activeModeBtn.dataset.groupsize, 10); generatedGroups = createStudentGroupsBySize(namesToRegroup, size); }
+    seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
+    generatedGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     unselectedNames.forEach(name => { unselectedStudentsGrid.appendChild(createSeatElement(name)); });
-    
-    updateJigsawButtonVisibility(); 
-    toggleDragAndDrop(!attendanceVisible); 
-    applyAttendanceStyles(); 
-    updateStudentCount(); 
-    updateGroupNumbers();
+    updateJigsawButtonVisibility(); toggleDragAndDrop(!attendanceVisible); applyAttendanceStyles(); updateStudentCount(); updateGroupNumbers();
 }
 
 function createSeatElement(studentName) {
@@ -733,24 +672,7 @@ async function initializePageSpecificApp() {
     minDownBtn.addEventListener('click', () => adjustTimerMinutes(-1));
 
     groupBtns.forEach(btn => btn.disabled = true);
-    groupBtns.forEach(btn => { 
-        btn.addEventListener('click', (e) => { 
-            updateActiveButton(e.currentTarget); 
-            if (!classStarted) {
-                generateInitialChart(); // Regenerate all
-            } else {
-                generateSelectiveChart(); // Regroup selected
-            }
-        }); 
-    });
-    
-    // UPDATED: Group Count Input Listener
-    groupCountInput.addEventListener('change', () => {
-       if (!classStarted && document.getElementById('generateGroupsByCountBtn').classList.contains('active')) {
-           generateInitialChart();
-       }
-    });
-
+    groupBtns.forEach(btn => { btn.addEventListener('click', (e) => { updateActiveButton(e.currentTarget); generateSelectiveChart(); }); });
     classDropdown.addEventListener('change', generateInitialChart);
 
     toolsContent.addEventListener('contextmenu', (event) => {
@@ -827,24 +749,6 @@ async function initializePageSpecificApp() {
         toggleDragAndDrop(!attendanceVisible); 
         applyAttendanceStyles(); 
     });
-
-    function applyAttendanceStyles() {
-    toolsContent.querySelectorAll('.seat').forEach(seat => {
-        const studentName = seat.textContent;
-        const isPreselected = preselectedStudents.has(studentName);
-        const hasParticipated = participatedStudents.has(studentName);
-        seat.classList.remove('selected', 'participated', 'attendance-hidden');
-        if (attendanceVisible) {
-            if (isPreselected) seat.classList.add('selected');
-            if (hasParticipated) seat.classList.add('participated');
-        } else {
-            if (isPreselected || hasParticipated) {
-                seat.classList.add('attendance-hidden');
-            }
-        }
-    });
-}
-
 
     showTimerBtn.addEventListener('click', () => {
         const isHidden = timerContainer.classList.toggle('hidden');
