@@ -534,6 +534,13 @@ function applyAttendanceStyles() {
 function generateInitialChart() {
     const selectedClass = classDropdown.value; if (!selectedClass || selectedClass === DEFAULT_CLASS_OPTION) return;
     classStarted = false; originalSeating = null; attendanceVisible = true; preselectedStudents.clear(); participatedStudents.clear();
+    
+    // Ensure icons are reset to default (Attendance Visible state)
+    if (iconToArrange && iconToAttendance) {
+        iconToArrange.classList.add('hidden');
+        iconToAttendance.classList.remove('hidden');
+    }
+
     setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
     const initialGroups = createStudentGroupsBySize(students, 2);
