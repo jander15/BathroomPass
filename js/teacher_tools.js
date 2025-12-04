@@ -681,6 +681,12 @@ async function initializePageSpecificApp() {
     groupBtns.forEach(btn => btn.disabled = true);
     groupBtns.forEach(btn => { btn.addEventListener('click', (e) => { updateActiveButton(e.currentTarget); generateSelectiveChart(); }); });
     classDropdown.addEventListener('change', generateInitialChart);
+    classDropdown.addEventListener('change', () => {
+    const titleEl = document.getElementById('classTitleDisplay');
+    if(titleEl && classDropdown.options[classDropdown.selectedIndex]) {
+        titleEl.textContent = classDropdown.options[classDropdown.selectedIndex].text;
+    }
+});
 
     toolsContent.addEventListener('contextmenu', (event) => {
         const seat = event.target.closest('.seat'); if (!seat) return;
