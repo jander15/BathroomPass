@@ -543,7 +543,7 @@ function generateInitialChart() {
 
     setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
-    const initialGroups = createStudentGroupsBySize(students, 4);
+    const initialGroups = createStudentGroupsBySize(students, 4); updateActiveButton(generateFoursBtn);
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     toggleDragAndDrop(false); updateStudentCount(); updateGroupNumbers();
@@ -577,7 +577,7 @@ function createSeatElement(studentName) {
 
 function createGroupContainerElement(group, color) {
     const container = document.createElement('div'); container.className = 'group-container draggable-item'; container.style.backgroundColor = color.bg; container.style.borderColor = color.border;
-    const size = group.length; let internalCols = (size <= 4) ? 2 : (size <= 6) ? 3 : 4; let parentSpan = (size <= 4) ? 2 : (size <= 6) ? 3 : 4;
+    const size = group.length; let internalCols = (size <= 3) ? 2 : (size <= 6) ? 3 : 4; let parentSpan = (size <= 3) ? 2 : (size <= 6) ? 3 : 4;
     container.style.gridTemplateColumns = `repeat(${internalCols}, 1fr)`; container.style.gridColumn = `span ${parentSpan}`;
     group.forEach(studentName => container.appendChild(createSeatElement(studentName))); return container;
 }
@@ -774,7 +774,7 @@ async function initializePageSpecificApp() {
         try {
             await fetchAllStudentData(); populateCourseDropdownFromData();
             populateDropdown('classDropdown', appState.data.courses, DEFAULT_CLASS_OPTION, "");
-            classDropdown.removeAttribute("disabled"); groupBtns.forEach(btn => btn.disabled = false); updateActiveButton(generatePairsBtn);
+            classDropdown.removeAttribute("disabled"); groupBtns.forEach(btn => btn.disabled = false); 
         } catch (error) { showErrorAlert("Could not load class data."); }
     }
 }
