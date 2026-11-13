@@ -543,7 +543,7 @@ function generateInitialChart() {
 
     setupButtons.classList.remove('hidden'); inClassButtons.classList.add('hidden'); startClassBtn.disabled = false;
     const students = appState.data.allNamesFromSheet.filter(s => s.Class === selectedClass).map(s => normalizeName(s.Name));
-    const initialGroups = createStudentGroupsBySize(students, 2);
+    const initialGroups = createStudentGroupsBySize(students, 4);
     seatingChartGrid.innerHTML = ''; unselectedStudentsGrid.innerHTML = '';
     initialGroups.forEach((group, index) => { const color = groupColors[index % groupColors.length]; seatingChartGrid.appendChild(createGroupContainerElement(group, color)); });
     toggleDragAndDrop(false); updateStudentCount(); updateGroupNumbers();
