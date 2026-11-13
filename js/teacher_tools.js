@@ -59,6 +59,10 @@ const bgColors = [ '#fefce8', '#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#fbcf
 function cacheToolsDOMElements() {
     classDropdown = document.getElementById('classDropdown');
     seatingChartGrid = document.getElementById('seatingChartGrid');
+
+    seatingChartGrid.style.display = 'grid';
+    seatingChartGrid.style.gridTemplateColumns = 'repeat(6, 1fr)';
+    
     toolsContent = document.getElementById('toolsContent');
     generatePairsBtn = document.getElementById('generatePairsBtn');
     generateThreesBtn = document.getElementById('generateThreesBtn');
@@ -576,10 +580,25 @@ function createSeatElement(studentName) {
 }
 
 function createGroupContainerElement(group, color) {
-    const container = document.createElement('div'); container.className = 'group-container draggable-item'; container.style.backgroundColor = color.bg; container.style.borderColor = color.border;
-    const size = group.length; let internalCols = (size <= 3) ? 2 : (size <= 6) ? 3 : 4; let parentSpan = (size <= 3) ? 2 : (size <= 6) ? 3 : 4;
-    container.style.gridTemplateColumns = `repeat(${internalCols}, 1fr)`; container.style.gridColumn = `span ${parentSpan}`;
-    group.forEach(studentName => container.appendChild(createSeatElement(studentName))); return container;
+    const container = document.createElement('div'); 
+    container.className = 'group-container draggable-item'; 
+    container.style.backgroundColor = color.bg; 
+    container.style.borderColor = color.border;
+    
+    // Explicitly set grid display to ensure the internal layout behaves
+    container.style.display = 'grid';
+    
+    const size = group.length; 
+    // Force groups of 1-4 into 2 columns (creates a 2x2 grid for 4 students)
+    let internalCols = (size <= 4) ? 2 : (size <= 6) ? 3 : 4; 
+    // Each group takes up 2 "slots" in the main parent grid
+    let parentSpan = (size <= 4) ? 2 : (size <= 6) ? 3 : 4;
+    
+    container.style.gridTemplateColumns = `repeat(${internalCols}, 1fr)`; 
+    container.style.gridColumn = `span ${parentSpan}`;
+    
+    group.forEach(studentName => container.appendChild(createSeatElement(studentName))); 
+    return container;
 }
 
 function updateJigsawButtonVisibility() {
@@ -612,6 +631,7 @@ function generateJigsawGroups() {
 async function initializePageSpecificApp() {
     cacheToolsDOMElements();
     initializeQuill();
+    
     
     modeTextBtn.addEventListener('click', showTextMode);
     modeEmbedBtn.addEventListener('click', showEmbedMode);
